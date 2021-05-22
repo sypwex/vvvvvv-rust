@@ -3,3 +3,6 @@
 .DS_Store
 /*.bmp
 /tmp
+perf.data*
+flamegraph*
+.vscode/settings.json

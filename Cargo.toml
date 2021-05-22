@@ -13,3 +13,6 @@ sdl2-sys = { path = "/home/sypwex/src/rust-sdl2/sdl2-sys" }
 png = "0.16"
 libc = "^0.2"
 rand = "0.8.3"
+
+[profile.release]
+debug = true

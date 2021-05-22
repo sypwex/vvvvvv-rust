@@ -1,14 +1,18 @@
 extern crate sdl2;
 use sdl2::pixels::Color;
-mod render;
-mod game;
+
+use crate::rustutil::dump_surface;
+pub mod render;
+pub mod renderfixed;
 
 pub struct Screen {
-    render: Box<render::Render>,
-    game: Box<game::Game>,
+    pub render: Box<render::Render>,
+    pub renderfixed: Box<renderfixed::RenderFixed>,
     // window: Box<sdl2::video::Window>,
     canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
     m_screen: Box<sdl2::surface::Surface<'static>>,
+
+    badSignalEffect: bool,
 }
 
 impl Screen {
@@ -85,15 +89,14 @@ impl Screen {
 
         // ResizeScreen(windowWidth, windowHeight);
 
-        let mut game = game::Game::new();
-        game.init_game();
-
         Screen {
-            render: Box::new(render::Render::new()),
-            game: Box::new(game),
+            render: Box::new(render::Render::new(m_screen.pixel_format_enum())),
+            renderfixed: Box::new(renderfixed::RenderFixed::new()),
             // window: Box::new(window),
             canvas: Box::new(canvas),
             m_screen: Box::new(m_screen),
+
+            badSignalEffect: false,
         }
     }
 
@@ -109,10 +112,6 @@ impl Screen {
 
     }
 
-    pub fn getOver30mode (&self) -> bool {
-        self.game.over30mode
-    }
-
     pub fn init_canvas (&mut self) {
         self.canvas.set_draw_color(Color::RGB(128, 128, 128));
         self.canvas.clear();
@@ -123,289 +122,46 @@ impl Screen {
         self.canvas.present();
     }
 
-    pub fn deltaloop(&mut self) {
-        // //timestep limit to 30
-        // const float rawdeltatime = static_cast<float>(time_ - timePrev);
-        // accumulator += rawdeltatime;
-
-        let timesteplimit: u32 = match self.game.gamestate {
-            game::GameState::EDITORMODE => 24,
-            game::GameState::GAMEMODE => self.game.gameframerate,
-            _ => 34,
-        };
-
-        // while (accumulator >= timesteplimit) {
-        //     accumulator = SDL_fmodf(accumulator, timesteplimit);
-            self.fixedloop();
-        // }
-        // const float alpha = game.over30mode ? static_cast<float>(accumulator) / timesteplimit : 1.0f;
-        // graphics.alpha = alpha;
-
-        // if (key.isActive) {
-            match self.game.gamestate {
-                game::GameState::PRELOADER => self.render.preloaderrender(),
-        // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
-        //         game::GameState::EDITORMODE: {
-        //             graphics.flipmode = false;
-        //             editorrender();
-        //         }
-        // #endif
-                game::GameState::TITLEMODE => {
-                    self.render.title_render();
-                    self.update_screen()
-                },
-                game::GameState::GAMEMODE => self.render.gamerender(),
-                game::GameState::MAPMODE => self.render.maprender(),
-                game::GameState::TELEPORTERMODE => self.render.teleporterrender(),
-                game::GameState::GAMECOMPLETE => self.render.gamecompleterender(),
-                game::GameState::GAMECOMPLETE2 => self.render.gamecompleterender2(),
-                // game::GameState::CLICKTOSTART => help.updateglow(), // TODO:
-                _ => (),
-            }
-            // gameScreen.FlipScreen(); TODO:
-        // }
-    }
-
-    pub fn fixedloop(&self) {
-        //     // Update network per frame.
-        //     NETWORK_update();
-
-        //     key.Poll();
-        //     if(key.toggleFullscreen)
-        //     {
-        //         gameScreen.toggleFullScreen();
-        //         game.fullscreen = !game.fullscreen;
-        //         key.toggleFullscreen = false;
-
-        //         key.keymap.clear(); //we lost the input due to a new window.
-        //         if (game.glitchrunnermode)
-        //         {
-        //             game.press_left = false;
-        //             game.press_right = false;
-        //             game.press_action = true;
-        //             game.press_map = false;
-        //         }
-        //     }
-
-        //     if(!key.isActive)
-        //     {
-        //         Mix_Pause(-1);
-        //         Mix_PauseMusic();
-
-        //         if (!game.blackout)
-        //         {
-        //             FillRect(graphics.backBuffer, 0x00000000);
-        //             graphics.bprint(5, 110, "Game paused", 196 - help.glow, 255 - help.glow, 196 - help.glow, true);
-        //             graphics.bprint(5, 120, "[click to resume]", 196 - help.glow, 255 - help.glow, 196 - help.glow, true);
-        //             graphics.bprint(5, 220, "Press M to mute in game", 164 - help.glow, 196 - help.glow, 164 - help.glow, true);
-        //             graphics.bprint(5, 230, "Press N to mute music only", 164 - help.glow, 196 - help.glow, 164 - help.glow, true);
-        //         }
-        //         graphics.render();
-        //         gameScreen.FlipScreen();
-        //         //We are minimised, so lets put a bit of a delay to save CPU
-        //         SDL_Delay(100);
-        //     }
-        //     else
-        //     {
-        //         Mix_Resume(-1);
-        //         Mix_ResumeMusic();
-        //         game.gametimer++;
-        //         graphics.cutscenebarstimer();
-
-        //         switch(game.gamestate)
-        //         {
-        //         case PRELOADER:
-        //             preloaderlogic();
-        //             break;
-        // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
-        //         case EDITORMODE:
-        //             //Input
-        //             editorinput();
-        //             ////Logic
-        //             editorlogic();
-        //             break;
-        // #endif
-        //         case TITLEMODE:
-        //             //Input
-        //             titleinput();
-        //             ////Logic
-        //             titlelogic();
-        //             break;
-        //         case GAMEMODE:
-        //             // WARNING: If updating this code, don't forget to update Map.cpp mapclass::twoframedelayfix()
-
-        //             // Ugh, I hate this kludge variable but it's the only way to do it
-        //             if (script.dontrunnextframe)
-        //             {
-        //                 script.dontrunnextframe = false;
-        //             }
-        //             else if (script.running)
-        //             {
-        //                 script.run();
-        //             }
-
-        //             //Update old lerp positions of entities - has to be done BEFORE gameinput!
-        //             for (size_t i = 0; i < obj.entities.size(); i++)
-        //             {
-        //                 obj.entities[i].lerpoldxp = obj.entities[i].xp;
-        //                 obj.entities[i].lerpoldyp = obj.entities[i].yp;
-        //             }
-
-        //             gameinput();
-        //             gamelogic();
-
-
-        //             break;
-        //         case MAPMODE:
-        //             mapinput();
-        //             maplogic();
-        //             break;
-        //         case TELEPORTERMODE:
-        //             if(game.useteleporter)
-        //             {
-        //                 teleporterinput();
-        //             }
-        //             else
-        //             {
-        //                 if (script.running)
-        //                 {
-        //                     script.run();
-        //                 }
-        //                 gameinput();
-        //             }
-        //             maplogic();
-        //             break;
-        //         case GAMECOMPLETE:
-        //             //Input
-        //             gamecompleteinput();
-        //             //Logic
-        //             gamecompletelogic();
-        //             break;
-        //         case GAMECOMPLETE2:
-        //             //Input
-        //             gamecompleteinput2();
-        //             //Logic
-        //             gamecompletelogic2();
-        //             break;
-        //         case CLICKTOSTART:
-        //             break;
-        //         default:
-
-        //             break;
-
-        //         }
-
-        //     }
-
-        //     //Screen effects timers
-        //     if (key.isActive && game.flashlight > 0)
-        //     {
-        //         game.flashlight--;
-        //     }
-        //     if (key.isActive && game.screenshake > 0)
-        //     {
-        //         game.screenshake--;
-        //         graphics.updatescreenshake();
-        //     }
-
-        //     if (graphics.screenbuffer->badSignalEffect)
-        //     {
-        //         UpdateFilter();
-        //     }
-
-        //     //We did editorinput, now it's safe to turn this off
-        //     key.linealreadyemptykludge = false;
-
-        //     if (game.savemystats)
-        //     {
-        //         game.savemystats = false;
-        //         game.savestats();
-        //     }
-
-        //     //Mute button
-        //     if (key.isDown(KEYBOARD_m) && game.mutebutton<=0 && !key.textentry())
-        //     {
-        //         game.mutebutton = 8;
-        //         if (game.muted)
-        //         {
-        //             game.muted = false;
-        //         }
-        //         else
-        //         {
-        //             game.muted = true;
-        //         }
-        //     }
-        //     if(game.mutebutton>0)
-        //     {
-        //         game.mutebutton--;
-        //     }
-
-        //     if (key.isDown(KEYBOARD_n) && game.musicmutebutton <= 0 && !key.textentry())
-        //     {
-        //         game.musicmutebutton = 8;
-        //         game.musicmuted = !game.musicmuted;
-        //     }
-        //     if (game.musicmutebutton > 0)
-        //     {
-        //         game.musicmutebutton--;
-        //     }
-
-        //     if (game.muted)
-        //     {
-        //         Mix_VolumeMusic(0) ;
-        //         Mix_Volume(-1,0);
-        //     }
-        //     else
-        //     {
-        //         Mix_Volume(-1,MIX_MAX_VOLUME);
-
-        //         if (game.musicmuted)
-        //         {
-        //             Mix_VolumeMusic(0);
-        //         }
-        //         else
-        //         {
-        //             Mix_VolumeMusic(music.musicVolume);
-        //         }
-        //     }
-
-        //     if (key.resetWindow)
-        //     {
-        //         key.resetWindow = false;
-        //         gameScreen.ResizeScreen(-1, -1);
-        //     }
-
-        //     music.processmusic();
-        //     graphics.processfade();
-        //     game.gameclock();
-    }
-
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
     pub fn update_screen(&mut self) {
         let rect_src = self.render.get_render_rect();
-        let surf_src = &self.render.graphics.backBuffer;
+        let surf_src = &self.render.graphics.buffers.backBuffer;
 
+        // if (buffer == NULL) && (m_screen == NULL) {
+        //     return;
+        // }
+
+        if self.badSignalEffect {
+            // buffer = ApplyFilter(buffer);
+        }
+
+        // ClearSurface(m_screen);
         // FillRect(m_screen, 0x000);
         let rect_dst = sdl2::rect::Rect::new(0, 0, self.m_screen.width(), self.m_screen.height());
         match self.m_screen.fill_rect(rect_dst, sdl2::pixels::Color::BLACK) {
             Ok(_x) => (),
-            Err(s) => panic!(s),
+            Err(s) => panic!("{}", s),
         };
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
-
         match (*surf_src).blit(rect_src, &mut self.m_screen, rect_dst) {
             Ok(_x) => (),
-            Err(s) => panic!(s),
+            Err(s) => panic!("{}", s),
         };
 
-        crate::rustutil::dump_surface("backbuffer", (*self.m_screen).as_ref());
-
         let texture_creator = self.canvas.texture_creator();
-        let texture = self.m_screen.as_texture(&texture_creator).unwrap();
-        self.canvas.copy(&texture, None, None);
+        match self.m_screen.as_texture(&texture_creator) {
+            Ok(texture) => {
+                self.canvas.copy(&texture, None, None);
+            },
+            Err(s) => panic!("{}", s),
+        }
+        self.present_canvas();
 
-        // self.canvas.set_draw_color(Color::RGB(128, 128, 128));
-        // self.canvas.clear();
+        if self.badSignalEffect {
+            // SDL_FreeSurface(buffer);
+        }
+
+        // dump_surface(surf_src, "backbuffer", "");
     }
 }

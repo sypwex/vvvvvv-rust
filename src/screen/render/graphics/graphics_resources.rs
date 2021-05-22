@@ -55,9 +55,14 @@ impl Image {
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).unwrap();
 
-        let surface = match sdl2::surface::Surface::from_data(data.as_mut_slice(), info.width, info.height, info.width*4, sdl2::pixels::PixelFormatEnum::RGBX8888) {
+        let pf = match no_alpha {
+            true => sdl2::pixels::PixelFormatEnum::RGBA8888,
+            // false => sdl2::pixels::PixelFormatEnum::RGBX8888,
+            false => sdl2::pixels::PixelFormatEnum::ABGR8888,
+        };
+        let surface: sdl2::surface::Surface = match sdl2::surface::Surface::from_data(data.as_mut_slice(), info.width, info.height, info.width*4, pf) {
             Ok(x) => x,
-            Err(e) => panic!(),
+            Err(e) => panic!("{}", e),
         };
 
         let mut surfaces = vec![];
@@ -65,7 +70,7 @@ impl Image {
         while i*h < info.width {
             let mut j = 0;
             while j*w < info.height {
-                let mut src_destt = sdl2::surface::Surface::new(w, h, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
+                let mut src_destt = sdl2::surface::Surface::new(w, h, pf).unwrap();
                 let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
                 surface.blit(src_rect, &mut src_destt, None).unwrap();
 

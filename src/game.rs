@@ -1,3 +1,6 @@
+use sdl2::controller::Button;
+use crate::screen::render::graphics;
+
 const numcrew: usize = 6;
 const numunlock: usize = 25;
 const numtrials: usize = 6;
@@ -40,20 +43,20 @@ pub struct Game {
 
     pub gamestate: GameState,
     hascontrol: bool,
-    jumpheld: bool,
+    pub jumpheld: bool,
     jumppressed: i32,
     gravitycontrol: i32,
 
-    muted: bool,
-    mutebutton: i32,
-    musicmuted: bool,
-    musicmutebutton: i32,
+    pub muted: bool,
+    pub mutebutton: i32,
+    pub musicmuted: bool,
+    pub musicmutebutton: i32,
 
     tapleft: i32,
     tapright: i32,
 
     // Menu interaction stuff
-    mapheld: bool,
+    pub mapheld: bool,
     menupage: i32,
     lastsaved: i32,
     deathcounts: i32,
@@ -82,26 +85,19 @@ pub struct Game {
     teleport_to_teleporter: i32,
 
     // Main Menu Variables
-    // menuoptions: [MenuOption],
-    currentmenuoption: i32,
-    currentmenuname: MenuName,
+    pub menuoptions: Vec<MenuOption>,
+    pub currentmenuoption: i32,
+    pub currentmenuname: MenuName,
     kludge_ingametemp: MenuName,
     current_credits_list_index: i32,
     menuxoff: i32,
     menuyoff: i32,
     menuspacing: i32,
     // static const menutextbytes: i32: 161, // this is just sizeof(MenuOption::text), but doing that is non-standard
-    // menustack: [MenuStackFrame],
+    menustack: Vec<MenuStackFrame>,
 
-    // void inline option(const char* text, active: bool = true) {
-    //     MenuOption menuoption,
-    //     SDL_strlcpy(menuoption.text, text, sizeof(menuoption.text)),
-    //     menuoption.active: active,
-    //     menuoptions.push_back(menuoption),
-    // }
-
-    menucountdown: i32,
-    menudest: MenuName,
+    pub menucountdown: i32,
+    pub menudest: MenuName,
 
     creditposx: i32,
     creditposy: i32,
@@ -193,8 +189,8 @@ pub struct Game {
 
     mx: i32,
     my: i32,
-    screenshake: i32,
-    flashlight: i32,
+    pub screenshake: i32,
+    pub flashlight: i32,
     advancetext: bool,
     pausescript: bool,
 
@@ -233,10 +229,10 @@ pub struct Game {
     act_fade: i32,
     prev_act_fade: i32,
 
-    press_left: bool,
-    press_right: bool,
-    press_action: bool,
-    press_map: bool,
+    pub press_left: bool,
+    pub press_right: bool,
+    pub press_action: bool,
+    pub press_map: bool,
 
     // Some stats:
     totalflips: i32,
@@ -270,11 +266,10 @@ pub struct Game {
     // std::vector<CustomLevelStat> customlevelstats,
     customlevelstatsloaded: bool,
 
-
-    // std::vector<SDL_GameControllerButton> controllerButton_map,
-    // std::vector<SDL_GameControllerButton> controllerButton_flip,
-    // std::vector<SDL_GameControllerButton> controllerButton_esc,
-    // std::vector<SDL_GameControllerButton> controllerButton_restart,
+    pub controllerButton_map: Vec<Button>,
+    pub controllerButton_flip: Vec<Button>,
+    pub controllerButton_esc: Vec<Button>,
+    pub controllerButton_restart: Vec<Button>,
 
     skipfakeload: bool,
     ghostsenabled: bool,
@@ -309,12 +304,14 @@ pub struct Game {
     pub over30mode: bool,
     glitchrunnermode: bool, // Have fun speedrunners! <3 Misa
 
-    ingame_titlemode: bool,
-
-    // void returntopausemenu(),
-    // void unlockAchievement(const char *name),
+    pub ingame_titlemode: bool,
+    // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
+    ingame_editormode: bool,
+    // #endif
+    pub slidermode: SLIDERMODE,
 
     disablepause: bool,
+    pub inputdelay: bool,
 }
 
 impl Game {
@@ -415,6 +412,7 @@ impl Game {
             creditposdelay: 0,
             oldcreditposx: 0,
 
+            menuoptions: vec![],
             currentmenuoption: 0,
             currentmenuname: MenuName::mainmenu,
             kludge_ingametemp: MenuName::mainmenu,
@@ -500,8 +498,10 @@ impl Game {
             unlock: [false; numunlock],
             unlocknotify: [false; numunlock],
 
+            menustack: vec![],
+
             menucountdown: 0,
-            menudest: MenuName::accessibility, // TODO:
+            menudest: MenuName::accessibility, // TODO @sx
             // createmenu(Menu::mainmenu),
 
             startscript: false,
@@ -628,6 +628,12 @@ impl Game {
             //updatestate(),
 
             customlevelstatsloaded: false,
+
+            controllerButton_map: vec![],
+            controllerButton_flip: vec![],
+            controllerButton_esc: vec![],
+            controllerButton_restart: vec![],
+
             skipfakeload: false,
 
             ghostsenabled: false,
@@ -655,12 +661,18 @@ impl Game {
             glitchrunnermode: false,
 
             ingame_titlemode: false,
+            // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
+            ingame_editormode: false,
+            // #endif
+            slidermode: SLIDERMODE::SLIDER_NONE,
 
             disablepause: false,
+            inputdelay: false,
         }
     }
 
-    pub fn init_game(&mut self) {
+    // void Game::init(void);
+    pub fn init(&mut self) {
         if self.skipfakeload     { self.gamestate = GameState::TITLEMODE };
         // if self.usingmmmmmm == 0 { music.usingmmmmmm=false; }
         // if self.usingmmmmmm == 1 { music.usingmmmmmm=true; }
@@ -702,14 +714,214 @@ impl Game {
         // if self.bestrank[4]>=3 { self.unlockAchievement("vvvvvvtimetrial_warp_fixed"); }
         // if self.bestrank[5]>=3 { self.unlockAchievement("vvvvvvtimetrial_final_fixed"); }
     }
+
+    // int Game::crewrescued(void);
+
+    // std::string Game::unrescued(void);
+
+    // void Game::resetgameclock(void);
+
+    // bool Game::customsavequick(std::string savfile);
+    // bool Game::savequick(void);
+
+    // void Game::gameclock(void);
+
+    // std::string Game::giventimestring(int hrs, int min, int sec);
+
+    // std::string Game::timestring(void);
+
+    // std::string Game::partimestring(void);
+
+    // std::string Game::resulttimestring(void);
+
+    // std::string Game::timetstring(int t);
+
+    // void Game::returnmenu(void);
+    pub fn return_menu(&mut self) {
+        match self.menustack.pop() {
+            Some(frame) => {
+                // Store this in case createmenu() removes the stack frame
+                let previousoption = frame.option;
+
+                self.createmenu(frame.name, true);
+                self.currentmenuoption = previousoption;
+
+                // @sx: looks like don't need it
+                // Remove the stackframe now, but createmenu() might have already gotten to it
+                // if we were returning to the main menu
+                // if !self.menustack.empty() {
+                //     self.menustack.pop_back();
+                // }
+            },
+            None => println!("Error: returning to previous menu frame on empty stack!"),
+        }
+    }
+    // void Game::returntomenu(enum Menu::MenuName t);
+
+    // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
+    pub fn createmenu(&mut self, t: MenuName, samemenu: bool) {
+        if t == MenuName::mainmenu {
+            //Either we've just booted up the game or returned from gamemode
+            //Whichever it is, we shouldn't have a stack,
+            //and most likely don't have a current stackframe
+            self.menustack = vec![];
+        } else if !samemenu {
+            let frame = MenuStackFrame{
+                option: self.currentmenuoption,
+                name: self.currentmenuname,
+            };
+            self.menustack.push(frame);
+            self.currentmenuoption = 0;
+        }
+
+        self.currentmenuname = t;
+        self.menuyoff = 0;
+        let maxspacing = 30; // maximum value for menuspacing, can only become lower.
+        self.menucountdown = 0;
+        self.menuoptions = vec![];
+
+        // TODO @sx @impl
+        println!("DEADBEEF: Game::createmenu is not implemented yet");
+    }
+
+    // void inline option(const char* text, bool active = true)
+    fn add_menu_option (&mut self, text: &str, active: Option<bool>) {
+        let active = active.unwrap_or(true);
+
+        let menuoption = MenuOption {
+            text: text.to_string(),
+            active,
+        };
+        self.menuoptions.push(menuoption);
+    }
+
+    // void Game::lifesequence(void);
+
+    // void Game::gethardestroom(void);
+
+    // void Game::levelcomplete_textbox(void);
+    // void Game::crewmate_textbox(const int r, const int g, const int b);
+    // void Game::remaining_textbox(void);
+    // void Game::actionprompt_textbox(void);
+    // void Game::savetele_textbox(void);
+
+    // void Game::updatestate(void);
+
+    // void Game::unlocknum(int t);
+
+    // void Game::loadstats(ScreenSettings* screen_settings);
+
+    // bool Game::savestats(const ScreenSettings* screen_settings);
+    // bool Game::savestats(void);
+
+    // void Game::deletestats(void);
+
+    // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
+
+    // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
+
+    // void Game::loadsettings(ScreenSettings* screen_settings);
+
+    // bool Game::savesettings(const ScreenSettings* screen_settings);
+    // bool Game::savesettings(void);
+
+    // bool Game::savestatsandsettings(void);
+
+    // void Game::savestatsandsettings_menu(void);
+
+    // void Game::deletesettings(void);
+
+    // void Game::deletequick(void);
+
+    // bool Game::savetele(void);
+
+    // void Game::loadtele(void);
+
+    // void Game::deletetele(void);
+
+    // void Game::customstart(void);
+
+    // void Game::start(void);
+
+    // void Game::startspecial(int t);
+
+    // void Game::starttrial(int t);
+
+    // void Game::swnpenalty(void);
+
+    // void Game::deathsequence(void);
+
+    // void Game::customloadquick(std::string savfile);
+    // void Game::loadquick(void);
+
+    // void Game::loadsummary(void);
+
+    // void Game::readmaingamesave(tinyxml2::XMLDocument& doc);
+    // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
+
+    // void Game::initteleportermode(void);
+
+    // void Game::mapmenuchange(const int newgamestate);
+
+    // int Game::get_timestep(void);
+
+    // void Game::copyndmresults(void);
+
+    // int Game::trinkets(void);
+    // int Game::crewmates(void);
+
+    // bool Game::save_exists(void);
+
+    // void Game::clearcustomlevelstats(void);
+    // void Game::loadcustomlevelstats(void);
+    // void Game::savecustomlevelstats(void);
+    // void Game::updatecustomlevelstats(std::string clevel, int cscore);
+
+    // void Game::quittomenu(void);
+    // void Game::returntolab(void);
+
+    // #if !defined(NO_CUSTOM_LEVELS)
+    // void Game::returntoeditor(void);
+    // #endif
+
+    // bool inline inspecial(void)
+
+    // void Game::returntoingame(void)
+    pub fn returntoingame(&mut self, graphics: &mut graphics::Graphics) {
+        // TODO @sx @impl
+        println!("DEADBEEF: Game::returntoingame is not implemented yet");
+
+        self.ingame_titlemode = false;
+        self.mapheld = true;
+        // // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
+        if self.ingame_editormode {
+            self.ingame_editormode = false;
+            // DEFER_CALLBACK(returntoedsettings);
+            // gamestate = EDITORMODE;
+            // ed.settingskey = true;
+        } else { // #endif
+            // DEFER_CALLBACK(returntoingametemp);
+            self.gamestate = GameState::MAPMODE;
+            graphics.flipmode = graphics.setflipmode;
+            // DEFER_CALLBACK(setfademode);
+            // if !map.custommode && !graphics.flipmode {
+            //     obj.flags[73] = true;
+            // }
+        }
+        // DEFER_CALLBACK(nextbgcolor);
+    }
+
+    // void Game::unlockAchievement(const char *name);
 }
-struct MenuOption {
+pub struct MenuOption {
     // text: char[161], // 40 chars (160 bytes) covers the entire screen, + 1 more for null terminator
+    text: String,
     // WARNING: should match Game::menutextbytes below
     active: bool,
 }
 
-enum MenuName {
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum MenuName {
     mainmenu,
     playerworlds,
     levellist,
@@ -759,6 +971,13 @@ enum MenuName {
     timetrialcomplete2,
     timetrialcomplete3,
     gamecompletecontinue,
+}
+
+#[derive(PartialEq, Eq)]
+pub enum SLIDERMODE {
+    SLIDER_NONE,
+    SLIDER_MUSICVOLUME,
+    SLIDER_SOUNDVOLUME
 }
 
 struct MenuStackFrame {
