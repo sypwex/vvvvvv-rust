@@ -1,21 +1,22 @@
-use std::fs::File;
+use std::{fs::File};
 extern crate png;
+extern crate sdl2_sys;
 
-pub struct Resources {
+pub struct GraphicsResources {
     pub sprites: Image,
-    pub font: Image,
+    pub bfont: Image,
 }
 
-impl Resources {
-    pub fn new () -> Resources {
-        Resources {
+impl GraphicsResources {
+    pub fn new () -> GraphicsResources {
+        GraphicsResources {
             // im_tiles = LoadImage("graphics/tiles.png");
             // im_tiles2 = LoadImage("graphics/tiles2.png");
             // im_tiles3 = LoadImage("graphics/tiles3.png");
             // im_entcolours = LoadImage("graphics/entcolours.png");
             // im_flipsprites = LoadImage("graphics/flipsprites.png");
-            sprites: Image::new("sprites.png", true, false),
-            font: Image::new("font.png", true, false),
+            sprites: Image::new("sprites", true, false, 32, 32),
+            bfont: Image::new("font", true, false, 8, 8),
             // im_teleporter = LoadImage("graphics/teleporter.png");
 
             // im_image0 = LoadImage("graphics/levelcomplete.png", false);
@@ -37,13 +38,15 @@ impl Resources {
 }
 
 pub struct Image {
-    pub surface: sdl2::surface::Surface<'static>,
+    pub name: String,
+    pub surfaces: Vec<sdl2::surface::Surface<'static>>,
+    // pub rect: sdl2::rect::Rect,
     pub rect: sdl2::rect::Rect,
 }
 
 impl Image {
-    pub fn new (file_name: &str, no_blend: bool, no_alpha: bool) -> Image {
-        let file_path = ["/home/sypwex/prj/vvvvvvonrust/assets/graphics/", file_name].concat();
+    pub fn new (file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> Image {
+        let file_path = ["assets/graphics/", file, ".png"].concat();
         let decoder = match File::open(file_path.to_owned()) {
             Ok(x) => png::Decoder::new(x),
             Err(e) => panic!("{}: {}", e, file_path),
@@ -56,14 +59,24 @@ impl Image {
             Ok(x) => x,
             Err(e) => panic!(),
         };
-        let mut src_dest = sdl2::surface::Surface::new(32, 32, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
-        let src_rect = sdl2::rect::Rect::new(32*11, 32, 32, 32);
-        surface.blit(src_rect, &mut src_dest, None);
 
-        match src_dest.save_bmp("sprites.bmp") {
-            Ok(_x) => (),
-            Err(s) => panic!(s),
-        };
+        let mut surfaces = vec![];
+        let mut i = 0;
+        while i*h < info.width {
+            let mut j = 0;
+            while j*w < info.height {
+                let mut src_destt = sdl2::surface::Surface::new(w, h, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
+                let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
+                surface.blit(src_rect, &mut src_destt, None).unwrap();
+
+                // crate::rustutil::dump_surface(&[file, "-", &surfaces.len().to_string()].concat(), &src_destt);
+                surfaces.push(src_destt);
+
+                j += 1;
+            }
+
+            i += 1;
+        }
 
         // //Temporary storage for the image that's loaded
         // SDL_Surface* loadedImage = NULL;
@@ -109,9 +122,12 @@ impl Image {
         // 	return NULL;
         // }
 
+        let rect = sdl2::rect::Rect::new(0, 0, w, h);
+
         Image {
-            surface: src_dest,
-            rect: sdl2::rect::Rect::new(0, 0, 0, 0),
+            name: String::from(file),
+            surfaces,
+            rect,
         }
     }
 }

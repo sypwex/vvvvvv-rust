@@ -4,6 +4,7 @@ use sdl2::keyboard::Keycode;
 use std::time::Duration;
 
 mod screen;
+mod rustutil;
 
 fn main() {
     init_arguments();
@@ -26,7 +27,7 @@ fn main() {
     // NETWORK_init();
     print_logo();
 
-    // Load Ini, reloadresources loads music too...#[derive(Debug, PartialEq)]
+    // Load Ini, reloadresources loads music too...
 
     // graphics.init();
     // game.init();

@@ -71,7 +71,7 @@ pub struct Game {
     newscript: String,
 
     mainmenu: i32,
-    menustart: bool,
+    pub menustart: bool,
 
     // Teleporting
     teleport_to_new_area: bool,

@@ -1,5 +1,4 @@
 mod graphics;
-mod graphics_util;
 
 pub struct Render {
     pub graphics: Box<graphics::Graphics>,
@@ -22,8 +21,7 @@ impl Render {
         self.graphics.fill_back_buffer_with_color(sdl2::pixels::Color::BLACK);
         // FillRect(graphics.backBuffer, 0,0,graphics.backBuffer->w, graphics.backBuffer->h, 0x00000000 );
 
-        // if (!game.menustart)
-        // {
+        // if !self.game.menustart {
         //     tr = graphics.col_tr;
         //     tg = graphics.col_tg;
         //     tb = graphics.col_tb;
@@ -39,8 +37,8 @@ impl Render {
         //     graphics.Print(-1,temp+35,"     MAKE AND PLAY EDITION",tr, tg, tb, true);
     // #endif
 
-        //     graphics.Print(5, 175, "[ Press ACTION to Start ]", tr, tg, tb, true);
-        //     graphics.Print(5, 195, "ACTION = Space, Z, or V", int(tr*0.5f), int(tg*0.5f), int(tb*0.5f), true);
+            self.graphics.print(5, 175, "[ Press ACTION to Start ]".to_string(), self.tr, self.tg, self.tb, true);
+            self.graphics.print(5, 195, "ACTION = Space, Z, or V".to_string(), self.tr/2, self.tg/2, self.tb/2, true);
         // }
         // else
         // {
@@ -78,13 +76,14 @@ impl Render {
 
         // switch (game.currentmenuname)
         // case Menu::mainmenu:
-        self.graphics.draw_sprite((160 - 96) + 0 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.draw_sprite((160 - 96) + 1 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.draw_sprite((160 - 96) + 2 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.draw_sprite((160 - 96) + 3 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.draw_sprite((160 - 96) + 4 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.draw_sprite((160 - 96) + 5 * 32, temp, 23, self.tr, self.tg, self.tb);
-        self.graphics.print( 310 - (4*8), 230, "v2.3".to_string(), self.tr/2, self.tg/2, self.tb/2, false);
+        let vsprite = 27; // 23
+        self.graphics.draw_sprite((160 - 96) + 0 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.draw_sprite((160 - 96) + 1 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.draw_sprite((160 - 96) + 2 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.draw_sprite((160 - 96) + 3 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.draw_sprite((160 - 96) + 4 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.draw_sprite((160 - 96) + 5 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+        self.graphics.print( 310 - (6*8), 230, "v2.3-rust".to_string(), self.tr/2, self.tg/2, self.tb/2, false);
 
         // if(music.mmmmmm){
         //     graphics.Print( 10, 230, "[MMMMMM Mod Installed]", tr/2, tg/2, tb/2);

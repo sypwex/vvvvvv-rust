@@ -394,15 +394,12 @@ impl Screen {
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
 
-        match surf_src.blit(rect_src, &mut self.m_screen, rect_dst) {
+        match (*surf_src).blit(rect_src, &mut self.m_screen, rect_dst) {
             Ok(_x) => (),
             Err(s) => panic!(s),
         };
 
-        match self.m_screen.save_bmp("backbuffer.bmp") {
-            Ok(_x) => (),
-            Err(s) => panic!(s),
-        };
+        crate::rustutil::dump_surface("backbuffer", (*self.m_screen).as_ref());
 
         let texture_creator = self.canvas.texture_creator();
         let texture = self.m_screen.as_texture(&texture_creator).unwrap();
