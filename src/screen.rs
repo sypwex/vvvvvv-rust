@@ -1,7 +1,7 @@
 extern crate sdl2;
 use sdl2::pixels::Color;
 
-use crate::rustutil::dump_surface;
+use crate::{game, rustutil::dump_surface, scenes::RenderResult};
 pub mod render;
 pub mod renderfixed;
 
@@ -123,7 +123,7 @@ impl Screen {
     }
 
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
-    pub fn update_screen(&mut self) {
+    fn update_screen(&mut self) {
         let rect_src = self.render.get_render_rect();
         let surf_src = &self.render.graphics.buffers.backBuffer;
 
@@ -164,4 +164,81 @@ impl Screen {
 
         // dump_surface(surf_src, "backbuffer", "");
     }
+
+    pub fn do_screen_render(&mut self, render_result: RenderResult, game: &mut game::Game) {
+        match render_result {
+            RenderResult::MenuOffRender => {
+                0;
+            }
+            RenderResult::Screenshake => {
+                self.screenshake();
+            }
+            RenderResult::Plain => {
+                self.render();
+            }
+            RenderResult::WithScreenEffects => {
+                self.render_with_screen_effects(game);
+            }
+            _ => {}
+        }
+    }
+
+    // void Graphics::flashlight(void)
+    fn flashlight(&mut self) {
+        // FillRect(backBuffer, 0xBBBBBBBB);
+        let color = sdl2::pixels::Color::from_u32(&self.render.graphics.buffers.backBuffer.pixel_format(), 0xBBBBBBBB);
+        self.render.graphics.buffers.fill_back_buffer_with_color(color);
+    }
+
+    // void Graphics::screenshake(void)
+    fn screenshake(&mut self) {
+        // TODO @sx @impl
+        println!("DEADBEEF: Graphics::screenshake method not implemented yet");
+
+        // if self.flipmode {
+        //     // SDL_Rect shakeRect;
+        //     // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+        //     // let flipBackBuffer = self.FlipSurfaceVerticle(backBuffer);
+        //     // screenbuffer.UpdateScreen(flipBackBuffer, &shakeRect);
+        //     // drop(flipBackBuffer);
+        // } else {
+        //     // SDL_Rect shakeRect;
+        //     // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer.w, backBuffer.h);
+        //     // screenbuffer.UpdateScreen(backBuffer, &shakeRect);
+        // }
+
+        // graphics_util::ClearSurface(self.buffers.backBuffer.as_mut());
+
+        self.update_screen(); // TODO @sx: use upper code
+    }
+
+    // void Graphics::updatescreenshake(void)
+
+    // void Graphics::render(void)
+    fn render(&mut self) {
+        // let rect = sdl2::rect::Rect::new(0, 0, self.buffers.backBuffer.width(), self.buffers.backBuffer.height());
+        // if self.flipmode {
+        //     // let tempsurface = graphics_util::FlipSurfaceVerticle(buffers.backBuffer);
+        //     // screenbuffer.update_screen(tempsurface, &rect);
+        //     // drop(tempsurface);
+        // } else {
+        //     screenbuffer.update_screen(buffers.backBuffer, &rect);
+        // }
+
+        self.update_screen(); // TODO @sx: use upper code
+    }
+
+    // void Graphics::renderwithscreeneffects(void)
+    fn render_with_screen_effects(&mut self, game: &mut game::Game) {
+        if game.flashlight > 0 && !game.noflashingmode {
+            self.flashlight();
+        }
+
+        if game.screenshake > 0 && !game.noflashingmode {
+            self.screenshake();
+        } else {
+            self.render();
+        }
+    }
+
 }

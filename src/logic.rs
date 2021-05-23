@@ -3,7 +3,7 @@ use crate::screen::render::graphics;
 use crate::screen::renderfixed;
 
 pub fn title_logic(game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics) {
-    //Misc
+    // Misc
     // map.updatetowerglow(graphics.titlebg);
     renderfixed.update_glow();
 

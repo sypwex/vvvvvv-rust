@@ -130,7 +130,7 @@ pub struct Game {
 
     // Accessibility Options
     colourblindmode: bool,
-    noflashingmode: bool,
+    pub noflashingmode: bool,
     slowdown: i32,
     pub gameframerate: u32,
 
@@ -673,18 +673,19 @@ impl Game {
 
     // void Game::init(void);
     pub fn init(&mut self) {
-        if self.skipfakeload     { self.gamestate = GameState::TITLEMODE };
-        // if self.usingmmmmmm == 0 { music.usingmmmmmm=false; }
-        // if self.usingmmmmmm == 1 { music.usingmmmmmm=true; }
-        if self.slowdown == 0    { self.slowdown = 30; }
-
+        // static inline int get_framerate(const int slowdown)
         self.gameframerate = match self.slowdown {
             30 => 34,
             24 => 41,
             18 => 55,
             12 => 83,
             _  => 34,
-        }
+        };
+
+        if self.skipfakeload     { self.gamestate = GameState::TITLEMODE };
+        // if self.usingmmmmmm == 0 { music.usingmmmmmm=false; }
+        // if self.usingmmmmmm == 1 { music.usingmmmmmm=true; }
+        if self.slowdown == 0    { self.slowdown = 30; }
 
         // // Check to see if you've already unlocked some achievements here from before the update
         // if self.swnbestrank > 0 {
@@ -864,6 +865,13 @@ impl Game {
     // void Game::mapmenuchange(const int newgamestate);
 
     // int Game::get_timestep(void);
+    pub fn get_timestep(&mut self) -> u32 {
+        match self.gamestate {
+            GameState::EDITORMODE => 24,
+            GameState::GAMEMODE => self.gameframerate,
+            _ => 34,
+        }
+    }
 
     // void Game::copyndmresults(void);
 

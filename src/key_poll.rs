@@ -309,6 +309,7 @@ impl KeyPoll {
                 Event::Quit { .. } => {
                     // TODO @sx @impl
                     println!("DEADBEEF: Event::Quit handler not implemented yet");
+                    panic!("Event::Quit handler");
                     // VVV_exit(0);
                 },
 

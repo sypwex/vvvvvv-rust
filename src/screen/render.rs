@@ -1,4 +1,4 @@
-use crate::game;
+use crate::{game, scenes::RenderResult};
 pub mod graphics;
 
 pub struct Render {
@@ -20,7 +20,7 @@ impl Render {
         }
     }
 
-    pub fn title_render(&mut self, game: &mut game::Game) {
+    pub fn title_render(&mut self, game: &mut game::Game) -> RenderResult {
         // FillRect(graphics.backBuffer, 0,0,graphics.backBuffer->w, graphics.backBuffer->h, 0x00000000 );
         self.graphics.buffers.fill_back_buffer_with_color(sdl2::pixels::Color::BLACK);
 
@@ -61,17 +61,10 @@ impl Render {
             // graphics.drawmenu(tr, tg, tb, game.currentmenuname == Menu::levellist);
         }
 
-        // graphics.drawfade();
+        // self.graphics.drawfade();
 
-        self.graphics.render_with_screen_effects(game);
+        RenderResult::WithScreenEffects
     }
-
-    pub fn preloaderrender (&mut self) {}
-    pub fn gamerender (&mut self) {}
-    pub fn maprender (&mut self) {}
-    pub fn teleporterrender (&mut self) {}
-    pub fn gamecompleterender (&mut self) {}
-    pub fn gamecompleterender2 (&mut self) {}
 
     pub fn menu_render (&mut self) {
         let temp = 50;

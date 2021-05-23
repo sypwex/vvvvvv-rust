@@ -2,6 +2,39 @@ extern crate sdl2;
 extern crate sdl2_sys;
 use crate::sdl2u;
 
+// TODO sx: make a class?
+// static int oldscrollamount = 0;
+// static int scrollamount = 0;
+// static bool isscrolling = 0;
+
+pub struct ColourTransform {
+    pub colour: u32,
+    // Uint32 colour;
+}
+
+impl ColourTransform {
+    pub fn new () -> ColourTransform {
+        ColourTransform {
+            colour: 0,
+        }
+    }
+}
+
+// void setRect( SDL_Rect& _r, int x, int y, int w, int h )
+pub fn setRect(x: i32, y: i32, w: u32, h: u32) -> sdl2::rect::Rect {
+    sdl2::rect::Rect::new(x, y, w, h)
+}
+
+// static SDL_Surface* RecreateSurfaceWithDimensions(SDL_Surface* surface, const int width, const int height)
+pub fn RecreateSurfaceWithDimensions(surface: &sdl2::surface::SurfaceRef, width: u32, height: u32) -> sdl2::surface::Surface {
+    let retsurface = sdl2u::sdl_create_rgb_surface(surface, width, height);
+    let mut retval = sdl2u::surface_from_ll(retsurface);
+    retval.set_blend_mode(surface.blend_mode());
+
+    retval
+}
+
+// static SDL_Surface* RecreateSurface(SDL_Surface* surface)
 pub fn RecreateSurface(surface: &sdl2::surface::SurfaceRef) -> sdl2::surface::Surface {
     RecreateSurfaceWithDimensions(
         surface,
@@ -10,18 +43,7 @@ pub fn RecreateSurface(surface: &sdl2::surface::SurfaceRef) -> sdl2::surface::Su
     )
 }
 
-pub fn RecreateSurfaceWithDimensions(
-    surface: &sdl2::surface::SurfaceRef,
-    width: u32,
-    height: u32
-) -> sdl2::surface::Surface {
-    let retsurface = sdl2u::sdl_create_rgb_surface(surface, width, height);
-    let mut retval = sdl2u::surface_from_ll(retsurface);
-    retval.set_blend_mode(surface.blend_mode());
-
-    retval
-}
-
+// SDL_Surface* GetSubSurface( SDL_Surface* metaSurface, int x, int y, int width, int height )
 pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, width: u32,height: u32) -> sdl2::surface::Surface {
     // Create an SDL_Rect with the area of the _surface
     let area = sdl2::rect::Rect::new(
@@ -39,6 +61,7 @@ pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, wi
     }
 }
 
+// static void DrawPixel( SDL_Surface *_surface, int x, int y, Uint32 pixel )
 fn DrawPixel(surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, pixel: u32) {
     unsafe {
         let raw_surface = *surface.raw();
@@ -70,6 +93,7 @@ fn DrawPixel(surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, pixel: u32
     }
 }
 
+// Uint32 ReadPixel( SDL_Surface *_surface, int x, int y )
 fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
     unsafe {
         let raw_surface = *surface.raw();
@@ -90,10 +114,18 @@ fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
     }
 }
 
-// pub fn ScaleSurface () -> sdl2::surface::Surface {}
-// pub fn FlipSurfaceVerticle () {}
-// pub fn BlitSurfaceStandard () {}
+// SDL_Surface * ScaleSurface( SDL_Surface *_surface, int Width, int Height, SDL_Surface * Dest )
+// pub fn ScaleSurface () -> sdl2::surface::Surface<'static> {
+//     sdl2::surface::Surface::new(0, 0, sdl2::pixels::PixelFormatEnum::ABGR1555)
+// }
 
+// SDL_Surface *  FlipSurfaceVerticle(SDL_Surface* _src)
+pub fn FlipSurfaceVerticle() {}
+
+// void BlitSurfaceStandard( SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect )
+pub fn BlitSurfaceStandard() {}
+
+// void BlitSurfaceColoured(SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect, colourTransform& ct)
 pub fn BlitSurfaceColoured<R1>(
     _src: &sdl2::surface::SurfaceRef,
     _srcRect: R1,
@@ -149,69 +181,39 @@ pub fn BlitSurfaceColoured<R1>(
     // sdl2_sys::SDL_FreeSurface(**tempsurface);
     drop(tempsurface.raw());
 }
-pub struct ColourTransform {
-    pub colour: u32,
-    // Uint32 colour;
+
+// void BlitSurfaceTinted(SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect, colourTransform& ct)
+
+// void UpdateFilter(void)
+pub fn UpdateFilter() {}
+
+// SDL_Surface* ApplyFilter( SDL_Surface* _src )
+// void FillRect( SDL_Surface* _surface, const int _x, const int _y, const int _w, const int _h, const int r, int g, int b )
+// void FillRect( SDL_Surface* _surface, const int r, int g, int b )
+
+// void FillRect( SDL_Surface* _surface, const int color )
+pub fn FillRectWithColor(surface: &mut sdl2::surface::SurfaceRef, color: sdl2::pixels::Color) {
+    let rect = sdl2::rect::Rect::new(0, 0, surface.width(), surface.height());
+    surface.fill_rect(rect, color);
 }
 
-impl ColourTransform {
-    pub fn new () -> ColourTransform {
-        ColourTransform {
-            colour: 0,
-        }
-    }
-}
-
-// void FillRect( SDL_Surface* _surface, const int color ) {
-//     SDL_Rect rect = {0,0,Uint16(_surface->w) ,Uint16(_surface->h) };
-//     SDL_FillRect(_surface, &rect, color);
-// }
-pub fn FillRectWithColor (_surface: &mut sdl2::surface::SurfaceRef, color: sdl2::pixels::Color ) {
-    let rect = sdl2::rect::Rect::new(0, 0, _surface.width(), _surface.height());
-    _surface.fill_rect(rect, color);
-}
-
-// void FillRect( SDL_Surface* _surface, const int x, const int y, const int w, const int h, int rgba ) {
-//     SDL_Rect rect = {Sint16(x)  ,Sint16(y) ,Sint16(w) ,Sint16(h) };
-//     SDL_FillRect(_surface, &rect, rgba);
-// }
-pub fn FillRect (_surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, w: u32, h: u32, rgba: sdl2::pixels::Color ) {
-    let rect = sdl2::rect::Rect::new(x, y, w, h);
+// void FillRect( SDL_Surface* _surface, const int x, const int y, const int w, const int h, int rgba )
+pub fn FillRect(_surface: &mut sdl2::surface::SurfaceRef, x: u32, y: u32, w: u32, h: u32, rgba: sdl2::pixels::Color) {
+    let rect = sdl2::rect::Rect::new(x as i32, y as i32, w, h);
     _surface.fill_rect(rect, rgba);
 }
 
-// void setRect( SDL_Rect& _r, int x, int y, int w, int h ) {
-//     _r.x = x;
-//     _r.y = y;
-//     _r.w = w;
-//     _r.h = h;
-// }
-// pub fn setRect (x: i32, y: i32, w: u32, h: u32) -> sdl2::rect::Rect {
-//     let rect = sdl2::rect::Rect::new(x, y, w, h);
-// }
+// void FillRect( SDL_Surface* _surface, SDL_Rect& _rect, const int r, int g, int b )
+// void FillRect( SDL_Surface* _surface, SDL_Rect rect, int rgba )
 
-// void BlitSurfaceStandard( SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect )
-// {
-//     //SDL_Rect tempRect = *_destRect;
-//     //tempRect.w  ;
-//     //tempRect.h  ;
-//     //tempRect.x *=globalScale;
-//     //tempRect.y *=globalScale;
+// void ClearSurface(SDL_Surface* surface)
+pub fn ClearSurface(surface: &mut sdl2::surface::SurfaceRef) {
+    // SDL_FillRect(surface, NULL, 0x00000000);
+    let rect_dst = sdl2::rect::Rect::new(0, 0, surface.width(), surface.height());
+    match surface.fill_rect(rect_dst, sdl2::pixels::Color::BLACK) {
+        Ok(_x) => (),
+        Err(s) => panic!("{}", s),
+    };
+}
 
-
-//     //if(globalScale != 1)
-//     //{
-//     //	SDL_Surface* tempScaled = ScaleSurface(_src, tempRect.w, tempRect.h);
-
-//     //	SDL_BlitSurface( tempScaled, _srcRect, _dest, &tempRect );
-
-//     //	SDL_FreeSurface(tempScaled);
-//     //}
-//     //else
-//     //{
-//     SDL_BlitSurface( _src, _srcRect, _dest, _destRect );
-//     //}
-// }
-// pub fn blit_surface_standard () {
-//     buffer.blit(sdl2::rect::Rect::new(), self.m_screen, rect);
-// }
+// void ScrollSurface( SDL_Surface* _src, int _pX, int _pY )

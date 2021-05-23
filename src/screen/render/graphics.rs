@@ -8,7 +8,7 @@ use crate::{game, screen::render::graphics::graphics_util::ColourTransform};
 extern crate sdl2;
 extern crate sdl2_sys;
 mod maths;
-mod graphics_util;
+pub mod graphics_util;
 mod graphics_resources;
 mod towerbg;
 
@@ -99,7 +99,7 @@ pub struct Graphics {
 
 impl Graphics {
     // void Graphics::init(void)
-    pub fn new (pf: sdl2::pixels::PixelFormatEnum) -> Graphics {
+    pub fn new(pf: sdl2::pixels::PixelFormatEnum) -> Graphics {
         Graphics {
             screen_pixelformat: pf,
             grphx: graphics_resources::GraphicsResources::new(),
@@ -151,7 +151,7 @@ impl Graphics {
             crewframe: 0,
             crewframedelay: 4,
 
-            fademode: 0,
+            fademode: 1,
             fadeamount: 0, // TODO @sx set via mutator
             oldfadeamount: 0, // TODO @sx set via mutator
             fadebars: vec![],
@@ -355,7 +355,39 @@ impl Graphics {
     // void Graphics::createtextboxreal(std::string t, int xp, int yp, int r, int g, int b, bool flipme)
     // void Graphics::createtextbox(std::string t, int xp, int yp, int r, int g, int b)
     // void Graphics::createtextboxflipme(std::string t, int xp, int yp, int r, int g, int b)
+
     // void Graphics::drawfade(void)
+    pub fn drawfade(&mut self) {
+        let usethisamount = self.lerp(self.oldfadeamount as f32, self.fadeamount as f32) as u32;
+
+        match self.fademode {
+            // 1 -
+            // 4 - fadein
+            i if i == 1 || i == 4 => {
+                graphics_util::ClearSurface(&mut self.buffers.backBuffer);
+            },
+            3 => {
+                for (i, fadebar) in self.fadebars.iter().enumerate() {
+                    let i = i as u32;
+                    let fadebar = *fadebar as u32;
+                    graphics_util::FillRect(self.buffers.backBuffer.as_mut(), fadebar, i * 16, usethisamount, 16, sdl2::pixels::Color::BLACK);
+                }
+            },
+            5 => { // 5 - prepare fade in
+                for (i, fadebar) in self.fadebars.iter().enumerate() {
+                    let i = i as u32;
+                    let fadebar = *fadebar as u32;
+                    graphics_util::FillRect(self.buffers.backBuffer.as_mut(), fadebar - usethisamount, i * 16, 500, 16, sdl2::pixels::Color::BLACK);
+                }
+            },
+            // 2 => (), // 2 - fade out
+            0 => (), // normal - no fade
+            _ => {
+                panic!("unknown drawfade value {}", self.fademode);
+            }
+        }
+    }
+
     // void Graphics::processfade(void)
     // void Graphics::setfade(const int amount)
     // void Graphics::drawmenu( int cr, int cg, int cb, bool levelmenu /*= false*/ )
@@ -384,37 +416,6 @@ impl Graphics {
     // void Graphics::textboxmoveto(int xo)
     // void Graphics::textboxcentery(void)
     // int Graphics::crewcolour(const int t)
-    // void Graphics::flashlight(void)
-    // void Graphics::screenshake(void)
-    // void Graphics::updatescreenshake(void)
-
-    // void Graphics::render(void)
-    pub fn render (&self) {
-        let rect = sdl2::rect::Rect::new(0, 0, self.buffers.backBuffer.width(), self.buffers.backBuffer.height());
-
-        if self.flipmode {
-            0;
-            // let tempsurface = graphics_util::FlipSurfaceVerticle(buffers.backBuffer);
-            // screenbuffer.update_screen(tempsurface, &rect);
-            // drop(tempsurface);
-        } else {
-            0;
-            // screenbuffer.update_screen(buffers.backBuffer, &rect);
-        }
-    }
-
-    // void Graphics::renderwithscreeneffects(void)
-    pub fn render_with_screen_effects (&self, game: &mut game::Game) {
-        // if game.flashlight > 0 && !game.noflashingmode {
-        //     self.flashlight();
-        // }
-
-        // if game.screenshake > 0 && !game.noflashingmode {
-        //     self.screenshake();
-        // } else {
-            self.render();
-        // }
-    }
 
     // void Graphics::renderfixedpre(void)
     pub fn renderfixedpre(&self, game: &mut game::Game) {
@@ -445,16 +446,47 @@ impl Graphics {
     }
 
     // Uint32 Graphics::getRGB(Uint8 r, Uint8 g, Uint8 b)
-    fn getRGB (&mut self, r: i32, g: i32, b: i32) -> u32 {
+    fn getRGB(&self, r: i32, g: i32, b: i32) -> u32 {
+        unsafe {
+	        // SDL_MapRGB(backBuffer->format, b, g, r);
+            sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), b as u8, g as u8, r as u8)
+        }
+    }
+
+    // Uint32 Graphics::getBGR(Uint8 r, Uint8 g, Uint8 b)
+    pub fn getBGR(&self, r: i32, g: i32, b: i32) -> u32 {
         unsafe {
 	        // SDL_MapRGB(backBuffer->format, b, g, r);
             sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8)
         }
     }
+    pub fn getBGR_AsPixelColor(&self, r: i32, g: i32, b: i32) -> sdl2::pixels::Color {
+        unsafe {
+	        // SDL_MapRGB(backBuffer->format, b, g, r);
+            let color = sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8);
+            let color = sdl2::pixels::Color::from_u32(&self.buffers.backBuffer.pixel_format(), color);
+            color
+        }
+    }
 
-    // Uint32 Graphics::getBGR(Uint8 r, Uint8 g, Uint8 b)
     // Uint32 Graphics::getRGB(Uint32 _col)
     // Uint32 Graphics::RGBflip(Uint8  r, Uint8  g, Uint8  b)
+    pub fn RGBflip(&mut self, r: i32, g: i32, b: i32) -> u32 {
+        unsafe {
+	        // SDL_MapRGB(backBuffer->format, r, g, b);
+            sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8)
+        }
+    }
+
+    pub fn RGBflip_AsPixelColor(&mut self, r: i32, g: i32, b: i32) -> sdl2::pixels::Color {
+        unsafe {
+	        // SDL_MapRGB(backBuffer->format, r, g, b);
+            let color = sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8);
+            let color = sdl2::pixels::Color::from_u32(&self.buffers.backBuffer.pixel_format(), color);
+            color
+        }
+    }
+
     // Uint32 Graphics::RGBf(int r, int g, int b)
 
     // void Graphics::setcolreal(Uint32 t)
@@ -469,12 +501,18 @@ impl Graphics {
     // bool Graphics::onscreen(int t)
 
     // void Graphics::reloadresources(void)
-    pub fn reload_resources (&mut self) {
+    pub fn reload_resources(&mut self) {
         self.make_bfont();
     }
 
     // Uint32 Graphics::crewcolourreal(int t)
 
+    /* inline methods */
+
+    // float inline lerp(const float v0, const float v1)
+    fn lerp(&self, v0: f32, v1: f32) -> f32 {
+        v0 + self.alpha * (v1 - v0)
+    }
 }
 
 fn PROCESS_TILESHEET(tilesheet: graphics_resources::Image, tile_square: u8/*, extra_code*/) {
@@ -566,7 +604,7 @@ pub struct GraphicBuffers {
 
 impl GraphicBuffers {
     // void Graphics::create_buffers(const SDL_PixelFormat* fmt)
-    pub fn create_buffers (pf: sdl2::pixels::PixelFormatEnum) -> GraphicBuffers {
+    pub fn create_buffers(pf: sdl2::pixels::PixelFormatEnum) -> GraphicBuffers {
         let mut backBuffer = CREATE_SURFACE(pf, 320, 240).unwrap();
         backBuffer.set_blend_mode(BlendMode::None).unwrap();
 
@@ -624,12 +662,22 @@ impl GraphicBuffers {
 
     // void Graphics::destroy_buffers(void)
 
-    pub fn fill_back_buffer_with_color (&mut self, color: sdl2::pixels::Color ) {
+    pub fn fill_back_buffer_with_color(&mut self, color: sdl2::pixels::Color) {
         let rect = sdl2::rect::Rect::new(0, 0, self.backBuffer.width(), self.backBuffer.height());
         self.backBuffer.fill_rect(rect, color);
     }
 
-    pub fn get_back_buffer_rect (&mut self) -> sdl2::rect::Rect {
+    pub fn fill_back_buffer_with_color_at_xy(&mut self, x: u32, y: u32, w: u32, h: u32, color: sdl2::pixels::Color) {
+        // TODO @sx make sanity checks for width and height
+        let rect = sdl2::rect::Rect::new(x as i32, y as i32, w, h);
+        self.backBuffer.fill_rect(rect, color);
+    }
+
+    pub fn clear_back_buffer(&mut self) {
+        graphics_util::ClearSurface(self.backBuffer.as_mut());
+    }
+
+    pub fn get_back_buffer_rect(&mut self) -> sdl2::rect::Rect {
         sdl2::rect::Rect::new(0, 0, self.backBuffer.width(), self.backBuffer.height())
     }
 }
