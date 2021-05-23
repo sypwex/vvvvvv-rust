@@ -70,8 +70,8 @@ pub struct Graphics {
 
     pub alpha: f32,
 
-    screenshake_x: i32,
-    screenshake_y: i32,
+    pub screenshake_x: i32,
+    pub screenshake_y: i32,
 
     col_crewred: graphics_util::ColourTransform,
     col_crewyellow: graphics_util::ColourTransform,
@@ -93,6 +93,11 @@ pub struct Graphics {
     tiles2_mounted: bool,
     minimap_mounted: bool,
     // #endif
+
+    /* @sx: moved here from graphic_util since required storage for variables */
+    oldscrollamount: i32,
+    scrollamount: i32,
+    isscrolling: bool,
 }
 
 impl Graphics {
@@ -149,7 +154,7 @@ impl Graphics {
             crewframe: 0,
             crewframedelay: 4,
 
-            fademode: 1,
+            fademode: 0,
             fadeamount: 0, // TODO @sx set via mutator
             oldfadeamount: 0, // TODO @sx set via mutator
             fadebars: vec![],
@@ -181,6 +186,11 @@ impl Graphics {
             tiles2_mounted: false,
             minimap_mounted: false,
             // #endif
+
+            /* @sx: moved here from graphic_util since required storage for variables */
+            oldscrollamount: 0,
+            scrollamount: 0,
+            isscrolling: false,
         }
     }
 
@@ -415,18 +425,25 @@ impl Graphics {
     // void Graphics::textboxcentery(void)
     // int Graphics::crewcolour(const int t)
 
+    // void Graphics::updatescreenshake(void)
+    fn updatescreenshake(&mut self) {
+        self.screenshake_x = (maths::fRandom() as i32 * 7) - 4;
+        self.screenshake_y = (maths::fRandom() as i32 * 7) - 4;
+    }
+
     // void Graphics::renderfixedpre(void)
-    pub fn renderfixedpre(&self, game: &mut game::Game) {
+    pub fn renderfixedpre(&mut self, game: &mut game::Game, badSignalEffect: bool) {
         // TODO @sx @impl
         // println!("DEADBEEF: Graphics::renderfixedpre method is not implemented yet");
 
-        // if game.screenshake > 0 {
-        //     self.updatescreenshake();
-        // }
+        if game.screenshake > 0 {
+            self.updatescreenshake();
+        }
 
-        // if screenbuffer != NULL && screenbuffer.badSignalEffect {
-        //     self.UpdateFilter();
-        // }
+        // if screenbuffer.badSignalEffect {
+        if badSignalEffect {
+            self.UpdateFilter();
+        }
     }
 
     // void Graphics::renderfixedpost(void)
@@ -505,12 +522,93 @@ impl Graphics {
 
     // Uint32 Graphics::crewcolourreal(int t)
 
-    /* inline methods */
+    /* graphics.cpp inline methods */
 
     // float inline lerp(const float v0, const float v1)
     fn lerp(&self, v0: f32, v1: f32) -> f32 {
         v0 + self.alpha * (v1 - v0)
     }
+
+    /* @sx: moved here from graphic_util since required storage for variables */
+
+    // void UpdateFilter(void)
+    pub fn UpdateFilter(&mut self) {
+        if maths::c_rand() % 4000 < 8 {
+            self.isscrolling = true;
+        }
+
+        self.oldscrollamount = self.scrollamount;
+        if self.isscrolling == true {
+            self.scrollamount += 20;
+            if self.scrollamount > 240 {
+                self.scrollamount = 0;
+                self.oldscrollamount = 0;
+                self.isscrolling = false;
+            }
+        }
+    }
+
+    // SDL_Surface* ApplyFilter( SDL_Surface* _src )
+    pub fn ApplyFilter(&mut self, src: &'static sdl2::surface::SurfaceRef) -> sdl2::surface::Surface<'static> {
+        let mut _ret = graphics_util::RecreateSurface(src);
+        let redOffset = maths::c_rand() % 4;
+
+        let Gmask;
+        let Bmask;
+        let Rmask;
+        let Amask;
+        unsafe {
+            let format = src.pixel_format();
+            let pf = *format.raw();
+            Gmask = pf.Gmask;
+            Bmask = pf.Bmask;
+            Rmask = pf.Rmask;
+            Amask = pf.Amask;
+        }
+
+        for x in 0..src.width() as i32 {
+            for y in 0..src.height() as i32 {
+                let sampley = (y + (self.lerp(self.oldscrollamount as f32, self.scrollamount as f32) as i32) ) % 240;
+                let pixel = graphics_util::ReadPixel(src, x, sampley);
+
+                let mut green = ( (pixel & Gmask) >> 8) as u8;
+                let mut blue = ( (pixel & Bmask) >> 0) as u8;
+
+                let pixelOffset = graphics_util::ReadPixel(src, maths::VVV_min(x+redOffset, 319), sampley);
+                let mut red = ( (pixelOffset & Rmask) >> 16) as u8;
+
+                if self.isscrolling && sampley > 220 && ((maths::c_rand() % 10) < 4) {
+                    red   = maths::VVV_min((red   as i32 + (maths::fRandom() * 0.6) as i32 * 254) as i32, 255) as u8;
+                    green = maths::VVV_min((green as i32 + (maths::fRandom() * 0.6) as i32 * 254) as i32, 255) as u8;
+                    blue  = maths::VVV_min((blue  as i32 + (maths::fRandom() * 0.6) as i32 * 254) as i32, 255) as u8;
+                } else {
+                    red   = maths::VVV_min((red   as i32 + (maths::fRandom() * 0.2) as i32 * 254) as i32, 255) as u8;
+                    green = maths::VVV_min((green as i32 + (maths::fRandom() * 0.2) as i32 * 254) as i32, 255) as u8;
+                    blue  = maths::VVV_min((blue  as i32 + (maths::fRandom() * 0.2) as i32 * 254) as i32, 255) as u8;
+                }
+
+                if y % 2 == 0 {
+                    red = (red as f32 / 1.2f32) as u8;
+                    green = (green as f32 / 1.2f32) as u8;
+                    blue = (blue as f32 / 1.2f32) as u8;
+                }
+
+                let distX = (((160.0f32 - x as f32) / 160.0f32) * 16f32).abs() as i32;
+                let distY = (((120.0f32 - y as f32) / 120.0f32) * 32f32).abs() as i32;
+
+                let red   = maths::VVV_max(red   as i32 - (distX + distY), 0) as u32;
+                let green = maths::VVV_max(green as i32 - (distX + distY), 0) as u32;
+                let blue  = maths::VVV_max(blue  as i32 - (distX + distY), 0) as u32;
+
+                let finalPixel = ((red << 16) + (green << 8) + (blue << 0)) | (pixel & Amask);
+                graphics_util::DrawPixel(&mut _ret, x, y, finalPixel);
+
+            }
+        }
+
+        _ret
+    }
+
 }
 
 fn PROCESS_TILESHEET(tilesheet: graphics_resources::Image, tile_square: u8/*, extra_code*/) {

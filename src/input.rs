@@ -24,7 +24,7 @@ impl Input {
 
     pub fn titleinput (&mut self, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
         let graphics = screen.render.graphics.as_mut();
-        // @disabled
+        // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
 

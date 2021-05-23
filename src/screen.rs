@@ -5,6 +5,7 @@ use crate::{game, scenes::RenderResult};
 pub mod render;
 pub mod renderfixed;
 
+// class that known as screenbuffer in graphics.cpp
 pub struct Screen {
     pub render: Box<render::Render>,
     pub renderfixed: Box<renderfixed::RenderFixed>,
@@ -12,7 +13,7 @@ pub struct Screen {
     canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
     m_screen: Box<sdl2::surface::Surface<'static>>,
 
-    badSignalEffect: bool,
+    pub badSignalEffect: bool,
 }
 
 impl Screen {
@@ -118,22 +119,14 @@ impl Screen {
         self.canvas.present();
     }
 
-    pub fn present_canvas (&mut self) {
-        self.canvas.present();
-    }
-
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
     fn update_screen(&mut self) {
-        let rect_src = self.render.get_render_rect();
-        let surf_src = &self.render.graphics.buffers.backBuffer;
+        let rect = self.render.get_render_rect();
+        let buffer = &self.render.graphics.buffers.backBuffer;
 
-        // if (buffer == NULL) && (m_screen == NULL) {
-        //     return;
+        // if self.badSignalEffect {
+        //     buffer = &self.render.graphics.ApplyFilter(buffer);
         // }
-
-        if self.badSignalEffect {
-            // buffer = ApplyFilter(buffer);
-        }
 
         // ClearSurface(m_screen);
         // FillRect(m_screen, 0x000);
@@ -144,7 +137,7 @@ impl Screen {
         };
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
-        match (*surf_src).blit(rect_src, &mut self.m_screen, rect_dst) {
+        match (*buffer).blit(rect, &mut self.m_screen, rect_dst) {
             Ok(_x) => (),
             Err(s) => panic!("{}", s),
         };
@@ -156,13 +149,14 @@ impl Screen {
             },
             Err(s) => panic!("{}", s),
         }
-        self.present_canvas();
+        self.canvas.present();
 
         if self.badSignalEffect {
             // SDL_FreeSurface(buffer);
+            // drop(buffer);
         }
 
-        // dump_surface(surf_src, "backbuffer", "");
+        // dump_surface(buffer, "backbuffer", "");
     }
 
     pub fn do_screen_render(&mut self, render_result: RenderResult, game: &mut game::Game) {
@@ -192,40 +186,52 @@ impl Screen {
 
     // void Graphics::screenshake(void)
     fn screenshake(&mut self) {
-        // TODO @sx @impl
-        println!("DEADBEEF: Graphics::screenshake method not implemented yet");
+        // let graphics = &self.render.graphics;
+        // let backBuffer = graphics.buffers.backBuffer;
+        // let shakeRect = sdl2::rect::Rect::new(graphics.screenshake_x, graphics.screenshake_y, backBuffer.width(), backBuffer.height());
 
-        // if self.flipmode {
-        //     // SDL_Rect shakeRect;
-        //     // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
-        //     // let flipBackBuffer = self.FlipSurfaceVerticle(backBuffer);
-        //     // screenbuffer.UpdateScreen(flipBackBuffer, &shakeRect);
-        //     // drop(flipBackBuffer);
-        // } else {
-        //     // SDL_Rect shakeRect;
-        //     // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer.w, backBuffer.h);
-        //     // screenbuffer.UpdateScreen(backBuffer, &shakeRect);
-        // }
+        println!("DEADBEEF: Graphics::screenshake method not fully implemented yet");
+
+        if self.render.graphics.flipmode {
+            // SDL_Rect shakeRect;
+            // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+            // SDL_Surface* flipBackBuffer = FlipSurfaceVerticle(backBuffer);
+            // screenbuffer->UpdateScreen( flipBackBuffer, &shakeRect);
+            // SDL_FreeSurface(flipBackBuffer);
+
+            // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+            // let flipBackBuffer = graphics_util::FlipSurfaceVerticle(&backBuffer);
+            // self.update_screen(flipBackBuffer, &shakeRect);
+            // drop(flipBackBuffer);
+
+            self.update_screen(); // TODO @sx: use upper code
+        } else {
+            // SDL_Rect shakeRect;
+            // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+            // screenbuffer->UpdateScreen( backBuffer, &shakeRect);
+
+            // self.update_screen(self.render.graphics.buffers.backBuffer, &shakeRect);
+
+            self.update_screen(); // TODO @sx: use upper code
+        }
 
         // graphics_util::ClearSurface(self.buffers.backBuffer.as_mut());
-
-        self.update_screen(); // TODO @sx: use upper code
     }
-
-    // void Graphics::updatescreenshake(void)
 
     // void Graphics::render(void)
     fn render(&mut self) {
         // let rect = sdl2::rect::Rect::new(0, 0, self.buffers.backBuffer.width(), self.buffers.backBuffer.height());
-        // if self.flipmode {
-        //     // let tempsurface = graphics_util::FlipSurfaceVerticle(buffers.backBuffer);
-        //     // screenbuffer.update_screen(tempsurface, &rect);
-        //     // drop(tempsurface);
-        // } else {
-        //     screenbuffer.update_screen(buffers.backBuffer, &rect);
-        // }
-
-        self.update_screen(); // TODO @sx: use upper code
+        if self.render.graphics.flipmode {
+            // let tempsurface = graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
+            // let tempsurface = graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
+            // self.render.graphics.buffers.tempBuffer = tempsurface;
+            // screenbuffer.update_screen(tempsurface); // , &rect);
+            self.update_screen();
+            // drop(tempsurface);
+        } else {
+            // screenbuffer.update_screen(buffers.backBuffer, &rect);
+            self.update_screen();
+        }
     }
 
     // void Graphics::renderwithscreeneffects(void)

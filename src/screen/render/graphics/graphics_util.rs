@@ -2,11 +2,6 @@ extern crate sdl2;
 extern crate sdl2_sys;
 use crate::sdl2u;
 
-// TODO sx: make a class?
-// static int oldscrollamount = 0;
-// static int scrollamount = 0;
-// static bool isscrolling = 0;
-
 pub struct ColourTransform {
     pub colour: u32,
     // Uint32 colour;
@@ -62,7 +57,7 @@ pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, wi
 }
 
 // static void DrawPixel( SDL_Surface *_surface, int x, int y, Uint32 pixel )
-fn DrawPixel(surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, pixel: u32) {
+pub fn DrawPixel(surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, pixel: u32) {
     unsafe {
         let raw_surface = *surface.raw();
         let format = *raw_surface.format;
@@ -94,7 +89,7 @@ fn DrawPixel(surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, pixel: u32
 }
 
 // Uint32 ReadPixel( SDL_Surface *_surface, int x, int y )
-fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
+pub fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
     unsafe {
         let raw_surface = *surface.raw();
         let format = *raw_surface.format;
@@ -120,7 +115,17 @@ fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
 // }
 
 // SDL_Surface *  FlipSurfaceVerticle(SDL_Surface* _src)
-pub fn FlipSurfaceVerticle() {}
+pub fn FlipSurfaceVerticle(src: &sdl2::surface::SurfaceRef) -> sdl2::surface::Surface {
+    let mut ret = RecreateSurface(src);
+
+    for y in 0..(src.height() as i32) {
+        for x in 0..(src.width() as i32) {
+            DrawPixel(&mut ret, x, (src.height() as i32 - 1) - y, ReadPixel(src, x, y));
+        }
+    }
+
+    ret
+}
 
 // void BlitSurfaceStandard( SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect )
 pub fn BlitSurfaceStandard() {}
@@ -183,14 +188,8 @@ pub fn BlitSurfaceColoured<R1>(
 }
 
 // void BlitSurfaceTinted(SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect, colourTransform& ct)
-
-// void UpdateFilter(void)
-pub fn UpdateFilter() {}
-
-// SDL_Surface* ApplyFilter( SDL_Surface* _src )
 // void FillRect( SDL_Surface* _surface, const int _x, const int _y, const int _w, const int _h, const int r, int g, int b )
 // void FillRect( SDL_Surface* _surface, const int r, int g, int b )
-
 // void FillRect( SDL_Surface* _surface, const int color )
 pub fn FillRectWithColor(surface: &mut sdl2::surface::SurfaceRef, color: sdl2::pixels::Color) {
     let rect = sdl2::rect::Rect::new(0, 0, surface.width(), surface.height());

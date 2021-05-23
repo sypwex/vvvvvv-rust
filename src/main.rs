@@ -334,7 +334,7 @@ impl Main {
         // loop_assign_active_funcs();
 
         'running: loop {
-            let now = std::time::Instant::now();
+            // let now = std::time::Instant::now();
 
             f_time = timer.ticks();
             let f_timetaken: u32 = f_time - f_timePrev;
@@ -351,7 +351,7 @@ impl Main {
             timePrev = time_;
             time_ = timer.ticks();
 
-            println!("main loop iter done in {:?}ms", now.elapsed().as_millis());
+            // println!("main loop iter done in {:?}ms", now.elapsed().as_millis());
         }
     }
 
@@ -505,7 +505,8 @@ fn loop_run_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Screen,
     }
 
     /* About to switch over to rendering... but call this first. */
-    gameScreen.render.graphics.renderfixedpre(game);
+    let badSignalEffect = gameScreen.badSignalEffect;
+    gameScreen.render.graphics.renderfixedpre(game, badSignalEffect);
 
     LoopCode::LoopStop
 }
