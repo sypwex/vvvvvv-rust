@@ -155,8 +155,6 @@ impl Screen {
             // SDL_FreeSurface(buffer);
             // drop(buffer);
         }
-
-        // dump_surface(buffer, "backbuffer", "");
     }
 
     pub fn do_screen_render(&mut self, render_result: RenderResult, game: &mut game::Game) {

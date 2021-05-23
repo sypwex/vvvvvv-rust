@@ -331,8 +331,6 @@ impl Graphics {
             rect_dst,
             ct
         );
-
-        // crate::rustutil::dump_surface(&self.backBuffer, "draw_sprite", "");
     }
 
     // void Graphics::drawsprite(int x, int y, int t, Uint32 c)

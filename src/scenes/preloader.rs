@@ -179,7 +179,6 @@ impl RenderTrait for Preloader {
         }
 
         // graphics.drawfade();
-        crate::rustutil::dump_surface(&graphics.buffers.backBuffer, "backBuffer", "");
 
         Some(RenderResult::Plain)
     }

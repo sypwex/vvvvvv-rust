@@ -73,8 +73,6 @@ impl Image {
                 let mut src_destt = sdl2::surface::Surface::new(w, h, pf).unwrap();
                 let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
                 surface.blit(src_rect, &mut src_destt, None).unwrap();
-
-                // crate::rustutil::dump_surface(&[file, "-", &surfaces.len().to_string()].concat(), &src_destt);
                 surfaces.push(src_destt);
 
                 j += 1;
