@@ -1,7 +1,7 @@
 extern crate sdl2;
 use sdl2::pixels::Color;
 
-use crate::{game, rustutil::dump_surface, scenes::RenderResult};
+use crate::{game, scenes::RenderResult};
 pub mod render;
 pub mod renderfixed;
 

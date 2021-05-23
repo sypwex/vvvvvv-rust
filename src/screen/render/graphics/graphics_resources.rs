@@ -1,4 +1,4 @@
-use std::{fs::File};
+use std::fs::File;
 extern crate png;
 extern crate sdl2_sys;
 

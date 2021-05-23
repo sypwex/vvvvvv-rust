@@ -1,6 +1,5 @@
 use std::ptr;
 
-use sdl2::surface::Surface;
 use sdl2::render::BlendMode;
 
 use crate::{game, screen::render::graphics::graphics_util::ColourTransform};

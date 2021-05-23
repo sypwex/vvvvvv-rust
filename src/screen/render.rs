@@ -20,7 +20,7 @@ impl Render {
         }
     }
 
-    pub fn title_render(&mut self, game: &mut game::Game) -> RenderResult {
+    pub fn title_render(&mut self, game: &mut game::Game) -> Option<RenderResult> {
         // FillRect(graphics.backBuffer, 0,0,graphics.backBuffer->w, graphics.backBuffer->h, 0x00000000 );
         self.graphics.buffers.fill_back_buffer_with_color(sdl2::pixels::Color::BLACK);
 
@@ -63,7 +63,7 @@ impl Render {
 
         // self.graphics.drawfade();
 
-        RenderResult::WithScreenEffects
+        Some(RenderResult::WithScreenEffects)
     }
 
     pub fn menu_render (&mut self) {

@@ -351,7 +351,7 @@ impl Game {
 
             usingmmmmmm: 0,
 
-            gamestate: GameState::TITLEMODE,
+            gamestate: GameState::PRELOADER,
 
             hascontrol: true,
             jumpheld: false,
@@ -999,6 +999,7 @@ struct CustomLevelStat {
     score: u8,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameState {
     GAMEMODE,
     TITLEMODE,

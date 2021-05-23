@@ -1,8 +1,7 @@
 use sdl2::keyboard::Keycode;
 
-use crate::{game, screen};
+use crate::{game, scenes::RenderResult, screen};
 use crate::key_poll;
-use crate::screen::render::graphics;
 
 pub struct Input {
     fadetomode: bool,
@@ -23,7 +22,7 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) {
+    pub fn titleinput (&mut self, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
         let graphics = screen.render.graphics.as_mut();
         // @disabled
         // game.mx = (mouseX / 4);
@@ -160,6 +159,8 @@ impl Input {
                 // script.startgamemode(self.gotomode);
             }
         }
+
+        None
     }
 
     pub fn gameinput (&mut self) {

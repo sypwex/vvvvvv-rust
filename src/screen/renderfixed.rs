@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::game;
+use crate::{game, scenes::RenderResult};
 use crate::screen::render::graphics;
 
 pub struct RenderFixed {
@@ -62,7 +62,7 @@ impl RenderFixed {
     }
   }
 
-  pub fn title_render_fixed (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics) {
+  pub fn title_render_fixed (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
     // if !game.colourblindmode {
     //   graphics.updatetowerbackground(graphics.titlebg);
     // }
@@ -82,6 +82,8 @@ impl RenderFixed {
       graphics.crewframedelay = 8;
       graphics.crewframe = (graphics.crewframe + 1) % 2;
     }
+
+    None
   }
 
 }

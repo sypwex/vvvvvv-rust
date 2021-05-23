@@ -1,8 +1,8 @@
-use crate::game;
+use crate::{game, scenes::RenderResult};
 use crate::screen::render::graphics;
 use crate::screen::renderfixed;
 
-pub fn title_logic(game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics) {
+pub fn title_logic(game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
     // Misc
     // map.updatetowerglow(graphics.titlebg);
     renderfixed.update_glow();
@@ -25,6 +25,8 @@ pub fn title_logic(game: &mut game::Game, renderfixed: &mut renderfixed::RenderF
             // game.createmenu(game.menudest, true);
         }
     }
+
+    None
 }
 
 pub fn maplogic () {

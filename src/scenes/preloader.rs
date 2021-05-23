@@ -52,7 +52,7 @@ impl Preloader {
 
 impl InputTrait for Preloader {
     // void preloaderinput(void)
-    fn input(&mut self, game: &mut game::Game, key_poll: &mut key_poll::KeyPoll) {
+    fn input(&mut self, game: &mut game::Game, key_poll: &mut key_poll::KeyPoll) -> Option<RenderResult> {
         game.press_action = false;
 
         if key_poll.isDownKeycode(Keycode::Z) || key_poll.isDownKeycode(Keycode::Space) ||
@@ -65,12 +65,14 @@ impl InputTrait for Preloader {
             game.gamestate = GameState::TITLEMODE;
             game.jumpheld = true;
         }
+
+        None
     }
 }
 
 impl RenderFixedTrait for Preloader {
     // void preloaderrenderfixed(void)
-    fn render_fixed(&mut self, game: &mut game::Game) {
+    fn render_fixed(&mut self, game: &mut game::Game) -> Option<RenderResult> {
         if self.pre_transition < 30 {
             self.pre_transition -= 1;
         }
@@ -95,11 +97,13 @@ impl RenderFixedTrait for Preloader {
         if self.pre_transition <= -10 {
             game.gamestate = GameState::TITLEMODE;
         }
+
+        None
     }
 }
 
 impl RenderTrait for Preloader {
-    fn render(&mut self, graphics: &mut graphics::Graphics) -> RenderResult {
+    fn render(&mut self, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
 
         if self.pre_transition >= 30 {
             match self.pre_curcol {
@@ -177,6 +181,6 @@ impl RenderTrait for Preloader {
         // graphics.drawfade();
         crate::rustutil::dump_surface(&graphics.buffers.backBuffer, "backBuffer", "");
 
-        RenderResult::Plain
+        Some(RenderResult::Plain)
     }
 }
