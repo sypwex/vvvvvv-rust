@@ -1,5 +1,6 @@
 use sdl2::keyboard::Keycode;
 
+use crate::maths;
 use crate::{game::{self, GameState}, key_poll};
 use crate::screen::render::graphics;
 use crate::scenes::{InputTrait, RenderFixedTrait, RenderTrait};
@@ -84,11 +85,10 @@ impl RenderFixedTrait for Preloader {
                 self.pre_startgame = true;
             }
 
-            // self.pre_offset = (self.pre_offset + 4 + int(fRandom() * 5.0f32))%32;
-            self.pre_offset = (self.pre_offset + 4 + 5) % 32;
+            self.pre_offset = (self.pre_offset + 4 + (maths::fRandom() * 5.0f32) as i32) % 32;
             self.pre_coltimer -= 1;
             if self.pre_coltimer <= 0 {
-                // self.pre_curcol = (self.pre_curcol + int(fRandom() * 5.0f32)) % 6;
+                self.pre_curcol = (self.pre_curcol + (maths::fRandom() * 5.0f32) as i32) % 6;
                 self.pre_curcol = (self.pre_curcol + 5) % 6;
                 self.pre_coltimer = 8;
             }

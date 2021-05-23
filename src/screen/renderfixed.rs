@@ -1,6 +1,4 @@
-use rand::Rng;
-
-use crate::{game, scenes::RenderResult};
+use crate::{game, maths, scenes::RenderResult};
 use crate::screen::render::graphics;
 
 pub struct RenderFixed {
@@ -38,9 +36,9 @@ impl RenderFixed {
   }
 
   pub fn titleupdatetextcol (&mut self, graphics: &mut graphics::Graphics) {
-    graphics.col_tr = graphics.titlebg.r - (self.glow / 4) - (fRandom() as i32 * 4);
-    graphics.col_tg = graphics.titlebg.g - (self.glow / 4) - (fRandom() as i32 * 4);
-    graphics.col_tb = graphics.titlebg.b - (self.glow / 4) - (fRandom() as i32 * 4);
+    graphics.col_tr = graphics.titlebg.r - (self.glow / 4) - (maths::fRandom() as i32 * 4);
+    graphics.col_tg = graphics.titlebg.g - (self.glow / 4) - (maths::fRandom() as i32 * 4);
+    graphics.col_tb = graphics.titlebg.b - (self.glow / 4) - (maths::fRandom() as i32 * 4);
 
     if graphics.col_tr < 0 {
       graphics.col_tr = 0;
@@ -68,9 +66,9 @@ impl RenderFixed {
     // }
 
     if !game.menustart {
-      graphics.col_tr = 164 - (self.glow / 2) - (fRandom() as i32 * 4);
-      graphics.col_tg = 164 - (self.glow / 2) - (fRandom() as i32 * 4);
-      graphics.col_tb = 164 - (self.glow / 2) - (fRandom() as i32 * 4);
+      graphics.col_tr = 164 - (self.glow / 2) - (maths::fRandom() as i32 * 4);
+      graphics.col_tg = 164 - (self.glow / 2) - (maths::fRandom() as i32 * 4);
+      graphics.col_tb = 164 - (self.glow / 2) - (maths::fRandom() as i32 * 4);
     } else {
       self.titleupdatetextcol(graphics);
 
@@ -86,9 +84,4 @@ impl RenderFixed {
     None
   }
 
-}
-
-pub fn fRandom () -> f32 {
-  // return ( float(rand()) / float(RAND_MAX)) ;
-  rand::thread_rng().gen::<f32>() / i32::MAX as f32
 }

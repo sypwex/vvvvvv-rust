@@ -8,9 +8,9 @@ mod game;
 mod input;
 mod key_poll;
 mod logic;
+mod maths;
 mod scenes;
 use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, preloader::Preloader};
-
 use crate::scenes::RenderResult;
 mod screen;
 

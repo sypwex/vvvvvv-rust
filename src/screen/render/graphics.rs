@@ -2,11 +2,10 @@ use std::ptr;
 
 use sdl2::render::BlendMode;
 
-use crate::{game, screen::render::graphics::graphics_util::ColourTransform};
+use crate::{game, maths, screen::render::graphics::graphics_util::ColourTransform};
 
 extern crate sdl2;
 extern crate sdl2_sys;
-mod maths;
 pub mod graphics_util;
 mod graphics_resources;
 mod towerbg;
