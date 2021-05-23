@@ -113,17 +113,12 @@ impl KeyPoll {
                         hidemouse = true;
                     }
                 },
-                Event::KeyUp { keycode, .. } => {
-                    match keycode {
-                        Some(kc) => {
-                            self.keymap.insert(kc, false);
+                Event::KeyUp { keycode: Some(keycode), .. } => {
+                    self.keymap.insert(keycode, false);
 
-                            match kc {
-                                Keycode::Backspace => self.pressedbackspace = false,
-                                _ => (),
-                            }
-                        },
-                        None => {}
+                    match keycode {
+                        Keycode::Backspace => self.pressedbackspace = false,
+                        _ => (),
                     }
                 },
                 Event::TextInput { text, .. } => {
