@@ -19,15 +19,19 @@ impl Scenes {
 
             scene_functions: vec![
             // GameState::PRELOADER
+            SceneFunc { state: GameState::PRELOADER, fntype: FuncType::FuncFixed, fnname: Fns::focused_begin },
             SceneFunc { state: GameState::PRELOADER, fntype: FuncType::FuncInput, fnname: Fns::preloaderinput },
             SceneFunc { state: GameState::PRELOADER, fntype: FuncType::FuncFixed, fnname: Fns::preloaderrenderfixed },
             SceneFunc { state: GameState::PRELOADER, fntype: FuncType::FuncDelta, fnname: Fns::preloaderrender },
+            SceneFunc { state: GameState::PRELOADER, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
 
             // GameState::TITLEMODE
+            SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_begin },
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncInput, fnname: Fns::titleinput },
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::titlerenderfixed },
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncDelta, fnname: Fns::titlerender },
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::titlelogic },
+            SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
 
             // GameState::GAMEMODE => {
             //     // {Func_fixed, runscript},
@@ -151,6 +155,9 @@ pub struct SceneFunc {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Fns {
+    focused_begin,
+    focused_end,
+
     // GameState::PRELOADER
     preloaderinput,
     preloaderrenderfixed,

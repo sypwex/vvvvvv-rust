@@ -1,5 +1,8 @@
+use crate::map;
 use crate::{game, maths, scenes::RenderResult};
 use crate::screen::render::graphics;
+
+use super::render::BackGround;
 
 pub struct RenderFixed {
   glow: i32,
@@ -16,6 +19,15 @@ impl RenderFixed {
     }
   }
 
+  // UtilityClass::UtilityClass(void)
+  // std::string UtilityClass::String( int _v )
+  // int UtilityClass::Int(const char* str, int fallback /*= 0*/)
+  // std::string UtilityClass::GCString(const std::vector<SDL_GameControllerButton>& buttons)
+  // std::string UtilityClass::twodigits( int t )
+  // std::string UtilityClass::timestring( int t )
+  // std::string UtilityClass::number( int _t )
+  // bool UtilityClass::intersects( SDL_Rect A, SDL_Rect B )
+  // void UtilityClass::updateglow(void)
   pub fn update_glow (&mut self) {
     self.slowsine += 1;
     if self.slowsine >= 64 {
@@ -36,9 +48,9 @@ impl RenderFixed {
   }
 
   pub fn titleupdatetextcol (&mut self, graphics: &mut graphics::Graphics) {
-    graphics.col_tr = graphics.titlebg.r - (self.glow / 4) - (maths::fRandom() as i32 * 4);
-    graphics.col_tg = graphics.titlebg.g - (self.glow / 4) - (maths::fRandom() as i32 * 4);
-    graphics.col_tb = graphics.titlebg.b - (self.glow / 4) - (maths::fRandom() as i32 * 4);
+    graphics.col_tr = graphics.buffers.titlebg.r - (self.glow / 4) - (maths::fRandom() as i32 * 4);
+    graphics.col_tg = graphics.buffers.titlebg.g - (self.glow / 4) - (maths::fRandom() as i32 * 4);
+    graphics.col_tb = graphics.buffers.titlebg.b - (self.glow / 4) - (maths::fRandom() as i32 * 4);
 
     if graphics.col_tr < 0 {
       graphics.col_tr = 0;
@@ -60,10 +72,10 @@ impl RenderFixed {
     }
   }
 
-  pub fn title_render_fixed (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
-    // if !game.colourblindmode {
-    //   graphics.updatetowerbackground(graphics.titlebg);
-    // }
+  pub fn title_render_fixed (&mut self, map: &mut map::Map, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+    if !game.colourblindmode {
+      graphics.updatetowerbackground(BackGround::Title, map);
+    }
 
     if !game.menustart {
       graphics.col_tr = 164 - (self.glow / 2) - (maths::fRandom() as i32 * 4);
@@ -72,7 +84,7 @@ impl RenderFixed {
     } else {
       self.titleupdatetextcol(graphics);
 
-      // graphics.updatetitlecolours();
+      graphics.updatetitlecolours(self.glow);
     }
 
     graphics.crewframedelay -= 1;

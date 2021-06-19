@@ -3,6 +3,7 @@ extern crate png;
 extern crate sdl2_sys;
 
 pub struct GraphicsResources {
+    pub tiles3: Image,
     pub sprites: Image,
     pub bfont: Image,
 }
@@ -12,7 +13,7 @@ impl GraphicsResources {
         GraphicsResources {
             // im_tiles = LoadImage("graphics/tiles.png");
             // im_tiles2 = LoadImage("graphics/tiles2.png");
-            // im_tiles3 = LoadImage("graphics/tiles3.png");
+            tiles3: Image::new("tiles3", true, false, 8, 8),
             // im_entcolours = LoadImage("graphics/entcolours.png");
             // im_flipsprites = LoadImage("graphics/flipsprites.png");
             sprites: Image::new("sprites", true, false, 32, 32),

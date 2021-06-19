@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::screen::render::graphics;
+use crate::{music, screen::{self, render::graphics}};
 
 const numcrew: usize = 6;
 const numunlock: usize = 25;
@@ -90,9 +90,9 @@ pub struct Game {
     pub currentmenuname: MenuName,
     kludge_ingametemp: MenuName,
     current_credits_list_index: i32,
-    menuxoff: i32,
-    menuyoff: i32,
-    menuspacing: i32,
+    pub menuxoff: i32,
+    pub menuyoff: i32,
+    pub menuspacing: i32,
     // static const menutextbytes: i32: 161, // this is just sizeof(MenuOption::text), but doing that is non-standard
     menustack: Vec<MenuStackFrame>,
 
@@ -129,7 +129,7 @@ pub struct Game {
     scmprogress: i32,
 
     // Accessibility Options
-    colourblindmode: bool,
+    pub colourblindmode: bool,
     pub noflashingmode: bool,
     slowdown: i32,
     pub gameframerate: u32,
@@ -166,9 +166,8 @@ pub struct Game {
     quick_crewstats: [bool; numcrew],
 
     // numunlock: i32, // static const
-    unlock: [bool; numunlock],
+    pub unlock: [bool; numunlock],
     unlocknotify: [bool; numunlock],
-    // anything_unlocked: bool(),
     stat_trinkets: i32,
     fullscreen: bool,
     bestgamedeaths: i32,
@@ -253,7 +252,7 @@ pub struct Game {
     // Custom stuff
     // customscript: String[50],
     customcol: i32,
-    levelpage: i32,
+    pub levelpage: i32,
     playcustomlevel: i32,
     customleveltitle: String,
     customlevelfilename: String,
@@ -315,8 +314,8 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Game {
-        Game {
+    pub fn new(graphics: &mut graphics::Graphics) -> Game {
+        let mut game = Game {
             door_left: 0,
             door_right: 0,
             door_up: 0,
@@ -432,7 +431,6 @@ impl Game {
             telesummary: String::new(),
             quicksummary: String::new(),
             customquicksummary: String::new(),
-            // save_exists: bool(),
 
             bestgamedeaths: -1,
 
@@ -501,8 +499,7 @@ impl Game {
             menustack: vec![],
 
             menucountdown: 0,
-            menudest: MenuName::accessibility, // TODO @sx
-            // createmenu(Menu::mainmenu),
+            menudest: MenuName::accessibility,
 
             startscript: false,
             newscript: String::new(),
@@ -668,11 +665,15 @@ impl Game {
 
             disablepause: false,
             inputdelay: false,
-        }
+        };
+
+        game.createmenu(MenuName::mainmenu, false, graphics);
+
+        game
     }
 
     // void Game::init(void);
-    pub fn init(&mut self) {
+    pub fn init(&mut self, music: &mut music::Music) {
         // static inline int get_framerate(const int slowdown)
         self.gameframerate = match self.slowdown {
             30 => 34,
@@ -683,8 +684,8 @@ impl Game {
         };
 
         if self.skipfakeload     { self.gamestate = GameState::TITLEMODE };
-        // if self.usingmmmmmm == 0 { music.usingmmmmmm=false; }
-        // if self.usingmmmmmm == 1 { music.usingmmmmmm=true; }
+        if self.usingmmmmmm == 0 { music.usingmmmmmm = false; }
+        if self.usingmmmmmm == 1 { music.usingmmmmmm = true; }
         if self.slowdown == 0    { self.slowdown = 30; }
 
         // // Check to see if you've already unlocked some achievements here from before the update
@@ -726,6 +727,27 @@ impl Game {
     // bool Game::savequick(void);
 
     // void Game::gameclock(void);
+    pub fn gameclock (&mut self) {
+        if self.timetrialcountdown > 0 {
+            return;
+        }
+
+        self.frames += 1;
+        if self.frames >= 30 {
+            self.frames -= 30;
+            self.seconds += 1;
+
+            if self.seconds >= 60 {
+                self.seconds -= 60;
+                self.minutes += 1;
+
+                if self.minutes >= 60 {
+                    self.minutes -= 60;
+                    self.hours += 1;
+                }
+            }
+        }
+    }
 
     // std::string Game::giventimestring(int hrs, int min, int sec);
 
@@ -738,13 +760,13 @@ impl Game {
     // std::string Game::timetstring(int t);
 
     // void Game::returnmenu(void);
-    pub fn return_menu(&mut self) {
+    pub fn return_menu(&mut self, graphics: &mut graphics::Graphics) {
         match self.menustack.pop() {
             Some(frame) => {
                 // Store this in case createmenu() removes the stack frame
                 let previousoption = frame.option;
 
-                self.createmenu(frame.name, true);
+                self.createmenu(frame.name, true, graphics);
                 self.currentmenuoption = previousoption;
 
                 // @sx: looks like don't need it
@@ -757,10 +779,11 @@ impl Game {
             None => println!("Error: returning to previous menu frame on empty stack!"),
         }
     }
+
     // void Game::returntomenu(enum Menu::MenuName t);
 
     // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
-    pub fn createmenu(&mut self, t: MenuName, samemenu: bool) {
+    pub fn createmenu(&mut self, t: MenuName, samemenu: bool, graphics: &mut graphics::Graphics) {
         if t == MenuName::mainmenu {
             //Either we've just booted up the game or returned from gamemode
             //Whichever it is, we shouldn't have a stack,
@@ -777,12 +800,168 @@ impl Game {
 
         self.currentmenuname = t;
         self.menuyoff = 0;
-        let maxspacing = 30; // maximum value for menuspacing, can only become lower.
+        let mut maxspacing = 30; // maximum value for menuspacing, can only become lower.
         self.menucountdown = 0;
         self.menuoptions = vec![];
 
-        // TODO @sx @impl
-        println!("DEADBEEF: Game::createmenu is not implemented yet");
+        match self.currentmenuname {
+            MenuName::mainmenu => {
+                // #if !defined(MAKEANDPLAY)
+                self.add_menu_option("play", None);
+                // #endif
+
+                // #if !defined(NO_CUSTOM_LEVELS)
+                self.add_menu_option("levels", None);
+                // #endif
+
+                self.add_menu_option("options", None);
+
+                // #if !defined(MAKEANDPLAY)
+                self.add_menu_option("credits", None);
+                // #endif
+
+                self.add_menu_option("quit", None);
+
+                self.menuyoff = -10;
+                maxspacing = 15;
+            },
+            MenuName::quickloadlevel => {
+                self.add_menu_option("continue from save", None);
+                self.add_menu_option("start from beginning", None);
+                self.add_menu_option("back to levels", None);
+                self.menuyoff = -30;
+            },
+            MenuName::youwannaquit => {
+                self.add_menu_option("yes, quit", None);
+                self.add_menu_option("no, return", None);
+                self.menuyoff = -20;
+            },
+            MenuName::errornostart => {
+                self.add_menu_option("ok", None);
+                self.menuyoff = -20;
+            },
+            MenuName::gameplayoptions => {
+                // #if !defined(MAKEANDPLAY)
+                if self.ingame_titlemode && self.unlock[18] {
+                // #endif
+                    self.add_menu_option("flip mode", None);
+                }
+                self.add_menu_option("toggle fps", None);
+                self.add_menu_option("speedrun options", None);
+                self.add_menu_option("advanced options", None);
+                self.add_menu_option("clear data", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = -10;
+                maxspacing = 15;
+            },
+            MenuName::graphicoptions => {
+                self.add_menu_option("toggle fullscreen", None);
+                self.add_menu_option("scaling mode", None);
+                self.add_menu_option("resize to nearest", graphics.screenbuffer.isWindowed);
+                self.add_menu_option("toggle filter", None);
+                self.add_menu_option("toggle analogue", None);
+                self.add_menu_option("toggle vsync", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = -10;
+                maxspacing = 15;
+            },
+            MenuName::ed_settings => {
+                self.add_menu_option("change description", None);
+                self.add_menu_option("edit scripts", None);
+                self.add_menu_option("change music", None);
+                self.add_menu_option("editor ghosts", None);
+                self.add_menu_option("load level", None);
+                self.add_menu_option("save level", None);
+                self.add_menu_option("options", None);
+                self.add_menu_option("quit to main menu", None);
+
+                self.menuyoff = -20;
+                maxspacing = 15;
+            },
+            MenuName::ed_desc => {
+                self.add_menu_option("change name", None);
+                self.add_menu_option("change author", None);
+                self.add_menu_option("change description", None);
+                self.add_menu_option("change website", None);
+                self.add_menu_option("back to settings", None);
+
+                self.menuyoff = 6;
+                maxspacing = 15;
+            },
+            MenuName::ed_music => {
+                self.add_menu_option("next song", None);
+                self.add_menu_option("previous song", None);
+                self.add_menu_option("back", None);
+                self.menuyoff = 16;
+                maxspacing = 15;
+            },
+            MenuName::ed_quit => {
+                self.add_menu_option("yes, save and quit", None);
+                self.add_menu_option("no, quit without saving", None);
+                self.add_menu_option("return to editor", None);
+                self.menuyoff = 8;
+                maxspacing = 15;
+            },
+            MenuName::options => {
+                self.add_menu_option("gameplay", None);
+                self.add_menu_option("graphics", None);
+                self.add_menu_option("audio", None);
+                self.add_menu_option("game pad", None);
+                self.add_menu_option("accessibility", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            MenuName::speedrunneroptions => {
+                self.add_menu_option("glitchrunner mode", None);
+                self.add_menu_option("input delay", None);
+                self.add_menu_option("fake load screen", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            MenuName::advancedoptions => {
+                self.add_menu_option("unfocus pause", None);
+                self.add_menu_option("room name background", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            MenuName::audiooptions => {
+                self.add_menu_option("music volume", None);
+                self.add_menu_option("sound volume", None);
+                if music.mmmmmm {
+                    self.add_menu_option("soundtrack", None);
+                }
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            v => println!("DEADBEEF: Game::createmenu({:?}) is not implemented yet", v),
+        }
+
+        // Automatically center the menu. We must check the width of the menu with the initial horizontal spacing.
+        // If it's too wide, reduce the horizontal spacing by 5 and retry.
+        // Try to limit the menu width to 272 pixels: 320 minus 16*2 for square brackets, minus 8*2 padding.
+        // The square brackets fall outside the menu width (i.e. selected menu options are printed 16 pixels to the left)
+        let mut done_once = false;
+        let mut menuwidth = 0;
+        while !done_once || (menuwidth > 272 && self.menuspacing > 0) {
+            done_once = true;
+            self.menuspacing = maxspacing;
+            menuwidth = 0;
+
+            for i in 0..self.menuoptions.len() as i32 {
+                let width = i*self.menuspacing + self.menuoptions[i as usize].text.len() as i32;
+                if width > menuwidth {
+                    menuwidth = width;
+                }
+            }
+
+            maxspacing -= 5;
+        }
+
+        self.menuxoff = (320-menuwidth)/2;
     }
 
     // void inline option(const char* text, bool active = true)
@@ -811,6 +990,9 @@ impl Game {
     // void Game::unlocknum(int t);
 
     // void Game::loadstats(ScreenSettings* screen_settings);
+    pub fn loadstats(&mut self, screen_settings: &mut screen::ScreenSettings) {
+        println!("DEADBEEF: Game::loadstats not implemented yet");
+    }
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
@@ -822,6 +1004,9 @@ impl Game {
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
 
     // void Game::loadsettings(ScreenSettings* screen_settings);
+    pub fn loadsettings(&mut self, screen_settings: &mut screen::ScreenSettings) {
+        println!("DEADBEEF: Game::loadsettings not implemented yet");
+    }
 
     // bool Game::savesettings(const ScreenSettings* screen_settings);
     // bool Game::savesettings(void);
@@ -878,7 +1063,27 @@ impl Game {
     // int Game::trinkets(void);
     // int Game::crewmates(void);
 
+    // bool Game::anything_unlocked(void)
+    pub fn anything_unlocked (&self) -> bool {
+        // for (size_t i = 0; i < SDL_arraysize(unlock); i++) {
+        for i in 0..self.unlock.len() {
+            if self.unlock[i] && (
+                i == 8 || // Secret Lab
+                (i >= 9 && i <= 14) || // any Time Trial
+                i == 16 || // Intermission replays
+                i == 17 || // No Death Mode
+                i == 18 // Flip Mode
+            ) {
+                return true
+            }
+        }
+        false
+    }
+
     // bool Game::save_exists(void);
+    pub fn save_exists (&self) -> bool {
+        self.telesummary != "" || self.quicksummary != ""
+    }
 
     // void Game::clearcustomlevelstats(void);
     // void Game::loadcustomlevelstats(void);
@@ -921,14 +1126,18 @@ impl Game {
 
     // void Game::unlockAchievement(const char *name);
 }
+
+/* 40 chars (160 bytes) covers the entire screen, + 1 more for null terminator */
+pub const MENU_TEXT_BYTES: usize = 161;
+
 pub struct MenuOption {
     // text: char[161], // 40 chars (160 bytes) covers the entire screen, + 1 more for null terminator
-    text: String,
+    pub text: String,
     // WARNING: should match Game::menutextbytes below
-    active: bool,
+    pub active: bool,
 }
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum MenuName {
     mainmenu,
     playerworlds,
@@ -936,13 +1145,17 @@ pub enum MenuName {
     quickloadlevel,
     youwannaquit,
     errornostart,
+    errorsavingsettings,
     graphicoptions,
     ed_settings,
     ed_desc,
     ed_music,
     ed_quit,
     options,
+    gameplayoptions,
+    speedrunneroptions,
     advancedoptions,
+    audiooptions,
     accessibility,
     controller,
     cleardatamenu,

@@ -1,7 +1,9 @@
 use sdl2::keyboard::Keycode;
 
+use crate::game::MenuName;
+use crate::screen::render::graphics;
 use crate::{game, scenes::RenderResult, screen};
-use crate::key_poll;
+use crate::{key_poll, map, music};
 
 pub struct Input {
     fadetomode: bool,
@@ -22,7 +24,7 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
+    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
         let graphics = screen.render.graphics.as_mut();
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
@@ -78,12 +80,11 @@ impl Input {
                 game.jumpheld = true;
             }
 
-            if game.menustart && game.menucountdown <= 0 && (key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_esc))
-            {
-                // music.playef(11);
+            if game.menustart && game.menucountdown <= 0 && (key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_esc)) {
+                music.playef(11);
                 if game.currentmenuname == game::MenuName::mainmenu {
                     game.createmenu(game::MenuName::youwannaquit, false);
-                    // map.nexttowercolour();
+                    map.nexttowercolour(graphics);
                 } else {
                     if game.slidermode != game::SLIDERMODE::SLIDER_NONE {
                         match game.slidermode {
@@ -105,8 +106,8 @@ impl Input {
                     } else if game.ingame_titlemode && game.currentmenuname == game::MenuName::options {
                         game.returntoingame(graphics);
                     } else {
-                        game.return_menu();
-                        // map.nexttowercolour();
+                        game.return_menu(graphics);
+                        map.nexttowercolour(graphics);
                     }
                 }
             }
@@ -133,12 +134,12 @@ impl Input {
             if game.press_action {
                 if !game.menustart {
                     game.menustart = true;
-                    // music.play(6);
-                    // music.playef(18);
+                    music.play(6);
+                    music.playef(18);
                     game.screenshake = 10;
                     game.flashlight = 5;
                 } else {
-                    menuactionpress();
+                    self.menuactionpress(music, map, game, graphics);
                 }
             }
             if game.currentmenuname == game::MenuName::controller &&
@@ -157,6 +158,7 @@ impl Input {
                 self.fadetomode = false;
                 // TODO @sx
                 // script.startgamemode(self.gotomode);
+                println!("READY TO STAERT THE GAME!!!");
             }
         }
 
@@ -186,6 +188,204 @@ impl Input {
     pub fn gamecompleteinput2 (&mut self) {
         // TODO @sx @impl
         println!("DEADBEEF: input::Input::toggleflipmode is not implemented yet");
+    }
+
+    // @sx: previously static methods
+
+    // static void startmode(const int mode)
+    fn startmode(&mut self, mode: i32, graphics: &mut graphics::Graphics) {
+        self.gotomode = mode;
+        graphics.fademode = 2; /* fading out */
+        self.fadetomode = true;
+        self.fadetomodedelay = 16;
+    }
+
+    // static void menuactionpress(void)
+    fn menuactionpress(&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, graphics: &mut graphics::Graphics) {
+        match game.currentmenuname {
+            MenuName::mainmenu => {
+                // TODO @sx @define
+                // #if defined(MAKEANDPLAY)
+                //     #define MPOFFSET -1
+                //     #else
+                //     #define MPOFFSET 0
+                // #endif
+
+                // #if defined(NO_CUSTOM_LEVELS)
+                //     #define NOCUSTOMSOFFSET -1
+                //     #else
+                //     #define NOCUSTOMSOFFSET 0
+                // #endif
+
+                // #define OFFSET (MPOFFSET+NOCUSTOMSOFFSET)
+                match game.currentmenuoption {
+                    // #if !defined(MAKEANDPLAY)
+                    0 => {
+                        // Play
+                        if !game.save_exists() && !game.anything_unlocked() {
+                            // No saves exist, just start a new game
+                            music.playef(11);
+                            self.startmode(0, graphics);
+                        } else {
+                            // Bring you to the normal playmenu
+                            music.playef(11);
+                            game.createmenu(MenuName::play, false);
+                            map.nexttowercolour(graphics);
+                        }
+                    },
+                    // #endif
+                    // #if !defined(NO_CUSTOM_LEVELS)
+                    1 => { // OFFSET+1
+                        // Bring you to the normal playmenu
+                        music.playef(11);
+                        game.createmenu(MenuName::playerworlds, false);
+                        map.nexttowercolour(graphics);
+                    },
+                    // #endif
+                    2 => { // OFFSET+2
+                        // Options
+                        music.playef(11);
+                        game.createmenu(MenuName::options, false);
+                        map.nexttowercolour(graphics);
+                    },
+                    // #if !defined(MAKEANDPLAY)
+                    3 => { // OFFSET+3
+                        // Credits
+                        music.playef(11);
+                        game.createmenu(MenuName::credits, false);
+                        map.nexttowercolour(graphics);
+                    },
+                    // #else
+                    //     #undef MPOFFSET
+                    //     #define MPOFFSET -2
+                    // #endif
+                    4 => { // OFFSET+4
+                        music.playef(11);
+                        game.createmenu(MenuName::youwannaquit, false);
+                        map.nexttowercolour(graphics);
+                    },
+                    // #undef OFFSET
+                    // #undef NOCUSTOMSOFFSET
+                    // #undef MPOFFSET
+                    _ => panic!("incorrect menuoption"),
+                }
+            },
+
+            // #if !defined(NO_CUSTOM_LEVELS)
+            MenuName::levellist => {
+                println!("DEADBEEF: not fully implemented yet");
+
+                if game.currentmenuoption == game.menuoptions.len() as i32 - 1 {
+                    //go back to menu
+                    music.playef(11);
+                    game.return_menu();
+                    map.nexttowercolour(graphics);
+                } else if game.currentmenuoption == game.menuoptions.len() as i32 - 2 {
+                    //previous page
+                    music.playef(11);
+                    // if game.levelpage == 0 {
+                    //     game.levelpage = (ed.ListOfMetaData.size()-1)/8;
+                    // } else {
+                    //     game.levelpage -= 1;
+                    // }
+                    game.createmenu(MenuName::levellist, true);
+                    game.currentmenuoption = game.menuoptions.len() as i32 - 2;
+                    map.nexttowercolour(graphics);
+                } else if game.currentmenuoption == game.menuoptions.len() as i32 - 3 {
+                    //next page
+                    music.playef(11);
+                    // if (game.levelpage*8)+8 >= ed.ListOfMetaData.len() {
+                    //     game.levelpage = 0;
+                    // } else {
+                    //     game.levelpage += 1;
+                    // }
+                    game.createmenu(MenuName::levellist, true);
+                    game.currentmenuoption = game.menuoptions.len() as i32 - 3;
+                    map.nexttowercolour(graphics);
+                } else {
+                    // // Ok, launch the level!
+                    // // PLAY CUSTOM LEVEL HOOK
+                    music.playef(11);
+                    // game.playcustomlevel = (game.levelpage*8)+game.currentmenuoption;
+                    // game.customleveltitle = ed.ListOfMetaData[game.playcustomlevel].title;
+                    // game.customlevelfilename = ed.ListOfMetaData[game.playcustomlevel].filename;
+
+                    // let name = "saves/" + ed.ListOfMetaData[game.playcustomlevel].filename.substr(7) + ".vvv";
+                    // // tinyxml2::XMLDocument doc;
+                    // let doc;
+                    // if !FILESYSTEM_loadTiXml2Document(name.c_str(), doc) {
+                    //     startmode(22);
+                    // } else {
+                    //     game.createmenu(Menu::quickloadlevel);
+                    //     map.nexttowercolour(graphics);
+                    // }
+                }
+            },
+            // #endif
+            MenuName::quickloadlevel => {
+                match game.currentmenuoption {
+                    0 => {
+                        // continue save
+                        music.playef(11);
+                        self.startmode(23, graphics);
+                    },
+                    1 => {
+                        music.playef(11);
+                        self.startmode(22, graphics);
+                    },
+                    2 => {
+                        music.playef(11);
+                        game.return_menu();
+                        map.nexttowercolour(graphics);
+                    },
+                    _ => panic!("incorrect menuoption"),
+                };
+            },
+            // #if !defined(NO_CUSTOM_LEVELS)
+            // MenuName::playerworlds => {
+            //     // #if defined(NO_EDITOR)
+            //     //     #define OFFSET -1
+            //     // #else
+            //     //     #define OFFSET 0
+            //     // #endif
+            //     match game.currentmenuoption {
+            //         0 => {
+            //             music.playef(11);
+            //             game.levelpage = 0;
+            //             ed.getDirectoryData();
+            //             game.loadcustomlevelstats(); // Should only load a file if it's needed
+            //             game.createmenu(MenuName::levellist, false);
+            //             map.nexttowercolour(graphics);
+            //         },
+            //         // #if !defined(NO_EDITOR)
+            //         1 => { // OFFSET+1
+            //             // LEVEL EDITOR HOOK
+            //             music.playef(11);
+            //             self.startmode(20, graphics);
+            //             ed.filename = "";
+            //         },
+            //         // #endif
+            //         2 => { // OFFSET+2
+            //             // "OPENFOLDERHOOK"
+            //             if FILESYSTEM_openDirectoryEnabled() && FILESYSTEM_openDirectory(FILESYSTEM_getUserLevelDirectory()) {
+            //                 music.playef(11);
+            //                 SDL_MinimizeWindow(graphics.screenbuffer.m_window);
+            //             } else {
+            //                 music.playef(2);
+            //             }
+            //         },
+            //         3 => { // OFFSET+3
+            //             // back
+            //             music.playef(11);
+            //             game.return_menu();
+            //             map.nexttowercolour(graphics);
+            //         },
+            //     };
+            //     // #undef OFFSET
+            //     // #endif
+            // },
+            _ => println!("DEADBEEF: input::menuactionpress({:?}) is not fully implemented yet", game.currentmenuname),
+        }
     }
 }
 
@@ -334,12 +534,6 @@ fn toggleflipmode() {
     println!("DEADBEEF: input::toggleflipmode is not implemented yet");
 }
 
-// static void startmode(const int mode)
-fn startmode() {
-    // TODO @sx @impl
-    println!("DEADBEEF: input::startmode is not implemented yet");
-}
-
 // static void initvolumeslider(const int menuoption)
 fn initvolumeslider() {
     // TODO @sx @impl
@@ -356,12 +550,6 @@ fn deinitvolumeslider() {
 fn slidermodeinput() {
     // TODO @sx @impl
     println!("DEADBEEF: input::slidermodeinput is not implemented yet");
-}
-
-// static void menuactionpress(void)
-fn menuactionpress() {
-    // TODO @sx @impl
-    println!("DEADBEEF: input::menuactionpress is not implemented yet");
 }
 
 // static void mapmenuactionpress(void)

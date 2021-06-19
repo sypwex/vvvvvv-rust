@@ -90,10 +90,9 @@ impl KeyPoll {
                         fullscreenkeybind = true;
                     }
 
-                    // TODO @sx @impl
-                    println!("DEADBEEF: KeyDown handler not fully implemented yet");
                     if self.textentry() {
                         if keycode == Keycode::Backspace && !self.keybuffer.is_empty() {
+                            println!("DEADBEEF: KeyDown handler(Backspace) not fully implemented yet");
                             // std::string::iterator iter = keybuffer.end();
                             // utf8::unchecked::prior(iter);
                             // keybuffer = keybuffer.substr(0, iter - keybuffer.begin());
@@ -101,6 +100,7 @@ impl KeyPoll {
                             //     linealreadyemptykludge = true;
                             // }
                         } else if keycode == Keycode::V && self.keymap.contains_key(&Keycode::LCtrl) {
+                            println!("DEADBEEF: KeyDown handler(V) not fully implemented yet");
                             // let text = sdl2_sys::SDL_GetClipboardText();
                             // if text != NULL {
                             //     self.keybuffer += text;
@@ -357,7 +357,10 @@ impl KeyPoll {
     // }
 
     pub fn isDownKeycode (&mut self, key: Keycode) -> bool {
-        self.keymap.contains_key(&key)
+        match self.keymap.get(&key) {
+            Some(v) => *v,
+            None => false,
+        }
     }
 
     pub fn isDownVec (&mut self, buttons: &Vec<Button>) -> bool {

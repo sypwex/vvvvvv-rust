@@ -2,34 +2,67 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 
 use crate::{game, scenes::RenderResult};
+
+use self::render::graphics::graphics_util;
 pub mod render;
 pub mod renderfixed;
+
+pub struct ScreenSettings {
+    pub windowWidth: i32,
+	pub windowHeight: i32,
+	pub fullscreen: bool,
+	pub useVsync: bool,
+	pub stretch: i32,
+	pub linearFilter: bool,
+	pub badSignal: bool,
+}
+
+impl ScreenSettings {
+    pub fn new() -> Self {
+        Self {
+            windowWidth: 320,
+            windowHeight: 240,
+            fullscreen: false,
+            useVsync: false,
+            stretch: 0,
+            linearFilter: false,
+            badSignal: false,
+        }
+    }
+}
 
 // class that known as screenbuffer in graphics.cpp
 pub struct Screen {
     pub render: Box<render::Render>,
     pub renderfixed: Box<renderfixed::RenderFixed>,
-    // window: Box<sdl2::video::Window>,
     canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
+
+    /* Screen.h */
+
+	pub isWindowed: bool,
+	isFiltered: bool,
+    pub badSignalEffect: bool,
+	stretchMode: i32,
+	vsync: bool,
+
+	m_window: Box<sdl2::video::Window>,
+	// m_renderer: &SDL_Renderer,
+	// m_screenTexture: &sdl2::render::Texture,
     m_screen: Box<sdl2::surface::Surface<'static>>,
 
-    pub badSignalEffect: bool,
+	filterSubrect: sdl2::rect::Rect,
 }
 
 impl Screen {
-    pub fn new (sdl_context: &sdl2::Sdl) -> Screen {
-        // m_window = NULL;
-        // m_renderer = NULL;
-        // m_screenTexture = NULL;
-        // m_screen = NULL;
-        // isWindowed = !fullscreen;
-        // stretchMode = stretch;
-        // isFiltered = linearFilter;
-        // vsync = useVsync;
-        // filterSubrect.x = 1;
-        // filterSubrect.y = 1;
-        // filterSubrect.w = 318;
-        // filterSubrect.h = 238;
+    pub fn new(sdl_context: &sdl2::Sdl) -> Screen {
+        let video_subsystem = sdl_context.video().unwrap();
+        let window = video_subsystem.window("VVVVVV on Rust", 640, 480)
+            .position_centered()
+            .build()
+            .unwrap();
+        let canvas = window.into_canvas().build().unwrap();
+
+        /* @sx: moved here from Screen::init */
 
         // SDL_SetHintWithPriority(
         //     SDL_HINT_RENDER_SCALE_QUALITY,
@@ -53,29 +86,9 @@ impl Screen {
         //     &m_renderer
         // );
         // SDL_SetWindowTitle(m_window, "VVVVVV");
-
-        let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem.window("VVVVVV on Rust", 640, 480)
-            .position_centered()
-            .build()
-            .unwrap();
-        let canvas = window.into_canvas().build().unwrap();
+        let m_window = Box::new(window);
 
         // LoadIcon();
-
-        // // FIXME: This surface should be the actual backbuffer! -flibit
-        // m_screen = SDL_CreateRGBSurface(
-        //     0,
-        //     320,
-        //     240,
-        //     32,
-        //     0x00FF0000,
-        //     0x0000FF00,
-        //     0x000000FF,
-        //     0xFF000000
-        // );
-
-        let m_screen = sdl2::surface::Surface::new(320, 240, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
 
         // // ALSO FIXME: This SDL_CreateTexture() is duplicated in Graphics::processVsync()!
         // m_screenTexture = SDL_CreateTexture(
@@ -85,44 +98,107 @@ impl Screen {
         //     320,
         //     240
         // );
+        // let m_screenTexture = sdl2::render::Texture::(320, 240, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
 
-        // badSignalEffect = badSignal;
-
-        // ResizeScreen(windowWidth, windowHeight);
+        //FIXME: This surface should be the actual backbuffer! -flibit
+        let m_screen = sdl2::surface::Surface::new(320, 240, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
 
         Screen {
             render: Box::new(render::Render::new(m_screen.pixel_format_enum())),
             renderfixed: Box::new(renderfixed::RenderFixed::new()),
-            // window: Box::new(window),
             canvas: Box::new(canvas),
+
+            /* Screen.h */
+
+            m_window: Box::new(window),
+            // m_renderer: &SDL_Renderer,
+            // m_screenTexture: &sdl2::render::Texture,
             m_screen: Box::new(m_screen),
 
+            isWindowed: false,
+            stretchMode: 0,
+            isFiltered: false,
             badSignalEffect: false,
+            vsync: false,
+            filterSubrect: sdl2::rect::Rect::new(1, 1, 318, 238),
         }
     }
 
-    pub fn init (
-        // int windowWidth,
-        // int windowHeight,
-        // bool fullscreen,
-        // bool useVsync,
-        // int stretch,
-        // bool linearFilter,
-        // bool badSignal
-    ) {
-
+    // void Screen::init(const ScreenSettings& settings)
+    pub fn init (&self, settings: &ScreenSettings) {
+        self.isWindowed = !settings.fullscreen;
+        self.stretchMode = settings.stretch;
+        self.isFiltered = settings.linearFilter;
+        self.vsync = settings.useVsync;
+        self.badSignalEffect = settings.badSignal;
+        self.ResizeScreen(settings.windowWidth, settings.windowHeight);
     }
 
-    pub fn init_canvas (&mut self) {
-        self.canvas.set_draw_color(Color::RGB(128, 128, 128));
-        self.canvas.clear();
-        self.canvas.present();
+    // void Screen::destroy(void)
+    // void Screen::GetSettings(ScreenSettings* settings)
+    // void Screen::LoadIcon(void)
+    // void Screen::ResizeScreen(int x, int y)
+    fn ResizeScreen(&mut self, x: i32, y: i32) {
+        let (resX, resY) = match x != -1 && y != -1 {
+            True => (x, y), // This is a user resize!
+            False => (320, 240),
+        };
+
+        println!("STUB CODE START HERE");
+
+        unsafe {
+            if !self.isWindowed {
+                if sdl2_sys::SDL_SetWindowFullscreen(self.m_window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0 {
+                    println!("Error: could not set the game to fullscreen mode: {:?}", sdl2_sys::SDL_GetError());
+                    return;
+                }
+            } else {
+                if sdl2_sys::SDL_SetWindowFullscreen(self.m_window, 0) != 0 {
+                    println!("Error: could not set the game to windowed mode: {:?}", sdl2_sys::SDL_GetError());
+                    return;
+                }
+                if x != -1 && y != -1 {
+                    sdl2_sys::SDL_SetWindowSize(self.m_window, resX, resY);
+                    sdl2_sys::SDL_SetWindowPosition(self.m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+                }
+            }
+            if self.stretchMode == 1 {
+                let mut winX: i32;
+                let mut winY: i32;
+                sdl2_sys::SDL_GetWindowSize(&winX, &winY);
+                if result = sdl2_sys::SDL_RenderSetLogicalSize(m_renderer, winX, winY) != 0 {
+                    println!("Error: could not set logical size: {:?}", sdl2_sys::SDL_GetError());
+                    return;
+                }
+                if sdl2_sys::SDL_RenderSetIntegerScale(m_renderer, SDL_FALSE) != 0 {
+                    println!("Error: could not set scale: {:?}", sdl2_sys::SDL_GetError());
+                    return;
+                }
+            } else {
+                sdl2_sys::SDL_RenderSetLogicalSize(m_renderer, 320, 240);
+                int result = SDL_RenderSetIntegerScale(m_renderer, (SDL_bool) (stretchMode == 2));
+                if result != 0 {
+                    println!("Error: could not set scale: {:?}", SDL_GetError());
+                    return;
+                }
+            }
+
+            sdl2_sys::SDL_ShowWindow(m_window);
+        }
     }
 
+    // void Screen::ResizeToNearestMultiple(void)
+    // void Screen::GetWindowSize(int* x, int* y)
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
-    fn update_screen(&mut self) {
-        let rect = self.render.get_render_rect();
-        let buffer = &self.render.graphics.buffers.backBuffer;
+    fn update_screen(&mut self, rect: sdl2::rect::Rect) {
+        // TODO: refactor
+        let buffer;
+        let flip_buffer = &graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
+        if !self.render.graphics.flipmode {
+            buffer = &self.render.graphics.buffers.backBuffer;
+        } else {
+            buffer = flip_buffer;
+        }
 
         // if self.badSignalEffect {
         //     buffer = &self.render.graphics.ApplyFilter(buffer);
@@ -137,7 +213,7 @@ impl Screen {
         };
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
-        match (*buffer).blit(rect, &mut self.m_screen, rect_dst) {
+        match buffer.blit(rect, &mut self.m_screen, rect_dst) {
             Ok(_x) => (),
             Err(s) => panic!("{}", s),
         };
@@ -153,9 +229,18 @@ impl Screen {
 
         if self.badSignalEffect {
             // SDL_FreeSurface(buffer);
-            // drop(buffer);
+            drop(buffer);
         }
     }
+
+    // const SDL_PixelFormat* Screen::GetFormat(void)
+    // void Screen::FlipScreen(void)
+    // void Screen::toggleFullScreen(void)
+    // void Screen::toggleStretchMode(void)
+    // void Screen::toggleLinearFilter(void)
+    // void Screen::resetRendererWorkaround(void)
+
+    /* moved here from Graohics.cpp */
 
     pub fn do_screen_render(&mut self, render_result: RenderResult, game: &mut game::Game) {
         match render_result {
@@ -184,52 +269,34 @@ impl Screen {
 
     // void Graphics::screenshake(void)
     fn screenshake(&mut self) {
-        // let graphics = &self.render.graphics;
-        // let backBuffer = graphics.buffers.backBuffer;
-        // let shakeRect = sdl2::rect::Rect::new(graphics.screenshake_x, graphics.screenshake_y, backBuffer.width(), backBuffer.height());
+        let screenshake_x = self.render.graphics.screenshake_x;
+        let screenshake_y = self.render.graphics.screenshake_y;
+        let width = self.render.graphics.buffers.backBuffer.width();
+        let height = self.render.graphics.buffers.backBuffer.height();
 
-        println!("DEADBEEF: Graphics::screenshake method not fully implemented yet");
+        // SDL_Rect shakeRect;
+        // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+        let shakeRect = sdl2::rect::Rect::new(screenshake_x, screenshake_y, width, height);
 
         if self.render.graphics.flipmode {
-            // SDL_Rect shakeRect;
-            // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
+            // TODO: @sx
             // SDL_Surface* flipBackBuffer = FlipSurfaceVerticle(backBuffer);
             // screenbuffer->UpdateScreen( flipBackBuffer, &shakeRect);
             // SDL_FreeSurface(flipBackBuffer);
-
-            // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
-            // let flipBackBuffer = graphics_util::FlipSurfaceVerticle(&backBuffer);
-            // self.update_screen(flipBackBuffer, &shakeRect);
-            // drop(flipBackBuffer);
-
-            self.update_screen(); // TODO @sx: use upper code
         } else {
             // SDL_Rect shakeRect;
             // setRect(shakeRect,screenshake_x, screenshake_y, backBuffer->w, backBuffer->h);
             // screenbuffer->UpdateScreen( backBuffer, &shakeRect);
-
-            // self.update_screen(self.render.graphics.buffers.backBuffer, &shakeRect);
-
-            self.update_screen(); // TODO @sx: use upper code
+            self.update_screen(shakeRect);
+            // TODO: @sx really needed?
+            graphics_util::ClearSurface(self.render.graphics.buffers.backBuffer.as_mut());
         }
-
-        // graphics_util::ClearSurface(self.buffers.backBuffer.as_mut());
     }
 
     // void Graphics::render(void)
     fn render(&mut self) {
-        // let rect = sdl2::rect::Rect::new(0, 0, self.buffers.backBuffer.width(), self.buffers.backBuffer.height());
-        if self.render.graphics.flipmode {
-            // let tempsurface = graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
-            // let tempsurface = graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
-            // self.render.graphics.buffers.tempBuffer = tempsurface;
-            // screenbuffer.update_screen(tempsurface); // , &rect);
-            self.update_screen();
-            // drop(tempsurface);
-        } else {
-            // screenbuffer.update_screen(buffers.backBuffer, &rect);
-            self.update_screen();
-        }
+        let rect = sdl2::rect::Rect::new(0, 0, self.render.graphics.buffers.backBuffer.width(), self.render.graphics.buffers.backBuffer.height());
+        self.update_screen(rect);
     }
 
     // void Graphics::renderwithscreeneffects(void)
@@ -245,4 +312,11 @@ impl Screen {
         }
     }
 
+    /* */
+
+    pub fn init_canvas (&mut self) {
+        self.canvas.set_draw_color(Color::RGB(128, 128, 128));
+        self.canvas.clear();
+        self.canvas.present();
+    }
 }

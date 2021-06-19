@@ -13,6 +13,10 @@ impl ColourTransform {
             colour: 0,
         }
     }
+
+    pub fn set_colour (&mut self, c: u32) {
+        self.colour = c;
+    }
 }
 
 // void setRect( SDL_Rect& _r, int x, int y, int w, int h )
@@ -39,7 +43,7 @@ pub fn RecreateSurface(surface: &sdl2::surface::SurfaceRef) -> sdl2::surface::Su
 }
 
 // SDL_Surface* GetSubSurface( SDL_Surface* metaSurface, int x, int y, int width, int height )
-pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, width: u32,height: u32) -> sdl2::surface::Surface {
+pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, width: u32, height: u32) -> sdl2::surface::Surface {
     // Create an SDL_Rect with the area of the _surface
     let area = sdl2::rect::Rect::new(
         x, y, width, height,
@@ -52,7 +56,7 @@ pub fn GetSubSurface(metaSurface: &sdl2::surface::SurfaceRef, x: i32, y: i32, wi
     // Return the new Bitmap _surface
     match metaSurface.blit(area, &mut preSurface, None) {
         Ok(_rect) => preSurface,
-        Err(s) => panic!("err: {:?}", s),
+        Err(s) => panic!("error while recreating subsurface: {:?}", s),
     }
 }
 
@@ -108,11 +112,43 @@ pub fn ReadPixel(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> u32 {
         }
     }
 }
+pub fn ReadPixel_Color(surface: &sdl2::surface::SurfaceRef, x: i32, y: i32) -> sdl2::pixels::Color {
+    unsafe {
+        let raw_surface = *surface.raw();
+        let format = *raw_surface.format;
+        let pixels = raw_surface.pixels as *mut u8;
+
+        let bpp = format.BytesPerPixel as i32;
+        /* Here p is the address to the pixel we want to retrieve */
+        let p = pixels.offset((y*raw_surface.pitch + x*bpp) as isize);
+
+        sdl2::pixels::Color::from_u32(&surface.pixel_format(), match bpp {
+            1 => *p as u32,
+            2 => (*p as u32) | ((*p.offset(1) as u32) << 8),
+            3 => ((*p as u32) | (*p.offset(1) as u32) << 8 | (*p.offset(2) as u32) << 16) as u32,
+            4 => ((*p as u32) | (*p.offset(1) as u32) << 8 | (*p.offset(2) as u32) << 16 | (*p.offset(3) as u32) << 24) as u32,
+            _ => 0,
+        })
+    }
+}
 
 // SDL_Surface * ScaleSurface( SDL_Surface *_surface, int Width, int Height, SDL_Surface * Dest )
-// pub fn ScaleSurface () -> sdl2::surface::Surface<'static> {
-//     sdl2::surface::Surface::new(0, 0, sdl2::pixels::PixelFormatEnum::ABGR1555)
-// }
+pub fn ScaleSurface(_surface: &sdl2::surface::SurfaceRef, Width: u32, Height: u32) -> sdl2::surface::Surface {
+    let mut _ret = RecreateSurfaceWithDimensions(_surface, Width, Height);
+
+    let _stretch_factor_x = (Width / _surface.width()) as i32;
+    let _stretch_factor_y = (Height / _surface.height()) as i32;
+
+    for y in 0.._surface.height() as i32 {
+        for x in 0.._surface.width() as i32 {
+            let gigantoPixel = setRect(x *_stretch_factor_x, y *_stretch_factor_y, _stretch_factor_x as u32, _stretch_factor_y as u32);
+            // sdl2::SDL_FillRect(_ret, &gigantoPixel, ReadPixel(_surface, x, y));
+            _ret.fill_rect(gigantoPixel, ReadPixel_Color(_surface, x, y));
+        }
+    }
+
+    _ret
+}
 
 // SDL_Surface *  FlipSurfaceVerticle(SDL_Surface* _src)
 pub fn FlipSurfaceVerticle(src: &sdl2::surface::SurfaceRef) -> sdl2::surface::Surface {
@@ -128,7 +164,10 @@ pub fn FlipSurfaceVerticle(src: &sdl2::surface::SurfaceRef) -> sdl2::surface::Su
 }
 
 // void BlitSurfaceStandard( SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect )
-pub fn BlitSurfaceStandard() {}
+pub fn BlitSurfaceStandard() {
+    // SDL_BlitSurface( _src, _srcRect, _dest, _destRect );
+    // use _src.blit(_srcRect, _dest, _destRect);
+}
 
 // void BlitSurfaceColoured(SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect, colourTransform& ct)
 pub fn BlitSurfaceColoured<R1>(
@@ -158,19 +197,18 @@ pub fn BlitSurfaceColoured<R1>(
             let pixel = ReadPixel(_src, x, y);
             // Uint32 Alpha = pixel & fmt.Amask;
             let Alpha = pixel & fmt.Amask;
-            // // Uint32 result = ct.colour & 0x00FFFFFF;
+            // Uint32 result = ct.colour & 0x00FFFFFF;
             let result = colourTransformValue & 0x00FFFFFF;
-            // // Uint32 CTAlpha = ct.colour & fmt.Amask;
+            // Uint32 CTAlpha = ct.colour & fmt.Amask;
             let CTAlpha = colourTransformValue & fmt.Amask;
-            // // float div1 = ((Alpha >> 24) / 255.0f);
+            // float div1 = ((Alpha >> 24) / 255.0f);
             let div1 = ((Alpha >> 24) as f32) / 255.0f32;
-            // // float div2 = ((CTAlpha >> 24) / 255.0f);
+            // float div2 = ((CTAlpha >> 24) / 255.0f);
             let div2 = ((CTAlpha >> 24) as f32) / 255.0f32;
-            // // Uint32 UseAlpha = (div1 * div2) * 255.0f;
+            // Uint32 UseAlpha = (div1 * div2) * 255.0f;
             let UseAlpha: u32 = (div1 * div2 * 255.0f32) as u32;
             // DrawPixel(tempsurface, x, y, result | (UseAlpha << 24));
             DrawPixel(tempsurface.as_mut(), x, y, result | (UseAlpha << 24));
-            // print!("ct {:?} ", colourTransformValue);
 
             y += 1;
         }
@@ -216,3 +254,57 @@ pub fn ClearSurface(surface: &mut sdl2::surface::SurfaceRef) {
 }
 
 // void ScrollSurface( SDL_Surface* _src, int _pX, int _pY )
+pub fn ScrollSurface (src: &mut sdl2::surface::SurfaceRef, pX: i32, pY: i32) {
+    // TODO: @sx create Surface::clone() method
+    let src_width = src.width();
+    let src_height = src.height();
+    let ret = sdl2u::sdl_create_rgb_surface(src, src_width, src_height);
+    let mut ret = sdl2u::surface_from_ll(ret);
+    ret.set_blend_mode(src.blend_mode());
+    src.blit(None, &mut ret, None)
+        .expect("unable to clone surface");
+
+    let res = match (pX, pY) {
+        (_, py) if py < 0 => {
+            //scrolling up;
+            let rect2 = setRect(0, 0, src_width, src_height - pY as u32);
+            let mut part1 = GetSubSurface(&ret, rect2.x, rect2.y, rect2.w as u32, rect2.h as u32);
+            part1.set_blend_mode(sdl2::render::BlendMode::None);
+            let dst_rect = setRect(0,  pY as i32, pX as u32, src_height);
+            Some((part1, dst_rect))
+        },
+        (_, py) if py > 0 => {
+            let rect1 = setRect(0, 0, src_width, src_height - pY as u32);
+            let mut part1 = GetSubSurface(&ret, rect1.x, rect1.y, rect1.w as u32, rect1.h as u32);
+            part1.set_blend_mode(sdl2::render::BlendMode::None);
+            let dst_rect = setRect(pX as i32, pY as i32, src_width, src_height - pY as u32);
+            Some((part1, dst_rect))
+        },
+        (px, _) if px <= 0 => {
+            //Right
+            let rect2 = setRect(0, 0, src_width - pX as u32, src_height);
+            let mut part1 = GetSubSurface(&ret, rect2.x, rect2.y, rect2.w as u32, rect2.h as u32);
+            part1.set_blend_mode(sdl2::render::BlendMode::None);
+            let dst_rect = setRect(pX as i32, 0, src_width - pX as u32, src_height);
+            Some((part1, dst_rect))
+        },
+        (px, _) if px > 0 => {
+            let rect1 = setRect(pX as i32, 0, src_width - pX as u32, src_height);
+            let mut part1 = GetSubSurface(&ret, rect1.x, rect1.y, rect1.w as u32, rect1.h as u32);
+            part1.set_blend_mode(sdl2::render::BlendMode::None);
+            let dst_rect = setRect(0, 0, src_width - pX as u32, src_height);
+            Some((part1, dst_rect))
+        },
+        (_, _) => (
+            None
+        ),
+    };
+
+    // SDL_BlitSurface (part1, NULL, _src, &destrect1);
+    match res {
+        Some((part1, dst_rect)) => {
+            part1.blit(None, src, dst_rect).expect("unable to scroll surface");
+        },
+        None => panic!("nothing to scroll );"),
+    }
+}

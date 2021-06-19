@@ -1,6 +1,8 @@
 use std::time::Duration;
 
 extern crate sdl2;
+use game::GameState;
+use screen::render::graphics;
 use sdl2::EventPump;
 mod sdl2u;
 
@@ -8,7 +10,9 @@ mod game;
 mod input;
 mod key_poll;
 mod logic;
+mod map;
 mod maths;
+mod music;
 mod scenes;
 use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, preloader::Preloader};
 use crate::scenes::RenderResult;
@@ -63,10 +67,10 @@ struct Main {
 
     // help: UtilityClass,
     // graphics: graphics::Graphics,
-    // music: musicclass,
+    music: music::Music,
     game: game::Game,
     key: key_poll::KeyPoll,
-    // map: mapclass,
+    map: map::Map,
     // obj: entityclass,
     gameScreen: screen::Screen,
 
@@ -93,41 +97,43 @@ impl Main {
         //     return 1;
         // }
         // NETWORK_init();
-        // Load Ini, reloadresources loads music too...
 
-        let mut game = game::Game::new();
-        // graphics.init();
-        // graphics.reloadresources();
+        let mut gameScreen = screen::Screen::new(&sdl_context);
+        let map = map::Map::new(&mut gameScreen.render.graphics);
+        let mut game = game::Game::new(&mut gameScreen.render.graphics);
 
-        // game.gamestate = PRELOADER;
-        // game.menustart = false;
-        // game.mainmenu = 0;
+        //Set up screen
+        //Load Ini
+        // gameScreen.render.graphics.init(); // @sx: done at Graphics::new()
+        //This loads music too...
+        gameScreen.render.graphics.reload_resources();
 
-        // TODO @sx
-        // map.ypos = (700-29) * 8;
-        // graphics.towerbg.bypos = map.ypos / 2;
-        // graphics.titlebg.bypos = map.ypos / 2;
+        // TODO: @sx load scene from argument
+        game.gamestate = GameState::PRELOADER;
+        game.menustart = false;
 
-        // TODO @sx
-        // // Moved screensetting init here from main menu V2.1
-        // int width = 320;
-        // int height = 240;
-        // bool vsync = false;
+        //Initialize title screen to cyan
+        // graphics.titlebg.colstate = 10; // @sx: done at struct init
+        // map.nexttowercolour(); // @sx: done at map init
 
-        // Prioritize unlock.vvv first (2.2 and below), but settings have been migrated to settings.vvv (2.3 and up)
-        // game.loadstats(&width, &height, &vsync);
-        // game.loadsettings(&width, &height, &vsync);
+        map.ypos = (700-29) * 8;
+        gameScreen.render.graphics.buffers.towerbg.bypos = map.ypos / 2;
+        gameScreen.render.graphics.buffers.titlebg.bypos = map.ypos / 2;
 
-        let gameScreen = screen::Screen::new(&sdl_context);
-        // gameScreen.init(
-        //     width,
-        //     height,
-        //     game.fullscreen,
-        //     vsync,
-        //     game.stretchMode,
-        //     game.useLinearFilter,
-        //     game.fullScreenEffect_badSignal
-        // );
+        // Prioritize unlock.vvv first (2.2 and below),
+        // but settings have been migrated to settings.vvv (2.3 and up)
+        let mut screen_settings = screen::ScreenSettings::new();
+        game.loadstats(&mut screen_settings);
+        game.loadsettings(&mut screen_settings);
+        gameScreen.init(&mut screen_settings);
+
+        // graphics.create_buffers(gameScreen.GetFormat());
+
+        // @sx: for skipfakeload see Game::init()
+        // if (game.skipfakeload)
+        //     game.gamestate = TITLEMODE;
+        // if (game.slowdown == 0) game.slowdown = 30;
+        // @sx: for unlockAchievement stuff see Game::init()
 
         // obj.init();
 
@@ -143,10 +149,10 @@ impl Main {
 
             // help: UtilityClass,
             // graphics: graphics::Graphics::new(),
-            // music: musicclass,
+            music: music::Music::new(),
             game: game::Game::new(),
             key: key_poll::KeyPoll::new(),
-            // map: mapclass,
+            map,
             // obj: entityclass,
             gameScreen,
 
@@ -351,6 +357,7 @@ impl Main {
             timePrev = time_;
             time_ = timer.ticks();
 
+            // rustutil::dump_surface(&self.gameScreen.render.graphics.buffers.backBuffer, "buffer", "");
             // println!("main loop iter done in {:?}ms", now.elapsed().as_millis());
         }
     }
@@ -371,7 +378,7 @@ impl Main {
             self.accumulator = sdl2u::sys_fmodf(self.accumulator, timesteplimit);
 
             /* We are done rendering. */
-            // graphics.renderfixedpost();
+            self.gameScreen.render.graphics.renderfixedpost(&mut self.game);
 
             self.fixedloop(key, event_pump);
         }
@@ -395,7 +402,7 @@ impl Main {
         let implfunc = self.scenes.get_current_gamestate_func();
 
         if implfunc.fntype == FuncType::FuncDelta {
-            match invoke_scene_function(&mut self.preloader_scene, implfunc.fnname, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump) {
+            match invoke_scene_function(&mut self.preloader_scene, implfunc.fnname, &mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump) {
                 Some(rr) => self.gameScreen.do_screen_render(rr, &mut self.game),
                 _ => (),
             }
@@ -407,7 +414,7 @@ impl Main {
     }
 
     fn fixedloop(&mut self, key: &mut key_poll::KeyPoll, event_pump: &mut EventPump) {
-        let meta_funcs: Vec<&dyn Fn(&mut game::Game, &mut screen::Screen, &mut key_poll::KeyPoll, &mut input::Input, &mut EventPump, &mut scenes::Scenes, &mut scenes::preloader::Preloader) -> LoopCode> = vec![
+        let meta_funcs: Vec<&dyn Fn(&mut music::Music, &mut map::Map, &mut game::Game, &mut screen::Screen, &mut key_poll::KeyPoll, &mut input::Input, &mut EventPump, &mut scenes::Scenes, &mut scenes::preloader::Preloader) -> LoopCode> = vec![
             &loop_begin,
             &loop_assign_active_funcs,
             &loop_run_active_funcs,
@@ -416,7 +423,7 @@ impl Main {
 
         'fixedloop: loop {
             for meta_func in &meta_funcs {
-                match meta_func(&mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.scenes, &mut self.preloader_scene) {
+                match meta_func(&mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.scenes, &mut self.preloader_scene) {
                     LoopCode::LoopContinue => (),
                     LoopCode::LoopStop => break 'fixedloop,
                 }
@@ -445,7 +452,7 @@ fn main() {
     m.main_loop();
 }
 
-fn loop_begin(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
+fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
     // println!("loop_begin");
     if game.inputdelay {
         key.Poll(event_pump, game);
@@ -458,7 +465,7 @@ fn loop_begin(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut 
     LoopCode::LoopContinue
 }
 
-fn loop_assign_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
+fn loop_assign_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
     // println!("loop_assign_active_funcs");
     // TODO @sx
     // if key.isActive {
@@ -477,7 +484,7 @@ fn loop_assign_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Scre
 }
 
 // static enum LoopCode loop_run_active_funcs(void)
-fn loop_run_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
+fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
     // println!("loop_run_active_funcs");
 
     // while (*active_funcs)[*active_func_index].type != Func_delta {
@@ -490,7 +497,7 @@ fn loop_run_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Screen,
             key.Poll(event_pump, game);
         }
 
-        match invoke_scene_function(preloader, implfunc.fnname, game, gameScreen, key, input, event_pump) {
+        match invoke_scene_function(preloader, implfunc.fnname, music, map, game, gameScreen, key, input, event_pump) {
             Some(rr) => gameScreen.do_screen_render(rr, game),
             _ => (),
         }
@@ -511,7 +518,19 @@ fn loop_run_active_funcs(game: &mut game::Game, gameScreen: &mut screen::Screen,
     LoopCode::LoopStop
 }
 
-fn loop_end(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
+fn focused_begin () -> Option<RenderResult> {
+    None
+}
+
+fn focused_end (music: &mut music::Music, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+    game.gameclock();
+    music.processmusic();
+    graphics.processfade();
+
+    None
+}
+
+fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
     // println!("loop_end");
 
     // We did editorinput, now it's safe to turn this off
@@ -560,17 +579,22 @@ fn loop_end(game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut ke
     LoopCode::LoopContinue
 }
 
-fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump) -> Option<RenderResult> {
+fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump) -> Option<RenderResult> {
+    // println!("current scene function: {:?}", fnname);
+
     match fnname {
+        Fns::focused_begin => focused_begin(),
+        Fns::focused_end => focused_end(music, game, &mut gameScreen.render.graphics),
+
         // GameState::PRELOADER
         Fns::preloaderinput => preloader.input(game, key),
         Fns::preloaderrenderfixed => preloader.render_fixed(game),
         Fns::preloaderrender => preloader.render(&mut gameScreen.render.graphics),
         // GameState::TITLEMODE
-        Fns::titleinput => input.titleinput(game, gameScreen, key),
-        Fns::titlerenderfixed => gameScreen.renderfixed.title_render_fixed(game, &mut gameScreen.render.graphics),
-        Fns::titlerender => gameScreen.render.title_render(game),
-        Fns::titlelogic => logic::title_logic(game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics),
+        Fns::titleinput => input.titleinput(music, map, game, gameScreen, key),
+        Fns::titlerenderfixed => gameScreen.renderfixed.title_render_fixed(map, game, &mut gameScreen.render.graphics),
+        Fns::titlerender => gameScreen.render.title_render(game, music),
+        Fns::titlelogic => logic::title_logic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics),
         // GameState::GAMEMODE
         // GameState::MAPMODE
         // GameState::TELEPORTERMODE
