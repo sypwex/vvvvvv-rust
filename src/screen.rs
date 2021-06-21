@@ -1,11 +1,14 @@
 extern crate sdl2;
-use sdl2::pixels::Color;
+use sdl2_sys::{SDL_TextureAccess, SDL_WindowFlags, SDL_bool};
 
 use crate::{game, scenes::RenderResult};
-
 use self::render::graphics::graphics_util;
+
 pub mod render;
 pub mod renderfixed;
+
+const SCREEN_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
+const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::ARGB8888;
 
 pub struct ScreenSettings {
     pub windowWidth: i32,
@@ -35,7 +38,8 @@ impl ScreenSettings {
 pub struct Screen {
     pub render: Box<render::Render>,
     pub renderfixed: Box<renderfixed::RenderFixed>,
-    canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
+    // canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
+    // texture_creator: Box<TextureCreator<WindowContext>>,
 
     /* Screen.h */
 
@@ -45,75 +49,45 @@ pub struct Screen {
 	stretchMode: i32,
 	vsync: bool,
 
-	m_window: Box<sdl2::video::Window>,
-	// m_renderer: &SDL_Renderer,
-	// m_screenTexture: &sdl2::render::Texture,
-    m_screen: Box<sdl2::surface::Surface<'static>>,
+	m_window: *mut sdl2_sys::SDL_Window,
+	m_renderer: *mut sdl2_sys::SDL_Renderer,
+	m_screenTexture: *mut sdl2_sys::SDL_Texture,
+    m_screen: sdl2::surface::Surface<'static>,
 
 	filterSubrect: sdl2::rect::Rect,
 }
 
 impl Screen {
     pub fn new(sdl_context: &sdl2::Sdl) -> Screen {
-        let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem.window("VVVVVV on Rust", 640, 480)
-            .position_centered()
-            .build()
-            .unwrap();
-        let canvas = window.into_canvas().build().unwrap();
+        // @sx stub code for using SDL video subsystem
+        // let video_subsystem = sdl_context.video().unwrap();
+        // let m_window = video_subsystem.window("VVVVVV/Rust", 640, 480)
+        //     .position_centered()
+        //     .build()
+        //     .unwrap();
+        // let canvas = m_window.into_canvas().build().unwrap();
+        // let texture_creator = Box::new(canvas.texture_creator());
+        // let m_screenTexture = texture_creator.create_texture_streaming(TEXTURE_PIXEL_FORMAT, 320, 240).unwrap();
 
-        /* @sx: moved here from Screen::init */
+        /* */
 
-        // SDL_SetHintWithPriority(
-        //     SDL_HINT_RENDER_SCALE_QUALITY,
-        //     isFiltered ? "linear" : "nearest",
-        //     SDL_HINT_OVERRIDE
-        // );
-        // SDL_SetHintWithPriority(
-        //     SDL_HINT_RENDER_VSYNC,
-        //     vsync ? "1" : "0",
-        //     SDL_HINT_OVERRIDE
-        // );
-
-        // // Uncomment this next line when you need to debug -flibit
-        // // SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
-        // // FIXME: m_renderer is also created in Graphics::processVsync()!
-        // SDL_CreateWindowAndRenderer(
-        //     640,
-        //     480,
-        //     SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE,
-        //     &m_window,
-        //     &m_renderer
-        // );
-        // SDL_SetWindowTitle(m_window, "VVVVVV");
-        let m_window = Box::new(window);
-
-        // LoadIcon();
-
-        // // ALSO FIXME: This SDL_CreateTexture() is duplicated in Graphics::processVsync()!
-        // m_screenTexture = SDL_CreateTexture(
-        //     m_renderer,
-        //     SDL_PIXELFORMAT_ARGB8888,
-        //     SDL_TEXTUREACCESS_STREAMING,
-        //     320,
-        //     240
-        // );
-        // let m_screenTexture = sdl2::render::Texture::(320, 240, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
-
-        //FIXME: This surface should be the actual backbuffer! -flibit
-        let m_screen = sdl2::surface::Surface::new(320, 240, sdl2::pixels::PixelFormatEnum::RGBX8888).unwrap();
+        let m_window = unsafe { sdl2_sys::SDL_CreateWindow("".as_ptr() as *const libc::c_char, 0, 0, 100, 100, 0) };
+        let m_renderer = unsafe { sdl2_sys::SDL_CreateRenderer(m_window, 0, 0) };
+        let m_screen = sdl2::surface::Surface::new(1, 1, SCREEN_PIXEL_FORMAT).unwrap();
+        let m_screenTexture = unsafe { sdl2_sys::SDL_CreateTextureFromSurface(m_renderer, m_screen.raw()) };
 
         Screen {
-            render: Box::new(render::Render::new(m_screen.pixel_format_enum())),
+            render: Box::new(render::Render::new(SCREEN_PIXEL_FORMAT)),
             renderfixed: Box::new(renderfixed::RenderFixed::new()),
-            canvas: Box::new(canvas),
+            // canvas: Box::new(canvas),
+            // texture_creator,
 
             /* Screen.h */
 
-            m_window: Box::new(window),
-            // m_renderer: &SDL_Renderer,
-            // m_screenTexture: &sdl2::render::Texture,
-            m_screen: Box::new(m_screen),
+            m_window,
+            m_renderer,
+            m_screenTexture,
+            m_screen,
 
             isWindowed: false,
             stretchMode: 0,
@@ -125,30 +99,90 @@ impl Screen {
     }
 
     // void Screen::init(const ScreenSettings& settings)
-    pub fn init (&self, settings: &ScreenSettings) {
+    pub fn init (&mut self, settings: &ScreenSettings) {
         self.isWindowed = !settings.fullscreen;
         self.stretchMode = settings.stretch;
         self.isFiltered = settings.linearFilter;
         self.vsync = settings.useVsync;
+
+        unsafe {
+            sdl2_sys::SDL_SetHintWithPriority(
+                sdl2_sys::SDL_HINT_RENDER_SCALE_QUALITY.as_ptr() as *const libc::c_char,
+                (if self.isFiltered { "linear" } else { "nearest" }).as_ptr() as *const libc::c_char,
+                sdl2_sys::SDL_HintPriority::SDL_HINT_OVERRIDE
+            );
+            sdl2_sys::SDL_SetHintWithPriority(
+                sdl2_sys::SDL_HINT_RENDER_VSYNC.as_ptr() as *const libc::c_char,
+                (if self.vsync { "1" } else { "0" }).as_ptr() as *const libc::c_char,
+                sdl2_sys::SDL_HintPriority::SDL_HINT_OVERRIDE
+            );
+
+            //Uncomment this next line when you need to debug -flibit
+            // SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "software", SDL_HINT_OVERRIDE);
+            //FIXME: m_renderer is also created in Graphics::processVsync()!
+            sdl2_sys::SDL_CreateWindowAndRenderer(
+                640,
+                480,
+                SDL_WindowFlags::SDL_WINDOW_HIDDEN as u32 | SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32,
+                as_mut_ptr!(self.m_window),
+                as_mut_ptr!(self.m_renderer),
+            );
+            sdl2_sys::SDL_SetWindowTitle(self.m_window, "VVVVVV/Rust".as_ptr() as *const libc::c_char);
+
+            self.LoadIcon();
+
+            //FIXME: This surface should be the actual backbuffer! -flibit
+            self.m_screen = sdl2::surface::Surface::new(320, 240, SCREEN_PIXEL_FORMAT).unwrap();
+
+            //ALSO FIXME: This SDL_CreateTexture() is duplicated in Graphics::processVsync()!
+            // m_screenTexture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 320, 240);
+            self.m_screenTexture = sdl2_sys::SDL_CreateTexture(self.m_renderer, TEXTURE_PIXEL_FORMAT as u32, SDL_TextureAccess::SDL_TEXTUREACCESS_STREAMING as i32, 320, 240);
+        }
+
         self.badSignalEffect = settings.badSignal;
+
         self.ResizeScreen(settings.windowWidth, settings.windowHeight);
     }
 
     // void Screen::destroy(void)
     // void Screen::GetSettings(ScreenSettings* settings)
     // void Screen::LoadIcon(void)
+    fn LoadIcon(&mut self) {
+        // #ifndef __APPLE__
+        // unsigned char *fileIn;
+        // size_t length;
+        // unsigned char *data;
+        // unsigned int width, height;
+        // FILESYSTEM_loadAssetToMemory("VVVVVV.png", &fileIn, &length, false);
+        // lodepng_decode24(&data, &width, &height, fileIn, length);
+        // FILESYSTEM_freeMemory(&fileIn);
+        // SDL_Surface *icon = SDL_CreateRGBSurfaceFrom(
+        //     data,
+        //     width,
+        //     height,
+        //     24,
+        //     width * 3,
+        //     0x000000FF,
+        //     0x0000FF00,
+        //     0x00FF0000,
+        //     0x00000000
+        // );
+        // SDL_SetWindowIcon(m_window, icon);
+        // SDL_FreeSurface(icon);
+        // SDL_free(data);
+        // #endif /* __APPLE__ */
+    }
+
     // void Screen::ResizeScreen(int x, int y)
     fn ResizeScreen(&mut self, x: i32, y: i32) {
         let (resX, resY) = match x != -1 && y != -1 {
-            True => (x, y), // This is a user resize!
-            False => (320, 240),
+            true => (x, y), //This is a user resize!
+            false => (320, 240),
         };
-
-        println!("STUB CODE START HERE");
 
         unsafe {
             if !self.isWindowed {
-                if sdl2_sys::SDL_SetWindowFullscreen(self.m_window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0 {
+                if sdl2_sys::SDL_SetWindowFullscreen(self.m_window, SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32) != 0 {
                     println!("Error: could not set the game to fullscreen mode: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
@@ -159,31 +193,35 @@ impl Screen {
                 }
                 if x != -1 && y != -1 {
                     sdl2_sys::SDL_SetWindowSize(self.m_window, resX, resY);
-                    sdl2_sys::SDL_SetWindowPosition(self.m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+                    sdl2_sys::SDL_SetWindowPosition(self.m_window, sdl2_sys::SDL_WINDOWPOS_CENTERED_MASK as i32, sdl2_sys::SDL_WINDOWPOS_CENTERED_MASK as i32);
                 }
             }
             if self.stretchMode == 1 {
-                let mut winX: i32;
-                let mut winY: i32;
-                sdl2_sys::SDL_GetWindowSize(&winX, &winY);
-                if result = sdl2_sys::SDL_RenderSetLogicalSize(m_renderer, winX, winY) != 0 {
+                let mut winX: libc::c_int = 0;
+                let mut winY: libc::c_int = 0;
+                sdl2_sys::SDL_GetWindowSize(self.m_window, &mut winX, &mut winY);
+                if sdl2_sys::SDL_RenderSetLogicalSize(self.m_renderer, winX, winY) != 0 {
                     println!("Error: could not set logical size: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
-                if sdl2_sys::SDL_RenderSetIntegerScale(m_renderer, SDL_FALSE) != 0 {
+                if sdl2_sys::SDL_RenderSetIntegerScale(self.m_renderer, sdl2_sys::SDL_bool::SDL_FALSE) != 0 {
                     println!("Error: could not set scale: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
             } else {
-                sdl2_sys::SDL_RenderSetLogicalSize(m_renderer, 320, 240);
-                int result = SDL_RenderSetIntegerScale(m_renderer, (SDL_bool) (stretchMode == 2));
-                if result != 0 {
-                    println!("Error: could not set scale: {:?}", SDL_GetError());
+                let enable = match self.stretchMode == 2 {
+                    True => SDL_bool::SDL_TRUE,
+                    False => SDL_bool::SDL_FALSE,
+                };
+
+                sdl2_sys::SDL_RenderSetLogicalSize(self.m_renderer, 320, 240);
+                if sdl2_sys::SDL_RenderSetIntegerScale(self.m_renderer, enable) != 0 {
+                    println!("Error: could not set scale: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
             }
 
-            sdl2_sys::SDL_ShowWindow(m_window);
+            sdl2_sys::SDL_ShowWindow(self.m_window);
         }
     }
 
@@ -192,40 +230,24 @@ impl Screen {
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
     fn update_screen(&mut self, rect: sdl2::rect::Rect) {
         // TODO: refactor
-        let buffer;
         let flip_buffer = &graphics_util::FlipSurfaceVerticle(&self.render.graphics.buffers.backBuffer);
-        if !self.render.graphics.flipmode {
-            buffer = &self.render.graphics.buffers.backBuffer;
+        let buffer = if !self.render.graphics.flipmode {
+            &self.render.graphics.buffers.backBuffer
         } else {
-            buffer = flip_buffer;
-        }
+            flip_buffer
+        };
 
         // if self.badSignalEffect {
         //     buffer = &self.render.graphics.ApplyFilter(buffer);
         // }
 
-        // ClearSurface(m_screen);
         // FillRect(m_screen, 0x000);
         let rect_dst = sdl2::rect::Rect::new(0, 0, self.m_screen.width(), self.m_screen.height());
-        match self.m_screen.fill_rect(rect_dst, sdl2::pixels::Color::BLACK) {
-            Ok(_x) => (),
-            Err(s) => panic!("{}", s),
-        };
+        graphics_util::ClearSurface(&mut self.m_screen);
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
-        match buffer.blit(rect, &mut self.m_screen, rect_dst) {
-            Ok(_x) => (),
-            Err(s) => panic!("{}", s),
-        };
-
-        let texture_creator = self.canvas.texture_creator();
-        match self.m_screen.as_texture(&texture_creator) {
-            Ok(texture) => {
-                self.canvas.copy(&texture, None, None);
-            },
-            Err(s) => panic!("{}", s),
-        }
-        self.canvas.present();
+        buffer.blit(rect, &mut self.m_screen, rect_dst)
+            .expect("unable to render to screen buffer");
 
         if self.badSignalEffect {
             // SDL_FreeSurface(buffer);
@@ -235,6 +257,47 @@ impl Screen {
 
     // const SDL_PixelFormat* Screen::GetFormat(void)
     // void Screen::FlipScreen(void)
+    pub fn FlipScreen(&mut self) {
+        // @sx canvas/texture_creator stub
+        // let texture_creator = self.canvas.texture_creator();
+        // match self.m_screen.as_texture(&texture_creator) {
+        //     Ok(texture) => {
+        //         self.canvas.copy(&texture, None, None);
+        //     },
+        //     Err(s) => panic!("{}", s),
+        // }
+
+        unsafe {
+            // SDL_UpdateTexture(
+            //     m_screenTexture,
+            //     NULL,
+            //     m_screen->pixels,
+            //     m_screen->pitch
+            // );
+            // SDL_RenderCopy(
+            //     m_renderer,
+            //     m_screenTexture,
+            //     isFiltered ? &filterSubrect : NULL,
+            //     NULL
+            // );
+            sdl2_sys::SDL_UpdateTexture(
+                self.m_screenTexture,
+                std::ptr::null(),
+                (*self.m_screen.raw()).pixels,
+                self.m_screen.pitch() as i32
+            );
+            // let texture = sdl2_sys::SDL_CreateTextureFromSurface(self.m_renderer, self.m_screen.raw());
+            sdl2_sys::SDL_RenderCopy(self.m_renderer, self.m_screenTexture, std::ptr::null(), std::ptr::null());
+
+            // SDL_RenderPresent(m_renderer);
+            // SDL_RenderClear(m_renderer);
+            // ClearSurface(m_screen);
+            sdl2_sys::SDL_RenderPresent(self.m_renderer);
+            sdl2_sys::SDL_RenderClear(self.m_renderer);
+            graphics_util::ClearSurface(&mut self.m_screen);
+        }
+    }
+
     // void Screen::toggleFullScreen(void)
     // void Screen::toggleStretchMode(void)
     // void Screen::toggleLinearFilter(void)
@@ -310,13 +373,5 @@ impl Screen {
         } else {
             self.render();
         }
-    }
-
-    /* */
-
-    pub fn init_canvas (&mut self) {
-        self.canvas.set_draw_color(Color::RGB(128, 128, 128));
-        self.canvas.clear();
-        self.canvas.present();
     }
 }

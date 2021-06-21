@@ -25,7 +25,7 @@ impl Input {
     }
 
     pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
-        let graphics = screen.render.graphics.as_mut();
+        let graphics = &mut screen.render.graphics;
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
@@ -83,7 +83,7 @@ impl Input {
             if game.menustart && game.menucountdown <= 0 && (key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_esc)) {
                 music.playef(11);
                 if game.currentmenuname == game::MenuName::mainmenu {
-                    game.createmenu(game::MenuName::youwannaquit, false);
+                    game.createmenu(game::MenuName::youwannaquit, false, graphics, music);
                     map.nexttowercolour(graphics);
                 } else {
                     if game.slidermode != game::SLIDERMODE::SLIDER_NONE {
@@ -106,7 +106,7 @@ impl Input {
                     } else if game.ingame_titlemode && game.currentmenuname == game::MenuName::options {
                         game.returntoingame(graphics);
                     } else {
-                        game.return_menu(graphics);
+                        game.return_menu(graphics, music);
                         map.nexttowercolour(graphics);
                     }
                 }
@@ -229,7 +229,7 @@ impl Input {
                         } else {
                             // Bring you to the normal playmenu
                             music.playef(11);
-                            game.createmenu(MenuName::play, false);
+                            game.createmenu(MenuName::play, false, graphics, music);
                             map.nexttowercolour(graphics);
                         }
                     },
@@ -238,21 +238,21 @@ impl Input {
                     1 => { // OFFSET+1
                         // Bring you to the normal playmenu
                         music.playef(11);
-                        game.createmenu(MenuName::playerworlds, false);
+                        game.createmenu(MenuName::playerworlds, false, graphics, music);
                         map.nexttowercolour(graphics);
                     },
                     // #endif
                     2 => { // OFFSET+2
                         // Options
                         music.playef(11);
-                        game.createmenu(MenuName::options, false);
+                        game.createmenu(MenuName::options, false, graphics, music);
                         map.nexttowercolour(graphics);
                     },
                     // #if !defined(MAKEANDPLAY)
                     3 => { // OFFSET+3
                         // Credits
                         music.playef(11);
-                        game.createmenu(MenuName::credits, false);
+                        game.createmenu(MenuName::credits, false, graphics, music);
                         map.nexttowercolour(graphics);
                     },
                     // #else
@@ -261,7 +261,7 @@ impl Input {
                     // #endif
                     4 => { // OFFSET+4
                         music.playef(11);
-                        game.createmenu(MenuName::youwannaquit, false);
+                        game.createmenu(MenuName::youwannaquit, false, graphics, music);
                         map.nexttowercolour(graphics);
                     },
                     // #undef OFFSET
@@ -278,7 +278,7 @@ impl Input {
                 if game.currentmenuoption == game.menuoptions.len() as i32 - 1 {
                     //go back to menu
                     music.playef(11);
-                    game.return_menu();
+                    game.return_menu(graphics, music);
                     map.nexttowercolour(graphics);
                 } else if game.currentmenuoption == game.menuoptions.len() as i32 - 2 {
                     //previous page
@@ -288,7 +288,7 @@ impl Input {
                     // } else {
                     //     game.levelpage -= 1;
                     // }
-                    game.createmenu(MenuName::levellist, true);
+                    game.createmenu(MenuName::levellist, true, graphics, music);
                     game.currentmenuoption = game.menuoptions.len() as i32 - 2;
                     map.nexttowercolour(graphics);
                 } else if game.currentmenuoption == game.menuoptions.len() as i32 - 3 {
@@ -299,7 +299,7 @@ impl Input {
                     // } else {
                     //     game.levelpage += 1;
                     // }
-                    game.createmenu(MenuName::levellist, true);
+                    game.createmenu(MenuName::levellist, true, graphics, music);
                     game.currentmenuoption = game.menuoptions.len() as i32 - 3;
                     map.nexttowercolour(graphics);
                 } else {
@@ -335,7 +335,7 @@ impl Input {
                     },
                     2 => {
                         music.playef(11);
-                        game.return_menu();
+                        game.return_menu(graphics, music);
                         map.nexttowercolour(graphics);
                     },
                     _ => panic!("incorrect menuoption"),

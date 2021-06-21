@@ -1,12 +1,13 @@
 use std::time::Duration;
 
 extern crate sdl2;
-use game::GameState;
-use screen::render::graphics;
 use sdl2::EventPump;
 mod sdl2u;
 
 mod game;
+use game::GameState;
+#[macro_use]
+mod helpers;
 mod input;
 mod key_poll;
 mod logic;
@@ -14,9 +15,9 @@ mod map;
 mod maths;
 mod music;
 mod scenes;
-use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, preloader::Preloader};
-use crate::scenes::RenderResult;
+use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, RenderResult, preloader::Preloader};
 mod screen;
+use screen::render::graphics;
 
 mod rustutil;
 
@@ -51,6 +52,32 @@ fn print_logo() {
     println!("\t\t");
     println!("\t\t");
 }
+
+// static void runscript(void)
+// static void teleportermodeinput(void)
+// static void flipmodeoff(void)
+// static void focused_begin(void);
+// static void focused_end(void);
+// static const inline struct ImplFunc* get_gamestate_funcs(const int gamestate, int* num_implfuncs)
+// static const struct ImplFunc* gamestate_funcs = NULL;
+// static int num_gamestate_funcs = 0;
+// static int gamestate_func_index = -1;
+// static enum IndexCode increment_gamestate_func_index(void)
+// static void unfocused_run(void);
+// static enum IndexCode increment_unfocused_func_index(void)
+// static const struct ImplFunc** active_funcs = NULL;
+// static int* num_active_funcs = NULL;
+// static int* active_func_index = NULL;
+// static enum IndexCode (*increment_func_index)(void) = NULL;
+// static enum LoopCode loop_assign_active_funcs(void)
+// static enum LoopCode loop_run_active_funcs(void)
+// static enum LoopCode loop_begin(void);
+// static enum LoopCode loop_end(void);
+// static enum LoopCode (*const meta_funcs[])(void) = {
+// static int meta_func_index = 0;
+// static void inline fixedloop(void)
+// static void inline deltaloop(void);
+// static void cleanup(void);
 
 struct Main {
     sdl_context: sdl2::Sdl,
@@ -98,9 +125,11 @@ impl Main {
         // }
         // NETWORK_init();
 
+        let mut screen_settings = screen::ScreenSettings::new();
         let mut gameScreen = screen::Screen::new(&sdl_context);
-        let map = map::Map::new(&mut gameScreen.render.graphics);
-        let mut game = game::Game::new(&mut gameScreen.render.graphics);
+        let mut map = map::Map::new(&mut gameScreen.render.graphics);
+        let music = music::Music::new();
+        let mut game = game::Game::new(&mut gameScreen.render.graphics, &music);
 
         //Set up screen
         //Load Ini
@@ -122,7 +151,6 @@ impl Main {
 
         // Prioritize unlock.vvv first (2.2 and below),
         // but settings have been migrated to settings.vvv (2.3 and up)
-        let mut screen_settings = screen::ScreenSettings::new();
         game.loadstats(&mut screen_settings);
         game.loadsettings(&mut screen_settings);
         gameScreen.init(&mut screen_settings);
@@ -137,6 +165,8 @@ impl Main {
 
         // obj.init();
 
+        let game = game::Game::new(&mut gameScreen.render.graphics, &music);
+
         Main {
             sdl_context,
             input: input::Input::new(),
@@ -149,8 +179,8 @@ impl Main {
 
             // help: UtilityClass,
             // graphics: graphics::Graphics::new(),
-            music: music::Music::new(),
-            game: game::Game::new(),
+            music,
+            game,
             key: key_poll::KeyPoll::new(),
             map,
             // obj: entityclass,
@@ -323,8 +353,6 @@ impl Main {
         let mut f_time: u32 = 0;
         let mut f_timePrev: u32 = 0;
 
-        self.gameScreen.init_canvas();
-
         let mut event_pump = match self.sdl_context.event_pump() {
             Ok(v) => v,
             Err(s) => panic!("{}", s),
@@ -357,7 +385,7 @@ impl Main {
             timePrev = time_;
             time_ = timer.ticks();
 
-            // rustutil::dump_surface(&self.gameScreen.render.graphics.buffers.backBuffer, "buffer", "");
+            // crate::rustutil::dump_surface(&self.gameScreen.render.graphics.buffers.backBuffer, "buffer", "");
             // println!("main loop iter done in {:?}ms", now.elapsed().as_millis());
         }
     }
@@ -406,7 +434,7 @@ impl Main {
                 Some(rr) => self.gameScreen.do_screen_render(rr, &mut self.game),
                 _ => (),
             }
-            // gameScreen.FlipScreen();
+            self.gameScreen.FlipScreen();
         }
         // }
 
@@ -451,6 +479,15 @@ fn main() {
     m.no_custom_levels();
     m.main_loop();
 }
+
+// static void cleanup(void)
+// void VVV_exit(const int exit_code)
+// static void inline deltaloop(void)
+// static enum LoopCode loop_begin(void)
+// static void unfocused_run(void)
+// static void focused_begin(void)
+// static void focused_end(void)
+// static enum LoopCode loop_end(void)
 
 fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader) -> LoopCode {
     // println!("loop_begin");

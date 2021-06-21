@@ -23,7 +23,7 @@ pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game
                 music.playef(3);
             }
 
-            game.createmenu(game.menudest, true, graphics);
+            game.createmenu(game.menudest, true, graphics, music);
         }
     }
 

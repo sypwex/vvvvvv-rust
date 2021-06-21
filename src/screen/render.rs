@@ -8,7 +8,7 @@ pub enum BackGround {
 }
 
 pub struct Render {
-    pub graphics: Box<graphics::Graphics>,
+    pub graphics: graphics::Graphics,
     tr: i32,
     tg: i32,
     tb: i32,
@@ -16,7 +16,7 @@ pub struct Render {
 
 impl Render {
     pub fn new (pf: sdl2::pixels::PixelFormatEnum) -> Render {
-        let graphics = Box::new(graphics::Graphics::new(pf));
+        let graphics = graphics::Graphics::new(pf);
 
         Render {
             graphics,

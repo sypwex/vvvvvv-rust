@@ -314,7 +314,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(graphics: &mut graphics::Graphics) -> Game {
+    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music) -> Game {
         let mut game = Game {
             door_left: 0,
             door_right: 0,
@@ -667,7 +667,7 @@ impl Game {
             inputdelay: false,
         };
 
-        game.createmenu(MenuName::mainmenu, false, graphics);
+        game.createmenu(MenuName::mainmenu, false, graphics, music);
 
         game
     }
@@ -760,13 +760,13 @@ impl Game {
     // std::string Game::timetstring(int t);
 
     // void Game::returnmenu(void);
-    pub fn return_menu(&mut self, graphics: &mut graphics::Graphics) {
+    pub fn return_menu(&mut self, graphics: &mut graphics::Graphics, music: &mut music::Music) {
         match self.menustack.pop() {
             Some(frame) => {
                 // Store this in case createmenu() removes the stack frame
                 let previousoption = frame.option;
 
-                self.createmenu(frame.name, true, graphics);
+                self.createmenu(frame.name, true, graphics, music);
                 self.currentmenuoption = previousoption;
 
                 // @sx: looks like don't need it
@@ -783,7 +783,7 @@ impl Game {
     // void Game::returntomenu(enum Menu::MenuName t);
 
     // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
-    pub fn createmenu(&mut self, t: MenuName, samemenu: bool, graphics: &mut graphics::Graphics) {
+    pub fn createmenu(&mut self, t: MenuName, samemenu: bool, graphics: &mut graphics::Graphics, music: &music::Music) {
         if t == MenuName::mainmenu {
             //Either we've just booted up the game or returned from gamemode
             //Whichever it is, we shouldn't have a stack,
@@ -857,7 +857,7 @@ impl Game {
             MenuName::graphicoptions => {
                 self.add_menu_option("toggle fullscreen", None);
                 self.add_menu_option("scaling mode", None);
-                self.add_menu_option("resize to nearest", graphics.screenbuffer.isWindowed);
+                // self.add_menu_option("resize to nearest", graphics.screenbuffer.isWindowed);
                 self.add_menu_option("toggle filter", None);
                 self.add_menu_option("toggle analogue", None);
                 self.add_menu_option("toggle vsync", None);
