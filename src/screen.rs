@@ -8,7 +8,7 @@ pub mod render;
 pub mod renderfixed;
 
 const SCREEN_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
-const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::ARGB8888;
+const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
 
 pub struct ScreenSettings {
     pub windowWidth: i32,
@@ -44,10 +44,10 @@ pub struct Screen {
     /* Screen.h */
 
 	pub isWindowed: bool,
-	isFiltered: bool,
+	pub isFiltered: bool,
     pub badSignalEffect: bool,
-	stretchMode: i32,
-	vsync: bool,
+	pub stretchMode: i32,
+	pub vsync: bool,
 
 	m_window: *mut sdl2_sys::SDL_Window,
 	m_renderer: *mut sdl2_sys::SDL_Renderer,
@@ -55,6 +55,15 @@ pub struct Screen {
     m_screen: sdl2::surface::Surface<'static>,
 
 	filterSubrect: sdl2::rect::Rect,
+}
+
+#[derive(Debug,Copy,Clone)]
+pub struct ScreenParams {
+    pub isWindowed: bool,
+	pub isFiltered: bool,
+    pub badSignalEffect: bool,
+	pub stretchMode: i32,
+	pub vsync: bool,
 }
 
 impl Screen {
@@ -95,6 +104,16 @@ impl Screen {
             badSignalEffect: false,
             vsync: false,
             filterSubrect: sdl2::rect::Rect::new(1, 1, 318, 238),
+        }
+    }
+
+    pub fn get_screen_params(&self) -> ScreenParams {
+        ScreenParams {
+            isWindowed: self.isWindowed,
+            isFiltered: self.isFiltered,
+            badSignalEffect: self.badSignalEffect,
+            stretchMode: self.stretchMode,
+            vsync: self.vsync,
         }
     }
 
@@ -226,6 +245,10 @@ impl Screen {
     }
 
     // void Screen::ResizeToNearestMultiple(void)
+    pub fn ResizeToNearestMultiple(&mut self) {
+        println!("DEADBEEF: Screen::ResizeToNearestMultiple method not implemented yet");
+    }
+
     // void Screen::GetWindowSize(int* x, int* y)
     // void Screen::UpdateScreen(SDL_Surface* buffer, SDL_Rect* rect )
     fn update_screen(&mut self, rect: sdl2::rect::Rect) {
@@ -299,9 +322,24 @@ impl Screen {
     }
 
     // void Screen::toggleFullScreen(void)
+    pub fn toggleFullScreen(&mut self) {
+        println!("DEADBEEF: Screen::toggleFullScreen method not implemented yet");
+    }
+
     // void Screen::toggleStretchMode(void)
+    pub fn toggleStretchMode(&mut self) {
+        println!("DEADBEEF: Screen::toggleStretchMode method not implemented yet");
+    }
+
     // void Screen::toggleLinearFilter(void)
+    pub fn toggleLinearFilter(&mut self) {
+        println!("DEADBEEF: Screen::toggleLinearFilter method not implemented yet");
+    }
+
     // void Screen::resetRendererWorkaround(void)
+    pub fn resetRendererWorkaround(&mut self) {
+        println!("DEADBEEF: Screen::resetRendererWorkaround method not implemented yet");
+    }
 
     /* moved here from Graohics.cpp */
 

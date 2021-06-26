@@ -15,7 +15,7 @@ pub struct KeyPoll {
 
     xVel: i32,
     yVel: i32,
-    sensitivity: i32,
+    pub sensitivity: i32,
     leftbutton: i32,
     rightbutton: i32,
     middlebutton: i32,

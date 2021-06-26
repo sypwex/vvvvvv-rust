@@ -64,7 +64,7 @@ pub struct Map {
 	final_aniframe: i32,
 	final_aniframedelay: i32,
 
-	custommode: bool,
+	pub custommode: bool,
 	custommodeforreal: bool,
 	customwidth: i32,
     customheight: i32,
@@ -80,7 +80,7 @@ pub struct Map {
 	rcol: i32,
 
 	// This needs to be in map instead!
-	invincibility: bool,
+	pub invincibility: bool,
 
 	tileset: i32,
 
@@ -281,10 +281,24 @@ impl Map {
     }
 
     // void mapclass::settowercolour(int t)
+    pub fn settowercolour(&mut self, t: i32, graphics: &mut graphics::Graphics) {
+        graphics.buffers.titlebg.colstate = t*5;
+        if graphics.buffers.titlebg.colstate >= 30 {
+            graphics.buffers.titlebg.colstate = 0;
+        }
+
+        Map::updatebgobj(&mut graphics.buffers.titlebg);
+    }
+
     // bool mapclass::spikecollide(int x, int y)
     // bool mapclass::collide(int x, int y)
     // void mapclass::settile(int xp, int yp, int t)
     // int mapclass::area(int _rx, int _ry)
+    pub fn area(&self, _rx: i32, _ry: i32) -> i32 {
+        println!("DEADBEEF: mapclass::area method not implemented yet");
+        0
+    }
+
     // bool mapclass::isexplored(const int rx, const int ry)
     // void mapclass::setexplored(const int rx, const int ry, const bool status)
     // void mapclass::exploretower(void)

@@ -15,7 +15,7 @@ pub struct Music {
 	user_music_volume: i32,
 	user_sound_volume: i32,
 
-	currentsong: i32,
+	pub currentsong: i32,
 	nicechange: i32,
 	nicefade: bool,
 	quick_fade: bool,

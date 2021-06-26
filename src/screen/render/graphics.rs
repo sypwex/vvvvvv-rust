@@ -10,6 +10,11 @@ pub mod graphics_util;
 mod graphics_resources;
 pub mod towerbg;
 
+pub enum Color {
+    Clock,
+    Trinket,
+}
+
 pub struct Graphics {
     screen_pixelformat: sdl2::pixels::PixelFormatEnum,
     pub grphx: graphics_resources::GraphicsResources,
@@ -19,7 +24,7 @@ pub struct Graphics {
 
     pub flipmode: bool,
 	pub setflipmode: bool,
-	notextoutline: bool,
+	pub notextoutline: bool,
 	//buffer objects. //TODO refactor buffer objects
 	// SDL_Surface* backBuffer;
 	// Screen* screenbuffer;
@@ -67,6 +72,8 @@ pub struct Graphics {
 	fadebars: Vec<i32>,
 	ingame_fademode: i32,
 
+    pub translucentroomname: bool,
+
     pub alpha: f32,
 
     pub screenshake_x: i32,
@@ -79,8 +86,8 @@ pub struct Graphics {
     col_crewblue: graphics_util::ColourTransform,
     col_crewpurple: graphics_util::ColourTransform,
     col_crewinactive: graphics_util::ColourTransform,
-    col_clock: graphics_util::ColourTransform,
-    col_trinket: graphics_util::ColourTransform,
+    pub col_clock: graphics_util::ColourTransform,
+    pub col_trinket: graphics_util::ColourTransform,
     pub col_tr: i32,
     pub col_tg: i32,
     pub col_tb: i32,
@@ -159,6 +166,7 @@ impl Graphics {
             fadebars: vec![],
             ingame_fademode: 0,
 
+            translucentroomname: false,
 
             alpha: 1.0f32,
 
@@ -214,6 +222,10 @@ impl Graphics {
     }
 
     // void Graphics::drawspritesetcol(int x, int y, int t, int c)
+    pub fn drawspritesetcol(&self, x: i32, y: i32, t: i32, c: i32) {
+        println!("DEADBEEF: drawspritesetcol not implemented yet");
+    }
+
     // void Graphics::updatetitlecolours(void)
     pub fn updatetitlecolours (&mut self, glow: i32) {
         self.setcol(15, glow);
@@ -278,12 +290,16 @@ impl Graphics {
     // void Graphics::map_option(int opt, int num_opts, const std::string& text, bool selected /*= false*/)
 
     // void Graphics::Print( int _x, int _y, std::string _s, int r, int g, int b, bool cen /*= false*/ )
-    pub fn print(&mut self, x: i32, y: i32, s: String, r: i32, g: i32, b: i32, cen: bool) {
+    pub fn print(&mut self, x: i32, y: i32, s: &str, r: i32, g: i32, b: i32, cen: Option<bool>) {
         self.print_alpha(x, y, s, r, g, b, 255, cen);
     }
 
     // void Graphics::PrintAlpha( int _x, int _y, std::string _s, int r, int g, int b, int a, bool cen /*= false*/ )
-    pub fn print_alpha(&mut self, x: i32, y: i32, s: String, r: i32, g: i32, b: i32, a: i32, cen: bool /*= false*/ ) {
+    pub fn print_alpha(&mut self, x: i32, y: i32, s: &str, r: i32, g: i32, b: i32, a: i32, cen: Option<bool> ) {
+        let cen = match cen {
+            Some(v) => v,
+            None => false,
+        };
         let mut xx = x;
         // std::vector<SDL_Surface*>& font = flipmode ? flipbfont : bfont;
 
@@ -295,19 +311,19 @@ impl Graphics {
         self.ct.colour = self.get_rgba(r, g, b, a);
 
         if cen {
-            xx = 160 - (s.len() / 2) as i32;
+            xx = 160 - (Graphics::len(&s) / 2);
         }
 
         let mut bfontpos = 0;
 
-        for (curr, c) in s.chars().enumerate() {
+        for (_, curr) in s.chars().enumerate() {
             let ix = xx + bfontpos;
             let iy = y;
 
             self.grphx.bfont.rect.x = ix;
             self.grphx.bfont.rect.y = iy;
 
-            let idx = Graphics::font_idx(c as i32);
+            let idx = Graphics::font_idx(curr as i32);
             match &self.grphx.bfont.surfaces.get(idx) {
                 Some(char_surface) => {
                     graphics_util::BlitSurfaceColoured(
@@ -325,8 +341,11 @@ impl Graphics {
         }
     }
 
-    // void Graphics::bigprint(  int _x, int _y, std::string _s, int r, int g, int b, bool cen, int sc )
-    pub fn bigprint(&mut self, _x: i32, _y: i32, _s: &str, r: i32, g: i32, b: i32, cen: bool, sc: i32) {
+    // void Graphics::bigprint(  int _x, int _y, std::string _s, int r, int g, int b, bool cen = false, int sc = 2)
+    pub fn bigprint(&mut self, _x: i32, _y: i32, _s: &str, r: i32, g: i32, b: i32, cen: Option<bool>, sc: Option<i32>) {
+        let cen = cen.unwrap_or(False);
+        let sc = sc.unwrap_or(2);
+
         // std::vector<SDL_Surface*>& font = flipmode ? flipbfont : bfont;
 
         let r = maths::clamp(r, 0, 255);
@@ -336,26 +355,22 @@ impl Graphics {
         self.ct.colour = self.getRGB(r, g, b);
 
         let _x = if cen {
-            maths::VVV_max(160 - (_s.len() as i32 / 2 * sc), 0 )
+            maths::VVV_max(160 - (Graphics::len(_s) / 2 * sc), 0 )
         } else {
             _x
         };
 
         let mut bfontpos = 0;
-
-        // std::string::iterator iter = _s.begin();
-        // while iter != _s.end() {
         for curr in _s.to_string().chars() {
-            // curr = utf8::unchecked::next(iter);
-
             let idx = Graphics::font_idx(curr as i32);
+            let font_surface = &self.grphx.bfont.surfaces[idx];
+
             // if INBOUNDS_VEC(idx, font) {
                 // SDL_Surface* tempPrint = ScaleSurface(font[idx], font[idx]->w *sc,font[idx]->h *sc);
                 // SDL_Rect printrect = {_x + bfontpos, _y, bfont_rect.w*sc + 1, bfont_rect.h*sc + 1};
                 // BlitSurfaceColoured(tempPrint, NULL, backBuffer, &printrect, ct);
                 // SDL_FreeSurface(tempPrint);
             // }
-            let font_surface = &self.grphx.bfont.surfaces[idx];
             let tempPrint = graphics_util::ScaleSurface(font_surface, font_surface.width() * sc as u32, font_surface.height() * sc as u32);
             let printrect = graphics_util::setRect(_x + bfontpos, _y, (self.grphx.bfont.rect.w * sc + 1) as u32, (self.grphx.bfont.rect.h * sc + 1) as u32);
             graphics_util::BlitSurfaceColoured(&tempPrint, None, &mut self.buffers.backBuffer, printrect, self.ct.colour);
@@ -366,6 +381,10 @@ impl Graphics {
 
     // void Graphics::bigbprint(int x, int y, std::string s, int r, int g, int b, bool cen, int sc)
     // int Graphics::len(std::string t)
+    pub fn len(_s: &str) -> i32 {
+        _s.len() as i32 * 8
+    }
+
     // void Graphics::PrintOffAlpha( int _x, int _y, std::string _s, int r, int g, int b, int a, bool cen /*= false*/ )
     // void Graphics::bprint( int x, int y, std::string t, int r, int g, int b, bool cen /*= false*/ ) {
     // void Graphics::bprintalpha( int x, int y, std::string t, int r, int g, int b, int a, bool cen /*= false*/ )
@@ -393,6 +412,12 @@ impl Graphics {
     }
 
     // void Graphics::drawsprite(int x, int y, int t, Uint32 c)
+    pub fn draw_sprite_c(&mut self, x: i32, y: i32, t: i32, c: Color) {
+        // self.graphics.draw_sprite_c(34, 126-20, 50, self.graphics.col_clock);
+        // self.graphics.draw_sprite_c(270, 126-20, 22, self.graphics.col_trinket);
+        println!("DEADBEEF: draw sprite c not implemented yet");
+    }
+
     // bool Graphics::shouldrecoloroneway(const int tilenum, const bool mounted)
     // void Graphics::drawtile( int x, int y, int t )
     // void Graphics::drawtile2( int x, int y, int t )
@@ -419,13 +444,25 @@ impl Graphics {
     // void Graphics::drawgui(void)
     // void Graphics::updatetextboxes(void)
     // void Graphics::drawimagecol( int t, int xp, int yp, int r = 0, int g = 0, int b = 0, bool cent/*= false*/ )
+    pub fn drawimagecol(&self, t: i32, xp: i32, yp: i32, r: i32, g: i32, b: i32, cent: bool) {
+        println!("DEADBEEF: drawimagecol not implemented yet");
+    }
+
     // void Graphics::drawimage( int t, int xp, int yp, bool cent/*=false*/ )
     // void Graphics::drawpartimage( int t, int xp, int yp, int wp, int hp)
     // void Graphics::cutscenebars(void)
     // void Graphics::cutscenebarstimer(void)
     // void Graphics::setbars(const int position)
     // void Graphics::drawcrewman( int x, int y, int t, bool act, bool noshift /*=false*/ )
+    pub fn drawcrewman(&self, i: i32, y: i32, t: i32, act: bool, noshift: Option<bool>) {
+        println!("DEADBEEF: drawcrewman is not implemented yet");
+    }
+
     // void Graphics::drawpixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
+    pub fn drawpixeltextbox(&self, x: i32, y: i32, w: i32, h: i32, w2: i32, h2: i32, r: i32, g: i32, b: i32, xo: i32, yo: i32) {
+        println!("DEADBEEF: drawpixeltextbox not implemented yet");
+    }
+
     // void Graphics::drawcustompixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
     // void Graphics::drawtextbox( int x, int y, int w, int h, int r, int g, int b )
     // void Graphics::textboxactive(void)
@@ -561,7 +598,7 @@ impl Graphics {
                 buffer = tempstring.clone();
             }
 
-            self.print(x, y, buffer.to_string(), fr, fg, fb, false);
+            self.print(x, y, &buffer.to_owned(), fr, fg, fb, None);
         }
     }
 

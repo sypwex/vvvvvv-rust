@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::{music, screen::{self, render::graphics}};
+use crate::{map, music, screen::{self, render::graphics}};
 
 const numcrew: usize = 6;
 const numunlock: usize = 25;
@@ -12,8 +12,8 @@ pub struct Game {
     door_right: i32,
     door_up: i32,
     door_down: i32,
-    roomx: i32,
-    roomy: i32,
+    pub roomx: i32,
+    pub roomy: i32,
     roomchangedir: i32,
     prevroomx: i32,
     prevroomy: i32,
@@ -60,6 +60,7 @@ pub struct Game {
     menupage: i32,
     lastsaved: i32,
     deathcounts: i32,
+    pub silence_settings_error: bool,
 
     frames: i32,
     seconds: i32,
@@ -89,7 +90,7 @@ pub struct Game {
     pub currentmenuoption: i32,
     pub currentmenuname: MenuName,
     kludge_ingametemp: MenuName,
-    current_credits_list_index: i32,
+    pub current_credits_list_index: i32,
     pub menuxoff: i32,
     pub menuyoff: i32,
     pub menuspacing: i32,
@@ -131,60 +132,66 @@ pub struct Game {
     // Accessibility Options
     pub colourblindmode: bool,
     pub noflashingmode: bool,
-    slowdown: i32,
+    pub slowdown: i32,
     pub gameframerate: u32,
 
-    nodeathmode: bool,
+    pub nodeathmode: bool,
     gameoverdelay: i32,
     nocutscenes: bool,
+    pub ndmresultcrewrescued: i32,
+    pub ndmresulttrinkets: i32,
+    pub ndmresulthardestroom: String,
 
     // Time Trials
-    intimetrial: bool,
+    pub intimetrial: bool,
     timetrialparlost: bool,
     timetrialcountdown: i32,
     timetrialshinytarget: i32,
-    timetriallevel: i32,
+    pub timetriallevel: i32,
     timetrialpar: i32,
-    timetrialresulttime: i32,
-    timetrialresultframes: i32,
-    timetrialrank: i32,
+    pub timetrialresulttime: i32,
+    pub timetrialresultframes: i32,
+    pub timetrialrank: i32,
+    pub timetrialresultshinytarget: i32,
+    pub timetrialresulttrinkets: i32,
+    pub timetrialresultpar: i32,
+    pub timetrialresultdeaths: i32,
 
     creditposition: i32,
     oldcreditposition: i32,
-    insecretlab: bool,
+    pub insecretlab: bool,
 
     inintermission: bool,
 
     // numcrew: i32, // const
     crewstats: [bool; numcrew],
+    pub ndmresultcrewstats: [bool; numcrew],
+    pub tele_crewstats: [bool; numcrew],
+    pub quick_crewstats: [bool; numcrew],
+    // static const numtrials: i32 = 6,
+    pub besttimes: [i32; numtrials],
+    pub bestframes: [i32; numtrials],
+    pub besttrinkets: [i32; numtrials],
+    pub bestlives: [i32; numtrials],
+    pub bestrank: [i32; numtrials],
 
     alarmon: bool,
     alarmdelay: i32,
     blackout: bool,
 
-    tele_crewstats: [bool; numcrew],
-    quick_crewstats: [bool; numcrew],
-
     // numunlock: i32, // static const
     pub unlock: [bool; numunlock],
-    unlocknotify: [bool; numunlock],
-    stat_trinkets: i32,
+    pub unlocknotify: [bool; numunlock],
+    pub stat_trinkets: i32,
     fullscreen: bool,
     bestgamedeaths: i32,
 
-    // static const numtrials: i32 = 6,
-    besttimes: [i32; numtrials],
-    bestframes: [i32; numtrials],
-    besttrinkets: [i32; numtrials],
-    bestlives: [i32; numtrials],
-    bestrank: [i32; numtrials],
-
-    tele_gametime: String,
-    tele_trinkets: i32,
-    tele_currentarea: String,
-    quick_gametime: String,
-    quick_trinkets: i32,
-    quick_currentarea: String,
+    pub tele_gametime: String,
+    pub tele_trinkets: i32,
+    pub tele_currentarea: String,
+    pub quick_gametime: String,
+    pub quick_trinkets: i32,
+    pub quick_currentarea: String,
 
     mx: i32,
     my: i32,
@@ -217,8 +224,8 @@ pub struct Game {
     activity_b: i32,
     activity_lastprompt: String,
 
-    telesummary: String,
-    quicksummary: String,
+    pub telesummary: String,
+    pub quicksummary: String,
     customquicksummary: String,
     // save_exists: bool(),
 
@@ -257,11 +264,6 @@ pub struct Game {
     customleveltitle: String,
     customlevelfilename: String,
 
-    // void clearcustomlevelstats(),
-    // void loadcustomlevelstats(),
-    // void savecustomlevelstats(),
-    // void updatecustomlevelstats(clevel: String, cscore: i32),
-
     // std::vector<CustomLevelStat> customlevelstats,
     customlevelstatsloaded: bool,
 
@@ -270,7 +272,7 @@ pub struct Game {
     pub controllerButton_esc: Vec<Button>,
     pub controllerButton_restart: Vec<Button>,
 
-    skipfakeload: bool,
+    pub skipfakeload: bool,
     ghostsenabled: bool,
 
     cliplaytest: bool,
@@ -301,7 +303,7 @@ pub struct Game {
     //   }
 
     pub over30mode: bool,
-    glitchrunnermode: bool, // Have fun speedrunners! <3 Misa
+    pub glitchrunnermode: bool, // Have fun speedrunners! <3 Misa
 
     pub ingame_titlemode: bool,
     // #if !defined(NO_CUSTOM_LEVELS) && !defined(NO_EDITOR)
@@ -309,12 +311,12 @@ pub struct Game {
     // #endif
     pub slidermode: SLIDERMODE,
 
-    disablepause: bool,
+    pub disablepause: bool,
     pub inputdelay: bool,
 }
 
 impl Game {
-    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music) -> Game {
+    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) -> Game {
         let mut game = Game {
             door_left: 0,
             door_right: 0,
@@ -380,6 +382,7 @@ impl Game {
             menupage: 0,
             lastsaved: 0,
             deathcounts: 0,
+            silence_settings_error: false,
 
             press_left: false,
             press_right: false,
@@ -449,7 +452,11 @@ impl Game {
             controllerSensitivity: 2,
 
             nodeathmode: false,
+            gameoverdelay: 0,
             nocutscenes: false,
+            ndmresultcrewrescued: 0,
+            ndmresulttrinkets: 0,
+            ndmresulthardestroom: String::new(),
 
             // Time Trials
             intimetrial: false,
@@ -461,20 +468,17 @@ impl Game {
             timetrialresulttime: 0,
             timetrialresultframes: 0,
             timetrialrank: 0,
+            timetrialresultshinytarget: 0,
+            timetrialresulttrinkets: 0,
+            timetrialresultpar: 0,
+            timetrialresultdeaths: 0,
 
             creditposition: 0,
             oldcreditposition: 0,
             insecretlab: false,
 
-            // SDL_memset(crewstats, false, sizeof(crewstats));
-            // SDL_memset(tele_crewstats, false, sizeof(tele_crewstats));
-            // SDL_memset(quick_crewstats, false, sizeof(quick_crewstats));
-            // SDL_memset(besttimes, -1, sizeof(besttimes));
-            // SDL_memset(bestframes, -1, sizeof(bestframes));
-            // SDL_memset(besttrinkets, -1, sizeof(besttrinkets));
-            // SDL_memset(bestlives, -1, sizeof(bestlives));
-            // SDL_memset(bestrank, -1, sizeof(bestrank));
             crewstats: [false; numcrew],
+            ndmresultcrewstats: [false; numcrew],
             tele_crewstats: [false; numcrew],
             quick_crewstats: [false; numcrew],
             besttimes: [-1; numcrew],
@@ -515,7 +519,6 @@ impl Game {
             useteleporter: false,
             teleport_to_teleporter: 0,
 
-            gameoverdelay: 0,
             frames: 0,
             seconds: 0,
             minutes: 0,
@@ -557,7 +560,7 @@ impl Game {
             // saveFilePath: FILESYSTEM_getUserSaveDirectory(),
 
             // tinyxml2::XMLDocument doc;
-            // if (!FILESYSTEM_loadTiXml2Document("saves/qsave.vvv", doc))
+            // if !FILESYSTEM_loadTiXml2Document("saves/qsave.vvv", doc))
             // {
             //     quicksummary = "";
             //     printf("Quick Save Not Found\n");
@@ -568,7 +571,7 @@ impl Game {
             //     tinyxml2::XMLElement* pElem;
             //     tinyxml2::XMLHandle hRoot(NULL);
             //     pElem=hDoc.FirstChildElement().ToElement();
-            //     if (!pElem)
+            //     if !pElem)
             //     {
             //         printf("Quick Save Appears Corrupted: No XML Root\n");
             //     }
@@ -578,7 +581,7 @@ impl Game {
             //     {
             //         std::string pKey(pElem->Value());
             //         const char* pText = pElem->GetText() ;
-            //         if (pKey == "summary")
+            //         if pKey == "summary")
             //         {
             //             quicksummary = pText;
             //         }
@@ -587,7 +590,7 @@ impl Game {
 
 
             // tinyxml2::XMLDocument docTele;
-            // if (!FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", docTele)) {
+            // if !FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", docTele)) {
             //     telesummary = "";
             //     printf("Teleporter Save Not Found\n");
             // } else {
@@ -596,7 +599,7 @@ impl Game {
             //     tinyxml2::XMLHandle hRoot(NULL); {
             //         pElem=hDoc.FirstChildElement().ToElement();
             //         // should always have a valid root but handle gracefully if it does
-            //         if (!pElem) {
+            //         if !pElem) {
             //             printf("Teleporter Save Appears Corrupted: No XML Root\n");
             //         }
             //         // save this for later
@@ -606,7 +609,7 @@ impl Game {
             //     {
             //         std::string pKey(pElem->Value());
             //         const char* pText = pElem->GetText() ;
-            //         if (pKey == "summary")
+            //         if pKey == "summary")
             //         {
             //             telesummary = pText;
             //         }
@@ -667,7 +670,7 @@ impl Game {
             inputdelay: false,
         };
 
-        game.createmenu(MenuName::mainmenu, false, graphics, music);
+        game.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map);
 
         game
     }
@@ -756,17 +759,25 @@ impl Game {
     // std::string Game::partimestring(void);
 
     // std::string Game::resulttimestring(void);
+    pub fn resulttimestring(&self) -> &str {
+        println!("DEADBEEF: resulttimestring not implemented yet");
+        &""
+    }
 
     // std::string Game::timetstring(int t);
+    pub fn timetstring(&self, t: i32) -> &str {
+        println!("DEADBEEF: timetstring not implemented yet");
+        &""
+    }
 
     // void Game::returnmenu(void);
-    pub fn return_menu(&mut self, graphics: &mut graphics::Graphics, music: &mut music::Music) {
+    pub fn returnmenu(&mut self, graphics: &mut graphics::Graphics, music: &mut music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) {
         match self.menustack.pop() {
             Some(frame) => {
                 // Store this in case createmenu() removes the stack frame
                 let previousoption = frame.option;
 
-                self.createmenu(frame.name, true, graphics, music);
+                self.createmenu(frame.name, Some(true), graphics, music, screen_params, map);
                 self.currentmenuoption = previousoption;
 
                 // @sx: looks like don't need it
@@ -781,9 +792,13 @@ impl Game {
     }
 
     // void Game::returntomenu(enum Menu::MenuName t);
+    pub fn returntomenu(&mut self, t: MenuName) {
+        println!("DEADBEEF: Game::returntomenu not implemented yet");
+    }
 
     // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
-    pub fn createmenu(&mut self, t: MenuName, samemenu: bool, graphics: &mut graphics::Graphics, music: &music::Music) {
+    pub fn createmenu(&mut self, t: MenuName, samemenu: Option<bool>, graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) {
+        let samemenu = samemenu.unwrap_or(false);
         if t == MenuName::mainmenu {
             //Either we've just booted up the game or returned from gamemode
             //Whichever it is, we shouldn't have a stack,
@@ -857,7 +872,7 @@ impl Game {
             MenuName::graphicoptions => {
                 self.add_menu_option("toggle fullscreen", None);
                 self.add_menu_option("scaling mode", None);
-                // self.add_menu_option("resize to nearest", graphics.screenbuffer.isWindowed);
+                self.add_menu_option("resize to nearest", Some(screen_params.isWindowed));
                 self.add_menu_option("toggle filter", None);
                 self.add_menu_option("toggle analogue", None);
                 self.add_menu_option("toggle vsync", None);
@@ -937,6 +952,316 @@ impl Game {
                 self.menuyoff = 0;
                 maxspacing = 15;
             },
+
+
+            MenuName::accessibility => {
+                // #if !defined(MAKEANDPLAY)
+                self.add_menu_option("unlock play modes", None);
+                // #endif
+                self.add_menu_option("invincibility", Some(!self.ingame_titlemode || (!self.insecretlab && !self.intimetrial && !self.nodeathmode)));
+                self.add_menu_option("slowdown", Some(!self.ingame_titlemode || (!self.insecretlab && !self.intimetrial && !self.nodeathmode)));
+                self.add_menu_option("animated backgrounds", None);
+                self.add_menu_option("screen effects", None);
+                self.add_menu_option("text outline", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            MenuName::controller => {
+                self.add_menu_option("analog stick sensitivity", None);
+                self.add_menu_option("bind flip", None);
+                self.add_menu_option("bind enter", None);
+                self.add_menu_option("bind menu", None);
+                self.add_menu_option("bind restart", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 0;
+                maxspacing = 10;
+            },
+            MenuName::cleardatamenu => {
+                self.add_menu_option("no! don't delete", None);
+                self.add_menu_option("yes, delete everything", None);
+                self.menuyoff = 64;
+            },
+            MenuName::setinvincibility => {
+                self.add_menu_option("no, return to options", None);
+                self.add_menu_option("yes, enable", None);
+                self.menuyoff = 64;
+            },
+            MenuName::setslowdown => {
+                self.add_menu_option("normal speed", None);
+                self.add_menu_option("80% speed", None);
+                self.add_menu_option("60% speed", None);
+                self.add_menu_option("40% speed", None);
+                self.menuyoff = 16;
+            },
+            MenuName::unlockmenu => {
+                self.add_menu_option("unlock time trials", None);
+                self.add_menu_option("unlock intermissions", Some(!self.unlock[16]));
+                self.add_menu_option("unlock no death mode", Some(!self.unlock[17]));
+                self.add_menu_option("unlock flip mode", Some(!self.unlock[18]));
+                self.add_menu_option("unlock ship jukebox", Some(self.stat_trinkets < 20));
+                self.add_menu_option("unlock secret lab", Some(!self.unlock[8]));
+                self.add_menu_option("return", None);
+                self.menuyoff = -20;
+            },
+            MenuName::credits => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("last page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits2 => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits25 => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits3 => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits4 => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits5 => {
+                self.add_menu_option("next page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::credits6 => {
+                self.add_menu_option("first page", None);
+                self.add_menu_option("previous page", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 64;
+            },
+            MenuName::play => {
+                //Ok, here's where the self.unlock stuff comes into it:
+                //First up, time trials:
+                let mut temp = 0;
+                if self.unlock[0] && self.stat_trinkets >= 3 && !self.unlocknotify[9] { temp += 1 };
+                if self.unlock[1] && self.stat_trinkets >= 6 && !self.unlocknotify[10] { temp += 1 };
+                if self.unlock[2] && self.stat_trinkets >= 9 && !self.unlocknotify[11] { temp += 1 };
+                if self.unlock[3] && self.stat_trinkets >= 12 && !self.unlocknotify[12] { temp += 1 };
+                if self.unlock[4] && self.stat_trinkets >= 15 && !self.unlocknotify[13] { temp += 1 };
+                if self.unlock[5] && self.stat_trinkets >= 18 && !self.unlocknotify[14] { temp += 1 };
+                if temp > 0 {
+                    //you've self.unlocked a time trial!
+                    if self.unlock[0] && self.stat_trinkets >= 3 {
+                        self.unlocknotify[9] = true;
+                        self.unlock[9] = true;
+                    }
+                    if self.unlock[1] && self.stat_trinkets >= 6 {
+                        self.unlocknotify[10] = true;
+                        self.unlock[10] = true;
+                    }
+                    if self.unlock[2] && self.stat_trinkets >= 9 {
+                        self.unlocknotify[11] = true;
+                        self.unlock[11] = true;
+                    }
+                    if self.unlock[3] && self.stat_trinkets >= 12 {
+                        self.unlocknotify[12] = true;
+                        self.unlock[12] = true;
+                    }
+                    if self.unlock[4] && self.stat_trinkets >= 15 {
+                        self.unlocknotify[13] = true;
+                        self.unlock[13] = true;
+                    }
+                    if self.unlock[5] && self.stat_trinkets >= 18 {
+                        self.unlocknotify[14] = true;
+                        self.unlock[14] = true;
+                    }
+
+                    if temp == 1 {
+                        self.createmenu(MenuName::unlocktimetrial, Some(true), graphics, music, screen_params, map);
+                        self.savestatsandsettings();
+                    }
+                    else if temp > 1 {
+                        self.createmenu(MenuName::unlocktimetrials, Some(true), graphics, music, screen_params, map);
+                        self.savestatsandsettings();
+                    }
+                }
+                else
+                {
+                    //Alright, we haven't self.unlocked any time trials. How about no death mode?
+                    temp = 0;
+                    if self.bestrank[0] >= 2 { temp += 1 }
+                    if self.bestrank[1] >= 2 { temp += 1 }
+                    if self.bestrank[2] >= 2 { temp += 1 }
+                    if self.bestrank[3] >= 2 { temp += 1 }
+                    if self.bestrank[4] >= 2 { temp += 1 }
+                    if self.bestrank[5] >= 2 { temp += 1 }
+                    if temp >= 4 && !self.unlocknotify[17] {
+                        //Unlock No Death Mode
+                        self.unlocknotify[17] = true;
+                        self.unlock[17] = true;
+                        self.createmenu(MenuName::unlocknodeathmode, Some(true), graphics, music, screen_params, map);
+                        self.savestatsandsettings();
+                    }
+                    //Alright then! Flip mode?
+                    else if self.unlock[5] && !self.unlocknotify[18] {
+                        self.unlock[18] = true;
+                        self.unlocknotify[18] = true;
+                        self.createmenu(MenuName::unlockflipmode, Some(true), graphics, music, screen_params, map);
+                        self.savestatsandsettings();
+                    }
+                    //What about the intermission levels?
+                    else if self.unlock[7] && !self.unlocknotify[16] {
+                        self.unlock[16] = true;
+                        self.unlocknotify[16] = true;
+                        self.createmenu(MenuName::unlockintermission, Some(true), graphics, music, screen_params, map);
+                        self.savestatsandsettings();
+                    } else {
+                        if self.save_exists() {
+                            self.add_menu_option("continue", None);
+                        } else {
+                            self.add_menu_option("new game", None);
+                        }
+                        //ok, secret lab! no notification, but test:
+                        if self.unlock[8] {
+                            self.add_menu_option("secret lab", Some(!map.invincibility && self.slowdown == 30));
+                        }
+                        self.add_menu_option("play modes", None);
+                        if self.save_exists() {
+                            self.add_menu_option("new game", None);
+                        }
+                        self.add_menu_option("return", None);
+                        if self.unlock[8] {
+                            self.menuyoff = -30;
+                        } else {
+                            self.menuyoff = -40;
+                        }
+                    }
+                }
+            },
+            MenuName::unlocktimetrial | MenuName::unlocktimetrials | MenuName::unlocknodeathmode | MenuName::unlockintermission | MenuName::unlockflipmode => {
+                self.add_menu_option("continue", None);
+                self.menuyoff = 70;
+            },
+            MenuName::newgamewarning => {
+                self.add_menu_option("start new game", None);
+                self.add_menu_option("return to menu", None);
+                self.menuyoff = 64;
+            },
+            MenuName::playmodes => {
+                self.add_menu_option("time trials", Some(!map.invincibility && self.slowdown == 30));
+                self.add_menu_option("intermissions", Some(self.unlock[16]));
+                self.add_menu_option("no death mode", Some(self.unlock[17] && !map.invincibility && self.slowdown == 30));
+                self.add_menu_option("flip mode", Some(self.unlock[18]));
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 8;
+                maxspacing = 20;
+            },
+            MenuName::intermissionmenu => {
+                self.add_menu_option("play intermission 1", None);
+                self.add_menu_option("play intermission 2", None);
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = -35;
+            },
+            MenuName::playint1 => {
+                self.add_menu_option("Vitellary", None);
+                self.add_menu_option("Vermilion", None);
+                self.add_menu_option("Verdigris", None);
+                self.add_menu_option("Victoria", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 10;
+            },
+            MenuName::playint2 => {
+                self.add_menu_option("Vitellary", None);
+                self.add_menu_option("Vermilion", None);
+                self.add_menu_option("Verdigris", None);
+                self.add_menu_option("Victoria", None);
+                self.add_menu_option("return", None);
+                self.menuyoff = 10;
+            },
+            MenuName::continuemenu => {
+                map.settowercolour(3, graphics);
+                self.add_menu_option("continue from teleporter", None);
+                self.add_menu_option("continue from quicksave", None);
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 20;
+            },
+            MenuName::startnodeathmode => {
+                self.add_menu_option("disable cutscenes", None);
+                self.add_menu_option("enable cutscenes", None);
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 40;
+            },
+            MenuName::gameover => {
+                self.menucountdown = 120;
+                self.menudest = MenuName::gameover2;
+            },
+            MenuName::gameover2 => {
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 80;
+            },
+            MenuName::unlockmenutrials => {
+                self.add_menu_option("space station 1", Some(!self.unlock[9]));
+                self.add_menu_option("the laboratory", Some(!self.unlock[10]));
+                self.add_menu_option("the tower", Some(!self.unlock[11]));
+                self.add_menu_option("space station 2", Some(!self.unlock[12]));
+                self.add_menu_option("the warp zone", Some(!self.unlock[13]));
+                self.add_menu_option("the final level", Some(!self.unlock[14]));
+
+                self.add_menu_option("return to self.unlock menu", None);
+                self.menuyoff = 0;
+            },
+            MenuName::timetrials => {
+                self.add_menu_option(if self.unlock[9]  { "space station 1" } else { "???" }, Some(self.unlock[9]));
+                self.add_menu_option(if self.unlock[10] { "the laboratory"  } else { "???" }, Some(self.unlock[10]));
+                self.add_menu_option(if self.unlock[11] { "the tower"       } else { "???" }, Some(self.unlock[11]));
+                self.add_menu_option(if self.unlock[12] { "space station 2" } else { "???" }, Some(self.unlock[12]));
+                self.add_menu_option(if self.unlock[13] { "the warp zone"   } else { "???" }, Some(self.unlock[13]));
+                self.add_menu_option(if self.unlock[14] { "the final level" } else { "???" }, Some(self.unlock[14]));
+
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 0;
+                maxspacing = 15;
+            },
+            MenuName::nodeathmodecomplete => {
+                self.menucountdown = 90;
+                self.menudest = MenuName::nodeathmodecomplete2;
+            },
+            MenuName::nodeathmodecomplete2 => {
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 70;
+            },
+            MenuName::timetrialcomplete => {
+                self.menucountdown = 90;
+                self.menudest = MenuName::timetrialcomplete2;
+            },
+            MenuName::timetrialcomplete2 => {
+                self.menucountdown = 60;
+                self.menudest = MenuName::timetrialcomplete3;
+            },
+            MenuName::timetrialcomplete3 => {
+                self.add_menu_option("return to play menu", None);
+                self.add_menu_option("try again", None);
+                self.menuyoff = 70;
+            },
+            MenuName::gamecompletecontinue => {
+                self.add_menu_option("return to play menu", None);
+                self.menuyoff = 70;
+            },
+            MenuName::errorsavingsettings => {
+                self.add_menu_option("ok", None);
+                self.add_menu_option("silence", None);
+                self.menuyoff = 10;
+            },
+
+
+
             v => println!("DEADBEEF: Game::createmenu({:?}) is not implemented yet", v),
         }
 
@@ -996,8 +1321,14 @@ impl Game {
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
+    pub fn savestats(&mut self, screen_settings: &mut screen::ScreenSettings) {
+        println!("DEADBEEF: Game::savestats not implemented yet");
+    }
 
     // void Game::deletestats(void);
+    pub fn deletestats(&mut self) {
+        println!("DEADBEEF: Game::deletestats not implemented yet");
+    }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
 
@@ -1012,35 +1343,75 @@ impl Game {
     // bool Game::savesettings(void);
 
     // bool Game::savestatsandsettings(void);
+    pub fn savestatsandsettings(&mut self) {
+        println!("DEADBEEF: Game::savestatsandsettings not implemented yet");
+    }
 
     // void Game::savestatsandsettings_menu(void);
+    pub fn savestatsandsettings_menu(&mut self) {
+        println!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
+    }
 
     // void Game::deletesettings(void);
+    pub fn deletesettings(&mut self) {
+        println!("DEADBEEF: Game::deletesettings() method not implemented yet");
+    }
 
     // void Game::deletequick(void);
+    pub fn deletequick(&mut self) {
+        println!("DEADBEEF: Game::deletequick() method not implemented yet");
+    }
 
     // bool Game::savetele(void);
+    pub fn savetele(&mut self) {
+        println!("DEADBEEF: Game::savetele() method not implemented yet");
+    }
 
     // void Game::loadtele(void);
+    pub fn loadtele(&mut self) {
+        println!("DEADBEEF: Game::loadtele() method not implemented yet");
+    }
 
     // void Game::deletetele(void);
+    pub fn deletetele(&mut self) {
+        println!("DEADBEEF: Game::deletetele() method not implemented yet");
+    }
 
     // void Game::customstart(void);
+    pub fn customstart(&mut self) {
+        println!("DEADBEEF: Game::customstart() method not implemented yet");
+    }
 
     // void Game::start(void);
+    pub fn start(&mut self) {
+        println!("DEADBEEF: Game::start() method not implemented yet");
+    }
 
     // void Game::startspecial(int t);
+    pub fn startspecial(&mut self, t: i32) {
+        println!("DEADBEEF: Game::startspecial() method not implemented yet");
+    }
 
     // void Game::starttrial(int t);
+    pub fn starttrial(&mut self, t: i32) {
+        println!("DEADBEEF: Game::starttrial() method not implemented yet");
+    }
 
     // void Game::swnpenalty(void);
 
     // void Game::deathsequence(void);
 
     // void Game::customloadquick(std::string savfile);
+
     // void Game::loadquick(void);
+    pub fn loadquick(&mut self) {
+        println!("DEADBEEF: Game::loadquick() method not implemented yet");
+    }
 
     // void Game::loadsummary(void);
+    pub fn loadsummary(&mut self) {
+        println!("DEADBEEF: Game::loadsummary() method not implemented yet");
+    }
 
     // void Game::readmaingamesave(tinyxml2::XMLDocument& doc);
     // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
@@ -1087,6 +1458,10 @@ impl Game {
 
     // void Game::clearcustomlevelstats(void);
     // void Game::loadcustomlevelstats(void);
+    pub fn loadcustomlevelstats(&self) {
+        println!("DEADBEEF: Game::loadcustomlevelstats() method not implemented yet");
+    }
+
     // void Game::savecustomlevelstats(void);
     // void Game::updatecustomlevelstats(std::string clevel, int cscore);
 

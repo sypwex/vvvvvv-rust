@@ -153,11 +153,9 @@ impl RenderTrait for Preloader {
             graphics.buffers.fill_back_buffer_with_color_at_xy(self.pre_frontrectx as u32, self.pre_frontrecty as u32, self.pre_frontrectw as u32, self.pre_frontrecth as u32, graphics.getBGR_AsPixelColor(0x3E,0x31,0xA2));
 
             if self.pre_fakepercent == 100 {
-                // graphics.Print(282-(15*8), 204, "LOADING... " + help.String(int(self.pre_fakepercent))+"%", 124, 112, 218, false);
-                graphics.print(282-(15*8), 204, ["LOADING... ", &self.pre_fakepercent.to_string(), "%"].concat(), 124, 112, 218, false);
+                graphics.print(282-(15*8), 204, &format!("LOADING... {}%", self.pre_fakepercent).to_owned(), 124, 112, 218, Some(false));
             } else {
-                // graphics.Print(282-(14*8), 204, "LOADING... " + help.String(int(self.pre_fakepercent))+"%", 124, 112, 218, false);
-                graphics.print(282-(14*8), 204, ["LOADING... ", &self.pre_fakepercent.to_string(), "%"].concat(), 124, 112, 218, false);
+                graphics.print(282-(14*8), 204, &format!("LOADING... {}%", self.pre_fakepercent).to_owned(), 124, 112, 218, Some(false));
             }
 
             // Render
@@ -175,7 +173,7 @@ impl RenderTrait for Preloader {
             // graphics.buffers.fill_back_buffer_with_color_at_xy(self.pre_temprectx as u32, self.pre_temprecty as u32, self.pre_temprectw as u32, self.pre_temprecth as u32, sdl2::pixels::Color::BLACK);
             // graphics.buffers.fill_back_buffer_with_color_at_xy(self.pre_frontrectx as u32, self.pre_frontrecty as u32, self.pre_frontrectw as u32, self.pre_frontrecth as u32, graphics.getBGR_AsPixelColor(0x3E,0x31,0xA2));
 
-            graphics.print(282-(15*8), 204, "LOADING... 100%".to_string(), 124, 112, 218, false);
+            graphics.print(282-(15*8), 204, "LOADING... 100%", 124, 112, 218, Some(false));
         }
 
         // graphics.drawfade();

@@ -19,14 +19,6 @@ impl RenderFixed {
     }
   }
 
-  // UtilityClass::UtilityClass(void)
-  // std::string UtilityClass::String( int _v )
-  // int UtilityClass::Int(const char* str, int fallback /*= 0*/)
-  // std::string UtilityClass::GCString(const std::vector<SDL_GameControllerButton>& buttons)
-  // std::string UtilityClass::twodigits( int t )
-  // std::string UtilityClass::timestring( int t )
-  // std::string UtilityClass::number( int _t )
-  // bool UtilityClass::intersects( SDL_Rect A, SDL_Rect B )
   // void UtilityClass::updateglow(void)
   pub fn update_glow (&mut self) {
     self.slowsine += 1;

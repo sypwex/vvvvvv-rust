@@ -1,9 +1,9 @@
-use crate::{map, music};
+use crate::{map, music, screen};
 use crate::{game, scenes::RenderResult};
 use crate::screen::render::graphics;
 use crate::screen::renderfixed;
 
-pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Option<RenderResult> {
     //Misc
     //map.updatetowerglow(&mut graphics.buffers.titlebg);
     renderfixed.update_glow();
@@ -23,7 +23,7 @@ pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game
                 music.playef(3);
             }
 
-            game.createmenu(game.menudest, true, graphics, music);
+            game.createmenu(game.menudest, Some(true), graphics, music, screen_params, map);
         }
     }
 
