@@ -33,13 +33,15 @@ impl Scenes {
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::titlelogic },
             SceneFunc { state: GameState::TITLEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
 
-            // GameState::GAMEMODE => {
-            //     // {Func_fixed, runscript},
-            //     // {Func_fixed, gamerenderfixed},
-            //     // {Func_delta, gamerender},
-            //     // {Func_input, gameinput},
-            //     // {Func_fixed, gamelogic},
-            // },
+            // GameState::GAMEMODE
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_begin },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::runscript },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::gamerenderfixed },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncDelta, fnname: Fns::gamerender },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncInput, fnname: Fns::gameinput },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::gamelogic },
+            SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
+
             // GameState::MAPMODE => {
             //     // {Func_fixed, maprenderfixed},
             //     // {Func_delta, maprender},
@@ -168,6 +170,13 @@ pub enum Fns {
     titlerenderfixed,
     titlerender,
     titlelogic,
+
+    // GameState::GAMEMODE
+    runscript,
+    gamerenderfixed,
+    gamerender,
+    gameinput,
+    gamelogic,
 }
 
 pub trait InputTrait {

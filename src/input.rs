@@ -1,10 +1,11 @@
 use sdl2::keyboard::Keycode;
 
+use crate::entity;
 use crate::game::{MenuName, SLIDERMODE};
 use crate::screen::ScreenParams;
 use crate::screen::render::graphics;
 use crate::{game, scenes::RenderResult, screen};
-use crate::{key_poll, map, music};
+use crate::{key_poll, map, music, script};
 
 pub struct Input {
     fadetomode: bool,
@@ -25,7 +26,7 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams) -> Option<RenderResult> {
+    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Option<RenderResult> {
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
@@ -156,18 +157,17 @@ impl Input {
                 self.fadetomodedelay -= 1;
             } else {
                 self.fadetomode = false;
-                // TODO @sx
-                // script.startgamemode(self.gotomode);
-                println!("READY TO STAERT THE GAME!!!");
+                script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music);
             }
         }
 
         None
     }
 
-    pub fn gameinput (&mut self) {
+    pub fn gameinput (&mut self) -> Option<RenderResult> {
         // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+        None
     }
 
     pub fn mapinput (&mut self) {

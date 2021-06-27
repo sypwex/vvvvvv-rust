@@ -1,4 +1,4 @@
-use std::ptr;
+use std::{collections::HashMap, ptr};
 extern crate sdl2;
 extern crate sdl2_sys;
 use sdl2::render::BlendMode;
@@ -8,12 +8,16 @@ use crate::{game::{self, SLIDERMODE}, map, maths, screen::render::graphics::grap
 use super::BackGround;
 pub mod graphics_util;
 mod graphics_resources;
+mod textbox;
 pub mod towerbg;
 
 pub enum Color {
     Clock,
     Trinket,
 }
+
+const numstars: usize = 50;
+const numbackboxes: usize = 18;
 
 pub struct Graphics {
     screen_pixelformat: sdl2::pixels::PixelFormatEnum,
@@ -51,7 +55,7 @@ pub struct Graphics {
 	linestate: i32,
     linedelay: i32,
 	backoffset: i32,
-	backgrounddrawn: bool,
+	pub backgrounddrawn: bool,
     foregrounddrawn: bool,
 
     trinketcolset: bool,
@@ -78,6 +82,28 @@ pub struct Graphics {
 
     pub screenshake_x: i32,
     pub screenshake_y: i32,
+
+	pub textbox: Vec<textbox::TextBoxClass>,
+
+	pub showcutscenebars: bool,
+	cutscenebarspos: i32,
+	oldcutscenebarspos: i32,
+
+	stars: [sdl2::rect::Rect; numstars],
+	starsspeed: [i32; numstars],
+
+	spcol: i32,
+    spcoldel: i32,
+	backboxes: [sdl2::rect::Rect; numbackboxes],
+	backboxvx: [i32; numbackboxes],
+	backboxvy: [i32; numbackboxes],
+	backboxint: [f32; numbackboxes],
+
+	warpskip: i32,
+    warpfcol: i32,
+    warpbcol: i32,
+
+	font_positions: HashMap<i32, i32>,
 
     col_crewred: graphics_util::ColourTransform,
     col_crewyellow: graphics_util::ColourTransform,
@@ -172,6 +198,28 @@ impl Graphics {
 
             screenshake_x: 0,
             screenshake_y: 0,
+
+            textbox: vec![],
+
+            showcutscenebars: false,
+            cutscenebarspos: 0,
+            oldcutscenebarspos: 0,
+
+            stars: [sdl2::rect::Rect::new(0, 0, 0, 0); numstars],
+            starsspeed: [0; numstars],
+
+            spcol: 0,
+            spcoldel: 0,
+            backboxes: [sdl2::rect::Rect::new(0, 0, 0, 0); numbackboxes],
+            backboxvx: [0; numbackboxes],
+            backboxvy: [0; numbackboxes],
+            backboxint: [0f32; numbackboxes],
+
+            warpskip: 0,
+            warpfcol: 0,
+            warpbcol: 0,
+
+            font_positions: HashMap::new(),
 
             col_crewred: ColourTransform::new(),
             col_crewyellow: ColourTransform::new(),
@@ -453,6 +501,11 @@ impl Graphics {
     // void Graphics::cutscenebars(void)
     // void Graphics::cutscenebarstimer(void)
     // void Graphics::setbars(const int position)
+    pub fn setbars(&mut self, position: i32) {
+        self.cutscenebarspos = position;
+        self.oldcutscenebarspos = position;
+    }
+
     // void Graphics::drawcrewman( int x, int y, int t, bool act, bool noshift /*=false*/ )
     pub fn drawcrewman(&self, i: i32, y: i32, t: i32, act: bool, noshift: Option<bool>) {
         println!("DEADBEEF: drawcrewman is not implemented yet");

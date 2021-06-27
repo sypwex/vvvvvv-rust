@@ -47,7 +47,7 @@ impl Render {
     }
 
     // static void menurender(void)
-    pub fn menu_render (&mut self, game: &game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) {
+    pub fn menurender(&mut self, game: &game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) {
         let temp = 50;
         let tr = self.tr;
         let tg = self.tg;
@@ -1000,7 +1000,7 @@ impl Render {
     }
 
     // void titlerender(void)
-    pub fn title_render(&mut self, game: &mut game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) -> Option<RenderResult> {
+    pub fn titlerender(&mut self, game: &mut game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) -> Option<RenderResult> {
         self.graphics.buffers.fill_back_buffer_with_color(sdl2::pixels::Color::BLACK);
 
         if !game.menustart {
@@ -1027,7 +1027,7 @@ impl Render {
                 self.graphics.drawtowerbackground(BackGround::Title);
             }
 
-            self.menu_render(game, music, map, help, key, screen_params);
+            self.menurender(game, music, map, help, key, screen_params);
 
             self.tr = ((self.graphics.col_tr as f32) * 0.8) as i32;
             self.tg = ((self.graphics.col_tg as f32) * 0.8) as i32;
@@ -1050,7 +1050,13 @@ impl Render {
 
     // void gamecompleterender(void)
     // void gamecompleterender2(void)
+
     // void gamerender(void)
+    pub fn gamerender(&mut self) -> Option<RenderResult> {
+        println!("DEADBEEF: Render::gamerender() method not implemented yet");
+        None
+    }
+
     // void maprender(void)
     // void teleporterrender(void)
 }

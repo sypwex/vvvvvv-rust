@@ -1,7 +1,7 @@
 use sdl2::controller::Button;
 use crate::{map, music, screen::{self, render::graphics}};
 
-const numcrew: usize = 6;
+pub const numcrew: usize = 6;
 const numunlock: usize = 25;
 const numtrials: usize = 6;
 
@@ -15,13 +15,13 @@ pub struct Game {
     pub roomx: i32,
     pub roomy: i32,
     roomchangedir: i32,
-    prevroomx: i32,
-    prevroomy: i32,
+    pub prevroomx: i32,
+    pub prevroomy: i32,
 
-    savex: i32,
-    savey: i32,
-    saverx: i32,
-    savery: i32,
+    pub savex: i32,
+    pub savey: i32,
+    pub saverx: i32,
+    pub savery: i32,
     savegc: i32,
     savedir: i32,
 
@@ -34,56 +34,56 @@ pub struct Game {
     edsavedir: i32,
 
     // State logic stuff
-    state: i32,
-    statedelay: i32,
+    pub state: i32,
+    pub statedelay: i32,
 
     glitchrunkludge: bool,
 
     usingmmmmmm: i32,
 
     pub gamestate: GameState,
-    hascontrol: bool,
+    pub hascontrol: bool,
     pub jumpheld: bool,
     jumppressed: i32,
-    gravitycontrol: i32,
+    pub gravitycontrol: i32,
 
     pub muted: bool,
     pub mutebutton: i32,
     pub musicmuted: bool,
     pub musicmutebutton: i32,
 
-    tapleft: i32,
-    tapright: i32,
+    pub tapleft: i32,
+    pub tapright: i32,
 
     // Menu interaction stuff
     pub mapheld: bool,
     menupage: i32,
-    lastsaved: i32,
-    deathcounts: i32,
+    pub lastsaved: i32,
+    pub deathcounts: i32,
     pub silence_settings_error: bool,
 
     frames: i32,
     seconds: i32,
     minutes: i32,
     hours: i32,
-    gamesaved: bool,
-    gamesavefailed: bool,
-    savetime: String,
-    savearea: String,
-    savetrinkets: i32,
-    startscript: bool,
-    newscript: String,
+    pub gamesaved: bool,
+    pub gamesavefailed: bool,
+    pub savetime: String,
+    pub savearea: String,
+    pub savetrinkets: i32,
+    pub startscript: bool,
+    pub newscript: String,
 
     mainmenu: i32,
     pub menustart: bool,
 
     // Teleporting
-    teleport_to_new_area: bool,
-    teleport_to_x: i32,
-    teleport_to_y: i32,
-    teleportscript: String,
-    useteleporter: bool,
-    teleport_to_teleporter: i32,
+    pub teleport_to_new_area: bool,
+    pub teleport_to_x: i32,
+    pub teleport_to_y: i32,
+    pub teleportscript: String,
+    pub useteleporter: bool,
+    pub teleport_to_teleporter: i32,
 
     // Main Menu Variables
     pub menuoptions: Vec<MenuOption>,
@@ -100,34 +100,34 @@ pub struct Game {
     pub menucountdown: i32,
     pub menudest: MenuName,
 
-    creditposx: i32,
-    creditposy: i32,
-    creditposdelay: i32,
+    pub creditposx: i32,
+    pub creditposy: i32,
+    pub creditposdelay: i32,
     oldcreditposx: i32,
 
 
     // Sine Wave Ninja Minigame
-    swnmode: bool,
-    swngame: i32,
-    swnstate: i32,
-    swnstate2: i32,
-    swnstate3: i32,
-    swnstate4: i32,
-    swndelay: i32,
-    swndeaths: i32,
-    swntimer: i32,
-    swncolstate: i32,
-    swncoldelay: i32,
+    pub swnmode: bool,
+    pub swngame: i32,
+    pub swnstate: i32,
+    pub swnstate2: i32,
+    pub swnstate3: i32,
+    pub swnstate4: i32,
+    pub swndelay: i32,
+    pub swndeaths: i32,
+    pub swntimer: i32,
+    pub swncolstate: i32,
+    pub swncoldelay: i32,
     swnrecord: i32,
-    swnbestrank: i32,
-    swnrank: i32,
-    swnmessage: i32,
+    pub swnbestrank: i32,
+    pub swnrank: i32,
+    pub swnmessage: i32,
 
     // SuperCrewMate Stuff
-    supercrewmate: bool,
-    scmhurt: bool,
-    scmmoveme: bool,
-    scmprogress: i32,
+    pub supercrewmate: bool,
+    pub scmhurt: bool,
+    pub scmmoveme: bool,
+    pub scmprogress: i32,
 
     // Accessibility Options
     pub colourblindmode: bool,
@@ -136,19 +136,19 @@ pub struct Game {
     pub gameframerate: u32,
 
     pub nodeathmode: bool,
-    gameoverdelay: i32,
-    nocutscenes: bool,
+    pub gameoverdelay: i32,
+    pub nocutscenes: bool,
     pub ndmresultcrewrescued: i32,
     pub ndmresulttrinkets: i32,
     pub ndmresulthardestroom: String,
 
     // Time Trials
     pub intimetrial: bool,
-    timetrialparlost: bool,
-    timetrialcountdown: i32,
-    timetrialshinytarget: i32,
+    pub timetrialparlost: bool,
+    pub timetrialcountdown: i32,
+    pub timetrialshinytarget: i32,
     pub timetriallevel: i32,
-    timetrialpar: i32,
+    pub timetrialpar: i32,
     pub timetrialresulttime: i32,
     pub timetrialresultframes: i32,
     pub timetrialrank: i32,
@@ -161,10 +161,10 @@ pub struct Game {
     oldcreditposition: i32,
     pub insecretlab: bool,
 
-    inintermission: bool,
+    pub inintermission: bool,
 
     // numcrew: i32, // const
-    crewstats: [bool; numcrew],
+    pub crewstats: [bool; numcrew],
     pub ndmresultcrewstats: [bool; numcrew],
     pub tele_crewstats: [bool; numcrew],
     pub quick_crewstats: [bool; numcrew],
@@ -175,16 +175,16 @@ pub struct Game {
     pub bestlives: [i32; numtrials],
     pub bestrank: [i32; numtrials],
 
-    alarmon: bool,
-    alarmdelay: i32,
-    blackout: bool,
+    pub alarmon: bool,
+    pub alarmdelay: i32,
+    pub blackout: bool,
 
     // numunlock: i32, // static const
     pub unlock: [bool; numunlock],
     pub unlocknotify: [bool; numunlock],
     pub stat_trinkets: i32,
     fullscreen: bool,
-    bestgamedeaths: i32,
+    pub bestgamedeaths: i32,
 
     pub tele_gametime: String,
     pub tele_trinkets: i32,
@@ -197,24 +197,24 @@ pub struct Game {
     my: i32,
     pub screenshake: i32,
     pub flashlight: i32,
-    advancetext: bool,
-    pausescript: bool,
+    pub advancetext: bool,
+    pub pausescript: bool,
 
     deathseq: i32,
     lifeseq: i32,
 
     // trinkets: i32(),
     // crewmates: i32(),
-    savepoint: i32,
+    pub savepoint: i32,
     teleportxpos: i32,
-    teleport: bool,
+    pub teleport: bool,
     edteleportent: i32,
-    completestop: bool,
+    pub completestop: bool,
 
     inertia: f32,
 
-    companion: i32,
-    roomchange: bool,
+    pub companion: i32,
+    pub roomchange: bool,
     // SDL_Rect teleblock,
     activetele: bool,
     readytotele: i32,
@@ -231,8 +231,8 @@ pub struct Game {
 
     backgroundtext: bool,
 
-    activeactivity: i32,
-    act_fade: i32,
+    pub activeactivity: i32,
+    pub act_fade: i32,
     prev_act_fade: i32,
 
     pub press_left: bool,
@@ -241,13 +241,12 @@ pub struct Game {
     pub press_map: bool,
 
     // Some stats:
-    totalflips: i32,
-    hardestroom: String,
-    hardestroomdeaths: i32,
-    currentroomdeaths: i32,
+    pub totalflips: i32,
+    pub hardestroom: String,
+    pub hardestroomdeaths: i32,
+    pub currentroomdeaths: i32,
 
     savemystats: bool,
-
 
     fullScreenEffect_badSignal: bool,
     useLinearFilter: bool,
@@ -725,6 +724,12 @@ impl Game {
     // std::string Game::unrescued(void);
 
     // void Game::resetgameclock(void);
+    pub fn resetgameclock(&mut self) {
+        self.frames = 0;
+        self.seconds = 0;
+        self.minutes = 0;
+        self.hours = 0;
+    }
 
     // bool Game::customsavequick(std::string savfile);
     // bool Game::savequick(void);
@@ -1383,8 +1388,25 @@ impl Game {
     }
 
     // void Game::start(void);
-    pub fn start(&mut self) {
-        println!("DEADBEEF: Game::start() method not implemented yet");
+    pub fn start(&mut self, music: &mut music::Music) {
+        self.jumpheld = true;
+
+        self.savex = 232;
+        self.savey = 113;
+        self.saverx = 104;
+        self.savery = 110;
+        self.savegc = 0;
+        self.savedir = 1; //Worldmap Start
+        self.savepoint = 0;
+        self.gravitycontrol = self.savegc;
+
+        self.state = 0;
+        self.deathseq = -1;
+        self.lifeseq = 0;
+
+        if !self.nocutscenes {
+            music.play(5);
+        }
     }
 
     // void Game::startspecial(int t);

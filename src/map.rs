@@ -26,8 +26,8 @@ pub const areamap: [i32; 20*20] = [
 ];
 
 pub struct Map {
-    roomdeaths: [i32; 20*20],
-    roomdeathsfinal: [i32; 20*20],
+    pub roomdeaths: [i32; 20*20],
+    pub roomdeathsfinal: [i32; 20*20],
     contents: [i16; 40*30],
     explored: [bool; 20*20],
     vmult: [i32; 30],
@@ -39,33 +39,33 @@ pub struct Map {
 	spikelevelbottom: i32,
 	oldspikeleveltop: i32,
 	oldspikelevelbottom: i32,
-	warpx: bool,
-	warpy: bool,
+	pub warpx: bool,
+	pub warpy: bool,
 	extrarow: i32,
 
-	showteleporters: bool,
-	showtargets: bool,
-	showtrinkets: bool,
+	pub showteleporters: bool,
+	pub showtargets: bool,
+	pub showtrinkets: bool,
 
-	finalmode: bool,
-	finalstretch: bool,
+	pub finalmode: bool,
+	pub finalstretch: bool,
 
 	cursorstate: i32,
 	cursordelay: i32,
 
-	towermode: bool,
-	cameraseekframe: i32,
-	resumedelay: i32,
+	pub towermode: bool,
+	pub cameraseekframe: i32,
+	pub resumedelay: i32,
 
-	final_colormode: bool,
-	final_colorframe: i32,
-	final_colorframedelay: i32,
-	final_mapcol: i32,
-	final_aniframe: i32,
-	final_aniframedelay: i32,
+	pub final_colormode: bool,
+	pub final_colorframe: i32,
+	pub final_colorframedelay: i32,
+	pub final_mapcol: i32,
+	pub final_aniframe: i32,
+	pub final_aniframedelay: i32,
 
 	pub custommode: bool,
-	custommodeforreal: bool,
+	pub custommodeforreal: bool,
 	customwidth: i32,
     customheight: i32,
 
@@ -75,9 +75,9 @@ pub struct Map {
     custommmysize: i32,
 
     customzoom: i32,
-	customshowmm: bool,
+	pub customshowmm: bool,
 
-	rcol: i32,
+	pub rcol: i32,
 
 	// This needs to be in map instead!
 	pub invincibility: bool,
@@ -192,11 +192,16 @@ impl Map {
     }
 
     // int mapclass::intpol(int a, int b, float c)
-    // void mapclass::setteleporter(int x, int y)
-    // void mapclass::settrinket(int x, int y)
-    // void mapclass::resetmap(void)
     fn intpol (a: i32, b: i32, c: i32) -> i32 {
         a + ((b - a) * c)
+    }
+
+    // void mapclass::setteleporter(int x, int y)
+    // void mapclass::settrinket(int x, int y)
+
+    // void mapclass::resetmap(void)
+    pub fn resetmap(&mut self) {
+        self.explored = [false; 20*20];
     }
 
     // void mapclass::resetnames(void)
@@ -304,10 +309,19 @@ impl Map {
     // void mapclass::exploretower(void)
     // void mapclass::hideship(void)
     // void mapclass::showship(void)
+
     // void mapclass::resetplayer(void)
     // void mapclass::resetplayer(const bool player_died)
+    pub fn resetplayer(&mut self, player_died: Option<bool>) {
+        println!("DEADBEEF: mapclass::resetplayer method not implemented yet");
+    }
+
     // void mapclass::warpto(int rx, int ry , int t, int tx, int ty)
     // void mapclass::gotoroom(int rx, int ry)
+    pub fn gotoroom(&mut self, rx: i32, ry: i32) {
+        println!("DEADBEEF: mapclass::gotoroom method not implemented yet");
+    }
+
     // std::string mapclass::currentarea(int t)
     // void mapclass::loadlevel(int rx, int ry)
     // void mapclass::twoframedelayfix(void)

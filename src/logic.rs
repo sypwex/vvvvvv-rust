@@ -3,7 +3,7 @@ use crate::{game, scenes::RenderResult};
 use crate::screen::render::graphics;
 use crate::screen::renderfixed;
 
-pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Option<RenderResult> {
+pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Option<RenderResult> {
     //Misc
     //map.updatetowerglow(&mut graphics.buffers.titlebg);
     renderfixed.update_glow();
@@ -30,18 +30,19 @@ pub fn title_logic(map: &mut map::Map, music: &mut music::Music, game: &mut game
     None
 }
 
-pub fn maplogic () {
+pub fn maplogic() {
 
 }
 
-pub fn gamecompletelogic () {
+pub fn gamecompletelogic() {
 
 }
 
-pub fn gamecompletelogic2 () {
+pub fn gamecompletelogic2() {
 
 }
 
-pub fn gamelogic () {
-
+pub fn gamelogic() -> Option<RenderResult> {
+    println!("DEADBEEF: gamelogic method not implemented yet");
+    None
 }

@@ -1,9 +1,11 @@
 use std::time::Duration;
 
 extern crate sdl2;
+use script::ScriptClass;
 use sdl2::EventPump;
 mod sdl2u;
 
+mod entity;
 mod game;
 use game::GameState;
 #[macro_use]
@@ -18,6 +20,7 @@ mod scenes;
 use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, RenderResult, preloader::Preloader};
 mod screen;
 use screen::render::graphics;
+mod script;
 use utility_class::UtilityClass;
 mod utility_class;
 
@@ -55,31 +58,25 @@ fn print_logo() {
     println!("\t\t");
 }
 
-// static void runscript(void)
-// static void teleportermodeinput(void)
-// static void flipmodeoff(void)
-// static void focused_begin(void);
-// static void focused_end(void);
-// static const inline struct ImplFunc* get_gamestate_funcs(const int gamestate, int* num_implfuncs)
-// static const struct ImplFunc* gamestate_funcs = NULL;
-// static int num_gamestate_funcs = 0;
-// static int gamestate_func_index = -1;
-// static enum IndexCode increment_gamestate_func_index(void)
-// static void unfocused_run(void);
-// static enum IndexCode increment_unfocused_func_index(void)
+// static enum LoopCode (*const meta_funcs[])(void) = {
 // static const struct ImplFunc** active_funcs = NULL;
 // static int* num_active_funcs = NULL;
 // static int* active_func_index = NULL;
 // static enum IndexCode (*increment_func_index)(void) = NULL;
-// static enum LoopCode loop_assign_active_funcs(void)
-// static enum LoopCode loop_run_active_funcs(void)
-// static enum LoopCode loop_begin(void);
-// static enum LoopCode loop_end(void);
-// static enum LoopCode (*const meta_funcs[])(void) = {
+// static const struct ImplFunc* gamestate_funcs = NULL;
+// static int num_gamestate_funcs = 0;
+// static int gamestate_func_index = -1;
 // static int meta_func_index = 0;
-// static void inline fixedloop(void)
-// static void inline deltaloop(void);
+
+// static void runscript(void)
+// static void teleportermodeinput(void)
+// static void flipmodeoff(void)
+// static const inline struct ImplFunc* get_gamestate_funcs(const int gamestate, int* num_implfuncs)
+// static enum IndexCode increment_gamestate_func_index(void)
+// static void unfocused_run(void);
+// static enum IndexCode increment_unfocused_func_index(void)
 // static void cleanup(void);
+// void VVV_exit(const int exit_code)
 
 struct Main {
     sdl_context: sdl2::Sdl,
@@ -100,8 +97,9 @@ struct Main {
     game: game::Game,
     key: key_poll::KeyPoll,
     map: map::Map,
-    // obj: entityclass,
+    obj: entity::EntityClass,
     gameScreen: screen::Screen,
+    script: script::ScriptClass,
 
     startinplaytest: bool,
     savefileplaytest: bool,
@@ -184,8 +182,9 @@ impl Main {
             game,
             key: key_poll::KeyPoll::new(),
             map,
-            // obj: entityclass,
+            obj: entity::EntityClass::new(),
             gameScreen,
+            script: script::ScriptClass::new(),
 
             startinplaytest: false,
             savefileplaytest: false,
@@ -391,6 +390,7 @@ impl Main {
         }
     }
 
+    // static void inline deltaloop(void);
     fn deltaloop(&mut self, rawdeltatime: u32, key: &mut key_poll::KeyPoll, event_pump: &mut EventPump) {
         // timestep limit to 30
         self.accumulator = self.accumulator + rawdeltatime as f32;
@@ -431,7 +431,7 @@ impl Main {
         let implfunc = self.scenes.get_current_gamestate_func();
 
         if implfunc.fntype == FuncType::FuncDelta {
-            match invoke_scene_function(&mut self.preloader_scene, implfunc.fnname, &mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.help) {
+            match invoke_scene_function(&mut self.preloader_scene, implfunc.fnname, &mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.help, &mut self.script, &mut self.obj) {
                 Some(rr) => self.gameScreen.do_screen_render(rr, &mut self.game),
                 _ => (),
             }
@@ -442,8 +442,9 @@ impl Main {
         // println!("delta loop finish");
     }
 
+    // static void inline fixedloop(void)
     fn fixedloop(&mut self, key: &mut key_poll::KeyPoll, event_pump: &mut EventPump) {
-        let meta_funcs: Vec<&dyn Fn(&mut music::Music, &mut map::Map, &mut game::Game, &mut screen::Screen, &mut key_poll::KeyPoll, &mut input::Input, &mut EventPump, &mut scenes::Scenes, &mut scenes::preloader::Preloader, &mut utility_class::UtilityClass) -> LoopCode> = vec![
+        let meta_funcs: Vec<&dyn Fn(&mut music::Music, &mut map::Map, &mut game::Game, &mut screen::Screen, &mut key_poll::KeyPoll, &mut input::Input, &mut EventPump, &mut scenes::Scenes, &mut scenes::preloader::Preloader, &mut utility_class::UtilityClass, &mut script::ScriptClass, &mut entity::EntityClass) -> LoopCode> = vec![
             &loop_begin,
             &loop_assign_active_funcs,
             &loop_run_active_funcs,
@@ -452,7 +453,7 @@ impl Main {
 
         'fixedloop: loop {
             for meta_func in &meta_funcs {
-                match meta_func(&mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.scenes, &mut self.preloader_scene, &mut self.help) {
+                match meta_func(&mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.scenes, &mut self.preloader_scene, &mut self.help, &mut self.script, &mut self.obj) {
                     LoopCode::LoopContinue => (),
                     LoopCode::LoopStop => break 'fixedloop,
                 }
@@ -481,16 +482,8 @@ fn main() {
     m.main_loop();
 }
 
-// static void cleanup(void)
-// void VVV_exit(const int exit_code)
-// static void inline deltaloop(void)
-// static enum LoopCode loop_begin(void)
-// static void unfocused_run(void)
-// static void focused_begin(void)
-// static void focused_end(void)
-// static enum LoopCode loop_end(void)
-
-fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass) -> LoopCode {
+// static enum LoopCode loop_begin(void);
+fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_begin");
     if game.inputdelay {
         key.Poll(event_pump, game);
@@ -503,7 +496,8 @@ fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Gam
     LoopCode::LoopContinue
 }
 
-fn loop_assign_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass) -> LoopCode {
+// static enum LoopCode loop_assign_active_funcs(void)
+fn loop_assign_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_assign_active_funcs");
     // TODO @sx
     // if key.isActive {
@@ -522,7 +516,7 @@ fn loop_assign_active_funcs(music: &mut music::Music, map: &mut map::Map, game: 
 }
 
 // static enum LoopCode loop_run_active_funcs(void)
-fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass) -> LoopCode {
+fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_run_active_funcs");
 
     // while (*active_funcs)[*active_func_index].type != Func_delta {
@@ -535,7 +529,7 @@ fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mu
             key.Poll(event_pump, game);
         }
 
-        match invoke_scene_function(preloader, implfunc.fnname, music, map, game, gameScreen, key, input, event_pump, help) {
+        match invoke_scene_function(preloader, implfunc.fnname, music, map, game, gameScreen, key, input, event_pump, help, script, obj) {
             Some(rr) => gameScreen.do_screen_render(rr, game),
             _ => (),
         }
@@ -556,11 +550,13 @@ fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mu
     LoopCode::LoopStop
 }
 
-fn focused_begin () -> Option<RenderResult> {
+// static void focused_begin(void);
+fn focused_begin() -> Option<RenderResult> {
     None
 }
 
-fn focused_end (music: &mut music::Music, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+// static void focused_end(void);
+fn focused_end(music: &mut music::Music, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
     game.gameclock();
     music.processmusic();
     graphics.processfade();
@@ -568,7 +564,8 @@ fn focused_end (music: &mut music::Music, game: &mut game::Game, graphics: &mut 
     None
 }
 
-fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass) -> LoopCode {
+// static enum LoopCode loop_end(void);
+fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_end");
 
     // We did editorinput, now it's safe to turn this off
@@ -617,7 +614,7 @@ fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game,
     LoopCode::LoopContinue
 }
 
-fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, help: &mut UtilityClass) -> Option<RenderResult> {
+fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, help: &mut UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Option<RenderResult> {
     // println!("current scene function: {:?}", fnname);
 
     let screen_params = gameScreen.get_screen_params();
@@ -631,11 +628,16 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
         Fns::preloaderrenderfixed => preloader.render_fixed(game),
         Fns::preloaderrender => preloader.render(&mut gameScreen.render.graphics),
         // GameState::TITLEMODE
-        Fns::titleinput => input.titleinput(music, map, game, gameScreen, key, screen_params),
-        Fns::titlerenderfixed => gameScreen.renderfixed.title_render_fixed(map, game, &mut gameScreen.render.graphics),
-        Fns::titlerender => gameScreen.render.title_render(game, music, map, help, key, screen_params),
-        Fns::titlelogic => logic::title_logic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params),
+        Fns::titleinput => input.titleinput(music, map, game, gameScreen, key, screen_params, script, obj),
+        Fns::titlerenderfixed => gameScreen.renderfixed.titlerenderfixed(map, game, &mut gameScreen.render.graphics),
+        Fns::titlerender => gameScreen.render.titlerender(game, music, map, help, key, screen_params),
+        Fns::titlelogic => logic::titlelogic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params),
         // GameState::GAMEMODE
+        Fns::runscript => script.run(),
+        Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(),
+        Fns::gamerender => gameScreen.render.gamerender(),
+        Fns::gameinput => input.gameinput(),
+        Fns::gamelogic => logic::gamelogic(),
         // GameState::MAPMODE
         // GameState::TELEPORTERMODE
         // GameState::GAMECOMPLETE
