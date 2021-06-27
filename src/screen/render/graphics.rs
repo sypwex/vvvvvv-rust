@@ -343,7 +343,7 @@ impl Graphics {
 
     // void Graphics::bigprint(  int _x, int _y, std::string _s, int r, int g, int b, bool cen = false, int sc = 2)
     pub fn bigprint(&mut self, _x: i32, _y: i32, _s: &str, r: i32, g: i32, b: i32, cen: Option<bool>, sc: Option<i32>) {
-        let cen = cen.unwrap_or(False);
+        let cen = cen.unwrap_or(false);
         let sc = sc.unwrap_or(2);
 
         // std::vector<SDL_Surface*>& font = flipmode ? flipbfont : bfont;
