@@ -165,28 +165,23 @@ impl Input {
     }
 
     pub fn gameinput (&mut self) -> Option<RenderResult> {
-        // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
         None
     }
 
     pub fn mapinput (&mut self) {
-        // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
     }
 
     pub fn teleporterinput (&mut self) {
-        // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
     }
 
     pub fn gamecompleteinput (&mut self) {
-        // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
     }
 
     pub fn gamecompleteinput2 (&mut self) {
-        // TODO @sx @impl
         println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
     }
 
@@ -1459,7 +1454,6 @@ impl Input {
 
 // static void updatebuttonmappings(int bind)
 fn updatebuttonmappings(key: &mut key_poll::KeyPoll, game: &mut game::Game, bind: i32) {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::Input::updatebuttonmappings is not implemented yet");
 
     // let i = sdl2_sys::SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_A;
@@ -1598,30 +1592,25 @@ fn updatebuttonmappings(key: &mut key_poll::KeyPoll, game: &mut game::Game, bind
 
 // static void toggleflipmode(void)
 fn toggleflipmode() {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::toggleflipmode is not implemented yet");
 }
 
 // static void initvolumeslider(const int menuoption)
 fn initvolumeslider(menuoption: i32) {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::initvolumeslider is not implemented yet");
 }
 
 // static void deinitvolumeslider(void)
 fn deinitvolumeslider() {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::deinitvolumeslider is not implemented yet");
 }
 
 // static void slidermodeinput(void)
 fn slidermodeinput() {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::slidermodeinput is not implemented yet");
 }
 
 // static void mapmenuactionpress(void)
 fn mapmenuactionpress() {
-    // TODO @sx @impl
     println!("DEADBEEF(input.rs): input::mapmenuactionpress is not implemented yet");
 }

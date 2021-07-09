@@ -633,11 +633,11 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
         Fns::titlerender => gameScreen.render.titlerender(game, music, map, help, key, screen_params),
         Fns::titlelogic => logic::titlelogic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params),
         // GameState::GAMEMODE
-        Fns::runscript => script.run(),
-        Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(),
-        Fns::gamerender => gameScreen.render.gamerender(),
+        Fns::runscript => script.run(game, obj, map, &mut gameScreen.render.graphics, help, music, key),
+        Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(obj, game, map, &mut gameScreen.render.graphics, script, help),
+        Fns::gamerender => gameScreen.render.gamerender(game, map, help, obj),
         Fns::gameinput => input.gameinput(),
-        Fns::gamelogic => logic::gamelogic(),
+        Fns::gamelogic => logic::gamelogic(game, &mut gameScreen.render.graphics, map, music, obj, help, script),
         // GameState::MAPMODE
         // GameState::TELEPORTERMODE
         // GameState::GAMECOMPLETE

@@ -1,3 +1,5 @@
+use crate::{game, screen::render::graphics, utility_class};
+
 pub struct EntClass {
     //Fundamentals
     pub invis: bool,
@@ -6,7 +8,7 @@ pub struct EntClass {
     pub tile: i32,
     pub rule: i32,
     pub state: i32,
-    statedelay: i32,
+    pub statedelay: i32,
     pub behave: i32,
     pub animate: i32,
     pub para: f32,
@@ -14,9 +16,9 @@ pub struct EntClass {
     pub colour: i32,
 
     //Position and velocity
-    oldxp: i32,
-    oldyp: i32,
-    ax: f32,
+    pub oldxp: i32,
+    pub oldyp: i32,
+    pub ax: f32,
     ay: f32,
     pub vx: f32,
     pub vy: f32,
@@ -24,7 +26,7 @@ pub struct EntClass {
     pub cy: i32,
     pub w: i32,
     pub h: i32,
-    newxp: f32,
+    pub newxp: f32,
     newyp: f32,
     pub isplatform: bool,
     pub x1: i32,
@@ -41,21 +43,21 @@ pub struct EntClass {
 
     //Platforming specific
     pub gravity: bool,
-    onground: i32,
-    onroof: i32,
+    pub onground: i32,
+    pub onroof: i32,
 
     //Animation
-    framedelay: i32,
-    pub drawframe: i32,
-    walkingframe: i32,
+    pub framedelay: i32,
+    pub drawframe: usize,
+    pub walkingframe: i32,
     pub dir: i32,
-    actionframe: i32,
-    visualonground: i32,
-    visualonroof: i32,
+    pub actionframe: i32,
+    pub visualonground: i32,
+    pub visualonroof: i32,
     pub yp: i32,
     pub xp: i32,
 
-    realcol: u32,
+    pub realcol: u32,
     pub lerpoldxp: i32,
     pub lerpoldyp: i32,
 }
@@ -191,29 +193,64 @@ impl EntClass {
     }
 
     // void entclass::setenemy( int t )
-    pub fn setenemy(&mut self, t: i32 ) {
-
+    pub fn setenemy(&mut self, t: i32) {
+        println!("DEADBEEF: entclass::setenemy() method not implemented yet");
     }
 
     // void entclass::setenemyroom( int rx, int ry )
-    pub fn setenemyroom(&mut self, rx: i32, ry: i32 ) {
-
+    pub fn setenemyroom(&mut self, rx: i32, ry: i32)  {
+        println!("DEADBEEF: entclass::setenemyroom() method not implemented yet");
     }
 
     // void entclass::settreadmillcolour( int rx, int ry )
-    pub fn settreadmillcolour(&mut self, rx: i32, ry: i32 ) {
-
+    pub fn settreadmillcolour(&mut self, rx: i32, ry: i32) {
+        println!("DEADBEEF: entclass::settreadmillcolour() method not implemented yet");
     }
 
     // void entclass::updatecolour(void)
-    fn updatecolour(&mut self) {
+    pub fn updatecolour(&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, help: &mut utility_class::UtilityClass) {
+        match self.size {
+            0 | 7 | 9 | 10 | 13 => {
+                // Sprites | Teleporter | Really Big Sprite! (2x2) | 2x1 Sprite | Special for epilogue: huge hero!
+                graphics.setcol(self.colour, help.glow);
+                self.realcol = graphics.ct.colour;
+            },
+            3 => {
+                // Big chunky pixels!
+                self.realcol = graphics.bigchunkygetcol(self.colour);
+            },
+            4 => {
+                // Small pickups
+                graphics.huetilesetcol(self.colour);
+                self.realcol = graphics.ct.colour;
+            },
+            11 => {
+                // The fucking elephant
+                if game.noflashingmode {
+                    graphics.setcol(22, help.glow);
+                } else {
+                    graphics.setcol(self.colour, help.glow);
+                }
+                self.realcol = graphics.ct.colour;
+            },
+            12 => {
+                // Regular sprites that don't wrap
+                // if we're outside the screen, we need to draw indicators
+                if (self.xp < -20 && self.vx > 0.0) || (self.xp > 340 && self.vx < 0.0) {
+                    graphics.setcol(23, help.glow);
+                } else {
+                    graphics.setcol(self.colour, help.glow);
+                }
 
+                self.realcol = graphics.ct.colour;
+            },
+            _ => (),
+        };
     }
 
     // bool entclass::ishumanoid(void)
-    fn ishumanoid(&mut self) -> bool {
+    pub fn ishumanoid(&mut self) -> bool {
         false
     }
-
 
 }

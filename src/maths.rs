@@ -23,11 +23,10 @@ pub fn clamp(x: i32, a: i32, b: i32) -> i32 {
     }
 }
 
-// struct point
-// {
-//     int x;
-//     int y;
-// };
+pub struct point {
+    pub x: i32,
+    pub y: i32,
+}
 
 // inline int VVV_min(const int a, const int b)
 pub fn VVV_min(a: i32, b: i32) -> i32 {

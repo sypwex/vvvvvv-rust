@@ -1,4 +1,9 @@
+use crate::INBOUNDS_VEC;
+use crate::entity;
 use crate::map;
+use crate::script;
+use crate::script::ScriptClass;
+use crate::utility_class;
 use crate::{game, maths, scenes::RenderResult};
 use crate::screen::render::graphics;
 
@@ -66,8 +71,114 @@ impl RenderFixed {
     }
 
     // void gamerenderfixed(void)
-    pub fn gamerenderfixed(&mut self) -> Option<RenderResult> {
-        println!("DEADBEEF: gamerenderfixed method not implemented yet");
+    pub fn gamerenderfixed(&mut self, obj: &mut entity::EntityClass, game: &mut game::Game, map: &mut map::Map, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
+        if !game.blackout && !game.completestop {
+            // for size_t i = 0; i < obj.entities.size(); i++ {
+            // for (i, entity) in obj.entities.iter_mut().enumerate() {
+            for i in 0..obj.entities.len() {
+                if obj.entitycollidefloor(i, map, help) {
+                    obj.entities[i].visualonground = 2;
+                } else {
+                    obj.entities[i].visualonground -= 1;
+                }
+
+                if obj.entitycollideroof(i, map, help) {
+                    obj.entities[i].visualonroof = 2;
+                } else {
+                    obj.entities[i].visualonroof -= 1;
+                }
+
+                //Animate the entities
+                obj.animateentities(i as i32, game);
+            }
+        }
+
+        game.prev_act_fade = game.act_fade;
+        if INBOUNDS_VEC!(game.activeactivity, obj.blocks) && game.hascontrol && !script.running {
+            if game.act_fade < 5 {
+                game.act_fade = 5;
+            }
+            if game.act_fade < 10 {
+                game.act_fade += 1;
+            }
+        } else if game.act_fade > 5 {
+            game.act_fade -= 1;
+        }
+
+        if obj.trophytext > 0 {
+            obj.trophytext -= 1;
+        }
+
+        graphics.cutscenebarstimer();
+
+        graphics.updatetextboxes();
+
+        if !game.colourblindmode {
+            if map.towermode {
+                graphics.updatetowerbackground(BackGround::Tower, map);
+            } else {
+                graphics.updatebackground(map.background);
+            }
+        }
+
+        if !game.blackout {
+            //Update line colours!
+            if graphics.linedelay <= 0 {
+                graphics.linestate += 1;
+                if graphics.linestate >= 10 {
+                    graphics.linestate = 0;
+                }
+                graphics.linedelay = 2;
+            } else {
+                graphics.linedelay -= 1;
+            }
+        }
+
+        graphics.trinketcolset = false;
+        // for int i = obj.entities.size() - 1; i >= 0; i-- {
+        // for (_i, entity) in obj.entities.iter_mut().enumerate() {
+        for i in (obj.entities.len() - 1)..=0 {
+            if obj.entities[i].invis {
+                continue;
+            }
+
+            obj.entities[i].updatecolour(game, graphics, help);
+        }
+
+        if map.finalmode {
+            map.glitchname = map.getglitchname(game.roomx, game.roomy);
+        }
+
+        // // #ifndef NO_CUSTOM_LEVELS
+        // ed.oldreturneditoralpha = ed.returneditoralpha;
+        // if map.custommode && !map.custommodeforreal && ed.returneditoralpha > 0 {
+        //     ed.returneditoralpha -= 15;
+        // }
+
+        // // Editor ghosts!
+        // if game.ghostsenabled {
+        //     if map.custommode && !map.custommodeforreal {
+        //         if game.frames % 3 == 0 {
+        //             int i = obj.getplayer();
+        //             GhostInfo ghost;
+        //             ghost.rx = game.roomx-100;
+        //             ghost.ry = game.roomy-100;
+        //             if INBOUNDS_VEC!(i, obj.entities) {
+        //                 ghost.x = obj.entities[i].xp;
+        //                 ghost.y = obj.entities[i].yp;
+        //                 ghost.col = obj.entities[i].colour;
+        //                 ghost.realcol = obj.entities[i].realcol;
+        //                 ghost.frame = obj.entities[i].drawframe;
+        //             }
+        //             ed.ghosts.push_back(ghost);
+        //         }
+        //         if ed.ghosts.size() > 100 {
+        //             ed.ghosts.erase(ed.ghosts.begin());
+        //         }
+        //     }
+        // }
+        // // #endif
+
         None
     }
 

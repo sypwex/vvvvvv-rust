@@ -3,22 +3,27 @@ extern crate png;
 extern crate sdl2_sys;
 
 pub struct GraphicsResources {
+    pub tiles: Image,
+    pub tiles2: Image,
     pub tiles3: Image,
+    pub entcolours: Image,
+    pub flipsprites: Image,
     pub sprites: Image,
     pub bfont: Image,
+    pub teleporter: Image,
 }
 
 impl GraphicsResources {
     pub fn new () -> GraphicsResources {
         GraphicsResources {
-            // im_tiles = LoadImage("graphics/tiles.png");
-            // im_tiles2 = LoadImage("graphics/tiles2.png");
+            tiles: Image::new("tiles", true, false, 8, 8),
+            tiles2: Image::new("tiles2", true, false, 8, 8),
             tiles3: Image::new("tiles3", true, false, 8, 8),
-            // im_entcolours = LoadImage("graphics/entcolours.png");
-            // im_flipsprites = LoadImage("graphics/flipsprites.png");
+            entcolours: Image::new("entcolours", true, false, 8, 8),
+            flipsprites: Image::new("flipsprites", true, false, 32, 32),
             sprites: Image::new("sprites", true, false, 32, 32),
             bfont: Image::new("font", true, false, 8, 8),
-            // im_teleporter = LoadImage("graphics/teleporter.png");
+            teleporter: Image::new("teleporter", true, false, 8, 8),
 
             // im_image0 = LoadImage("graphics/levelcomplete.png", false);
             // im_image1 = LoadImage("graphics/minimap.png", true, true);

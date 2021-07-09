@@ -226,8 +226,23 @@ pub fn BlitSurfaceColoured<R1>(
 }
 
 // void BlitSurfaceTinted(SDL_Surface* _src, SDL_Rect* _srcRect, SDL_Surface* _dest, SDL_Rect* _destRect, colourTransform& ct)
+pub fn BlitSurfaceTinted<R1>(
+    _src: &sdl2::surface::SurfaceRef,
+    _srcRect: R1,
+    _dest: &mut sdl2::surface::SurfaceRef,
+    _destRect: sdl2::rect::Rect,
+    ct: u32
+) where R1: Into<Option<sdl2::rect::Rect>> {
+
+}
+
+/* Fill Rect */
+// TODO: @sx refactor
+
 // void FillRect( SDL_Surface* _surface, const int _x, const int _y, const int _w, const int _h, const int r, int g, int b )
+
 // void FillRect( SDL_Surface* _surface, const int r, int g, int b )
+
 // void FillRect( SDL_Surface* _surface, const int color )
 pub fn FillRectWithColor(surface: &mut sdl2::surface::SurfaceRef, color: sdl2::pixels::Color) {
     let rect = sdl2::rect::Rect::new(0, 0, surface.width(), surface.height());
@@ -241,7 +256,25 @@ pub fn FillRect(_surface: &mut sdl2::surface::SurfaceRef, x: u32, y: u32, w: u32
 }
 
 // void FillRect( SDL_Surface* _surface, SDL_Rect& _rect, const int r, int g, int b )
+pub fn FillRect_rect_rgb(_surface: &mut sdl2::surface::SurfaceRef, rect: sdl2::rect::Rect, r: i32, g: i32, b: i32) {
+    unsafe {
+        let rgba = sdl2_sys::SDL_MapRGB(_surface.pixel_format().raw(), r as u8, g as u8, b as u8);
+        let color = sdl2::pixels::Color::from_u32(&_surface.pixel_format(), rgba);
+        FillRect(_surface, rect.x as u32, rect.y as u32, rect.w as u32, rect.h as u32, color);
+    }
+}
+
 // void FillRect( SDL_Surface* _surface, SDL_Rect rect, int rgba )
+pub fn FillRect_rect(_surface: &mut sdl2::surface::SurfaceRef, rect: sdl2::rect::Rect, rgba: sdl2::pixels::Color) {
+    FillRect(_surface, rect.x as u32, rect.y as u32, rect.w as u32, rect.h as u32, rgba);
+}
+pub fn FillRect_rect_coloru32(_surface: &mut sdl2::surface::SurfaceRef, rect: sdl2::rect::Rect, rgba: u32) {
+    let color = sdl2::pixels::Color::from_u32(&_surface.pixel_format(), rgba);
+    FillRect(_surface, rect.x as u32, rect.y as u32, rect.w as u32, rect.h as u32, color);
+}
+
+
+/* */
 
 // void ClearSurface(SDL_Surface* surface)
 pub fn ClearSurface(surface: &mut sdl2::surface::SurfaceRef) {

@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::{map, music, screen::{self, render::graphics}};
+use crate::{INBOUNDS_VEC, entity, map, music, screen::{self, render::graphics}, script, utility_class::{self, UtilityClass}};
 
 pub const numcrew: usize = 6;
 const numunlock: usize = 25;
@@ -8,13 +8,13 @@ const numtrials: usize = 6;
 pub struct Game {
     // saveFilePath: String,
 
-    door_left: i32,
-    door_right: i32,
-    door_up: i32,
-    door_down: i32,
+    pub door_left: i32,
+    pub door_right: i32,
+    pub door_up: i32,
+    pub door_down: i32,
     pub roomx: i32,
     pub roomy: i32,
-    roomchangedir: i32,
+    pub roomchangedir: i32,
     pub prevroomx: i32,
     pub prevroomy: i32,
 
@@ -22,8 +22,8 @@ pub struct Game {
     pub savey: i32,
     pub saverx: i32,
     pub savery: i32,
-    savegc: i32,
-    savedir: i32,
+    pub savegc: i32,
+    pub savedir: i32,
 
     // Added for port
     edsavex: i32,
@@ -42,6 +42,7 @@ pub struct Game {
     usingmmmmmm: i32,
 
     pub gamestate: GameState,
+    pub prevgamestate: GameState, //only used sometimes
     pub hascontrol: bool,
     pub jumpheld: bool,
     jumppressed: i32,
@@ -63,8 +64,8 @@ pub struct Game {
     pub silence_settings_error: bool,
 
     frames: i32,
-    seconds: i32,
-    minutes: i32,
+    pub seconds: i32,
+    pub minutes: i32,
     hours: i32,
     pub gamesaved: bool,
     pub gamesavefailed: bool,
@@ -118,7 +119,7 @@ pub struct Game {
     pub swntimer: i32,
     pub swncolstate: i32,
     pub swncoldelay: i32,
-    swnrecord: i32,
+    pub swnrecord: i32,
     pub swnbestrank: i32,
     pub swnrank: i32,
     pub swnmessage: i32,
@@ -157,7 +158,7 @@ pub struct Game {
     pub timetrialresultpar: i32,
     pub timetrialresultdeaths: i32,
 
-    creditposition: i32,
+    pub creditposition: i32,
     oldcreditposition: i32,
     pub insecretlab: bool,
 
@@ -200,40 +201,38 @@ pub struct Game {
     pub advancetext: bool,
     pub pausescript: bool,
 
-    deathseq: i32,
-    lifeseq: i32,
+    pub deathseq: i32,
+    pub lifeseq: i32,
 
-    // trinkets: i32(),
-    // crewmates: i32(),
     pub savepoint: i32,
-    teleportxpos: i32,
+    pub teleportxpos: i32,
     pub teleport: bool,
-    edteleportent: i32,
+    pub edteleportent: i32,
     pub completestop: bool,
 
     inertia: f32,
 
     pub companion: i32,
     pub roomchange: bool,
-    // SDL_Rect teleblock,
-    activetele: bool,
-    readytotele: i32,
-    oldreadytotele: i32,
-    activity_r: i32,
-    activity_g: i32,
-    activity_b: i32,
-    activity_lastprompt: String,
+    pub teleblock: sdl2::rect::Rect,
+    pub activetele: bool,
+    pub readytotele: i32,
+    pub oldreadytotele: i32,
+    pub activity_r: i32,
+    pub activity_g: i32,
+    pub activity_b: i32,
+    pub activity_lastprompt: String,
 
     pub telesummary: String,
     pub quicksummary: String,
     customquicksummary: String,
     // save_exists: bool(),
 
-    backgroundtext: bool,
+    pub backgroundtext: bool,
 
     pub activeactivity: i32,
     pub act_fade: i32,
-    prev_act_fade: i32,
+    pub prev_act_fade: i32,
 
     pub press_left: bool,
     pub press_right: bool,
@@ -352,6 +351,7 @@ impl Game {
             usingmmmmmm: 0,
 
             gamestate: GameState::PRELOADER,
+            prevgamestate: GameState::PRELOADER,
 
             hascontrol: true,
             jumpheld: false,
@@ -360,7 +360,7 @@ impl Game {
             gravitycontrol: 0,
             companion: 0,
             roomchange: false,
-
+            teleblock: sdl2::rect::Rect::new(0, 0, 0, 0),
 
             savemystats: false,
             quickrestartkludge: false,
@@ -720,8 +720,16 @@ impl Game {
     }
 
     // int Game::crewrescued(void);
+    pub fn crewrescued(&mut self) -> i32 {
+        println!("DEADBEEF: Game::crewrescued() method not implemented yet");
+        0
+    }
 
     // std::string Game::unrescued(void);
+    pub fn unrescued(&mut self) -> &str {
+        println!("DEADBEEF: Game::unrescued() method not implemented yet");
+        &""
+    }
 
     // void Game::resetgameclock(void);
     pub fn resetgameclock(&mut self) {
@@ -732,7 +740,16 @@ impl Game {
     }
 
     // bool Game::customsavequick(std::string savfile);
+    pub fn customsavequick(&mut self, savfile: &str) -> bool {
+        println!("DEADBEEF: Game::customsavequick() method not implemented yet");
+        false
+    }
+
     // bool Game::savequick(void);
+    pub fn savequick(&mut self) -> bool {
+        println!("DEADBEEF: Game::savequick() method not implemented yet");
+        false
+    }
 
     // void Game::gameclock(void);
     pub fn gameclock (&mut self) {
@@ -760,8 +777,39 @@ impl Game {
     // std::string Game::giventimestring(int hrs, int min, int sec);
 
     // std::string Game::timestring(void);
+    pub fn timestring(&mut self, help: &mut utility_class::UtilityClass) -> &str {
+        println!("DEADBEEF: timestring not implemented yet");
+
+        // std::string tempstring = "";
+        // if hours > 0 {
+        //     tempstring += help.String(hours) + ":";
+        // }
+        // tempstring += help.twodigits(minutes) + ":" + help.twodigits(seconds);
+        // return tempstring;
+
+        // let mut tempstring = String::new();
+        // if self.hours > 0 {
+        //     tempstring = format!("{}{}", help.String(self.hours), ":");
+        // }
+        // tempstring = format!("{}{}{}{}", tempstring, help.twodigits(self.minutes), ":", help.twodigits(self.seconds));
+
+        &""
+    }
 
     // std::string Game::partimestring(void);
+    pub fn partimestring(&self) -> &str {
+        println!("DEADBEEF: partimestring not implemented yet");
+
+        //given par time in seconds:
+        let tempstring = "";
+        // if timetrialpar >= 60 {
+        //     tempstring = help.twodigits(int((timetrialpar - (timetrialpar % 60)) / 60)) + ":" + help.twodigits(timetrialpar % 60);
+        // } else {
+        //     tempstring = "00:" + help.twodigits(timetrialpar);
+        // }
+
+        tempstring
+    }
 
     // std::string Game::resulttimestring(void);
     pub fn resulttimestring(&self) -> &str {
@@ -1291,7 +1339,7 @@ impl Game {
             maxspacing -= 5;
         }
 
-        self.menuxoff = (320-menuwidth)/2;
+        self.menuxoff = (320 - menuwidth)/2;
     }
 
     // void inline option(const char* text, bool active = true)
@@ -1306,33 +1354,158 @@ impl Game {
     }
 
     // void Game::lifesequence(void);
+    pub fn lifesequence(&mut self, obj: &mut entity::EntityClass) {
+        if self.lifeseq > 0 {
+            let i = obj.getplayer() as usize;
+            if INBOUNDS_VEC!(i, obj.entities) {
+                obj.entities[i].invis = false;
+                if self.lifeseq == 2 {
+                    obj.entities[i].invis = true;
+                }
+                if self.lifeseq == 6 {
+                    obj.entities[i].invis = true;
+                }
+                if self.lifeseq >= 8 {
+                    obj.entities[i].invis = true;
+                }
+            }
+
+            if self.lifeseq > 5 {
+                self.gravitycontrol = self.savegc;
+            }
+
+            self.lifeseq -= 1;
+            if INBOUNDS_VEC!(i, obj.entities) && self.lifeseq <= 0 {
+                obj.entities[i].invis = false;
+            }
+        }
+    }
 
     // void Game::gethardestroom(void);
+    pub fn gethardestroom(&mut self) {
+        println!("DEADBEEF: Game::gethardestroom() not implemented yet");
+    }
 
     // void Game::levelcomplete_textbox(void);
+    pub fn levelcomplete_textbox(&mut self) {
+        println!("DEADBEEF: Game::levelcomplete_textbox() not implemented yet");
+    }
+
     // void Game::crewmate_textbox(const int r, const int g, const int b);
+    pub fn crewmate_textbox(&mut self, r: i32, g: i32, b: i32) {
+        println!("DEADBEEF: Game::crewmate_textbox() not implemented yet");
+    }
+
     // void Game::remaining_textbox(void);
+    pub fn remaining_textbox(&mut self) {
+        println!("DEADBEEF: Game::remaining_textbox() not implemented yet");
+    }
+
     // void Game::actionprompt_textbox(void);
+    pub fn actionprompt_textbox(&mut self) {
+        println!("DEADBEEF: Game::actionprompt_textbox() not implemented yet");
+    }
+
     // void Game::savetele_textbox(void);
+    pub fn savetele_textbox(&mut self) {
+        println!("DEADBEEF: Game::savetele_textbox() not implemented yet");
+    }
 
     // void Game::updatestate(void);
+    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) {
+        self.statedelay -= 1;
+        if self.statedelay <= 0 {
+            self.statedelay = 0;
+            self.glitchrunkludge = false;
+        }
+
+        if self.statedelay <= 0 {
+            match self.state {
+                0 => {
+                    //Do nothing here! Standard game state
+
+                    if script.running {
+                        if self.pausescript && !self.advancetext {
+                            /* Prevent softlocks if we somehow don't have advancetext */
+                            self.pausescript = false;
+                        }
+                    } else {
+                        /* Prevent softlocks if there's no cutscene running right now */
+                        self.hascontrol = true;
+                        self.completestop = false;
+                    }
+                },
+                1 => {
+                    //Game initilisation
+                    self.state = 0;
+                },
+                2 => {
+                    //Opening cutscene
+                    self.advancetext = true;
+                    self.hascontrol = false;
+                    self.state = 3;
+                    graphics.createtextbox("To do: write quick", 50, 80, 164, 164, 255);
+                    graphics.addline("intro to story!");
+                    //Oh no! what happen to rest of crew etc crash into dimension
+                },
+                4 => {
+                    //End of opening cutscene for now
+                    graphics.createtextbox("  Press arrow keys or WASD to move  ", -1, 195, 174, 174, 174);
+                    graphics.textboxtimer(60);
+                    self.state = 0;
+                },
+                5 => {
+                    //Demo over
+                    self.advancetext = true;
+                    self.hascontrol = false;
+
+                    self.startscript = true;
+                    self.newscript = "returntohub".into();
+                    obj.removetrigger(5);
+                    self.state = 6;
+                },
+                7 => {
+                    //End of opening cutscene for now
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+                8 => {
+                    //Enter dialogue
+                    obj.removetrigger(8);
+                    if !obj.flags[13] {
+                        obj.flags[13] = true;
+                        graphics.createtextbox("  Press ENTER to view map  ", -1, 155, 174, 174, 174);
+                        graphics.addline("      and quicksave");
+                        graphics.textboxtimer(60);
+                    }
+                    self.state = 0;
+                },
+                _ => println!("DEADBEEF: Game::updatestate(): state {} not implemented yer", self.state),
+            }
+        }
+    }
 
     // void Game::unlocknum(int t);
+    pub fn unlocknum(&mut self, t: i32) {
+        println!("DEADBEEF: Game::unlocknum() not implemented yet");
+    }
 
     // void Game::loadstats(ScreenSettings* screen_settings);
     pub fn loadstats(&mut self, screen_settings: &mut screen::ScreenSettings) {
-        println!("DEADBEEF: Game::loadstats not implemented yet");
+        println!("DEADBEEF: Game::loadstats() not implemented yet");
     }
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
     pub fn savestats(&mut self, screen_settings: &mut screen::ScreenSettings) {
-        println!("DEADBEEF: Game::savestats not implemented yet");
+        println!("DEADBEEF: Game::savestats() not implemented yet");
     }
 
     // void Game::deletestats(void);
     pub fn deletestats(&mut self) {
-        println!("DEADBEEF: Game::deletestats not implemented yet");
+        println!("DEADBEEF: Game::deletestats() not implemented yet");
     }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
@@ -1420,10 +1593,19 @@ impl Game {
     }
 
     // void Game::swnpenalty(void);
+    pub fn swnpenalty(&mut self) {
+        println!("DEADBEEF: Game::swnpenalty() method not implemented yet");
+    }
 
     // void Game::deathsequence(void);
+    pub fn deathsequence(&mut self) {
+        println!("DEADBEEF: Game::deathsequence() method not implemented yet");
+    }
 
     // void Game::customloadquick(std::string savfile);
+    pub fn customloadquick(&mut self, savfile: &str) {
+        println!("DEADBEEF: Game::customloadquick() method not implemented yet");
+    }
 
     // void Game::loadquick(void);
     pub fn loadquick(&mut self) {
@@ -1436,11 +1618,25 @@ impl Game {
     }
 
     // void Game::readmaingamesave(tinyxml2::XMLDocument& doc);
+    pub fn readmaingamesave(&mut self, doc: i32) {
+        println!("DEADBEEF: Game::readmaingamesave() method not implemented yet");
+    }
+
     // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
+    pub fn Game(&mut self, doc: i32) -> &'static str {
+        println!("DEADBEEF: ::string Game() method not implemented yet");
+        &""
+    }
 
     // void Game::initteleportermode(void);
+    pub fn initteleportermode(&mut self) {
+        println!("DEADBEEF: Game::initteleportermode() method not implemented yet");
+    }
 
     // void Game::mapmenuchange(const int newgamestate);
+    pub fn mapmenuchange(&mut self, newgamestate: GameState) {
+        println!("DEADBEEF: Game::mapmenuchange() method not implemented yet");
+    }
 
     // int Game::get_timestep(void);
     pub fn get_timestep(&mut self) -> u32 {
@@ -1452,9 +1648,36 @@ impl Game {
     }
 
     // void Game::copyndmresults(void);
+    pub fn copyndmresults(&mut self) {
+        println!("DEADBEEF: Game::copyndmresults() method not implemented yet");
+    }
 
     // int Game::trinkets(void);
+    pub fn trinkets(&self, obj: &entity::EntityClass) -> i32 {
+        let mut temp = 0;
+        for ob in obj.collect.iter() {
+            // if obj.collect[i] {
+            // TODO @sx @impl
+            if true {
+                temp += 1;
+            }
+        }
+        temp
+    }
+
     // int Game::crewmates(void);
+    pub fn crewmates(&self, obj: &entity::EntityClass) -> i32 {
+        let mut temp = 0;
+        // for (size_t i = 0; i < SDL_arraysize(obj.customcollect); i++) {
+        for ob in obj.customcollect.iter() {
+            // if (obj.collect[i])
+            // TODO @sx @impl
+            if true {
+                temp += 1;
+            }
+        }
+        temp
+    }
 
     // bool Game::anything_unlocked(void)
     pub fn anything_unlocked (&self) -> bool {
@@ -1522,6 +1745,9 @@ impl Game {
     }
 
     // void Game::unlockAchievement(const char *name);
+    pub fn unlockAchievement(&mut self, name: &str) {
+        println!("DEADBEEF: Game::unlockAchievement() method not implemented yet");
+    }
 }
 
 /* 40 chars (160 bytes) covers the entire screen, + 1 more for null terminator */

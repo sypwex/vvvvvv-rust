@@ -32,6 +32,7 @@ pub struct KeyPoll {
 }
 
 impl KeyPoll {
+    // KeyPoll::KeyPoll(void)
     pub fn new() -> KeyPoll {
         KeyPoll {
             keymap: HashMap::new(),
@@ -56,6 +57,37 @@ impl KeyPoll {
             // static int mousetoggletimeout = 0;
             mousetoggletimeout: 0,
         }
+    }
+
+    // int inline KeyPoll::getThreshold(void)
+    fn getThreshold(&mut self) -> i16 {
+        match self.sensitivity {
+            0 => 28000,
+            1 => 16000,
+            2 => 8000,
+            3 => 4000,
+            4 => 2000,
+            _ => 8000,
+        }
+    }
+
+    // void KeyPoll::enabletextentry(void)
+
+    // void KeyPoll::disabletextentry(void)
+
+    // bool KeyPoll::textentry(void)
+    fn textentry(&mut self) -> bool {
+        unsafe {
+            sdl2_sys::SDL_IsTextInputActive() == SDL_TRUE
+        }
+    }
+
+    // void KeyPoll::toggleFullscreen(void)
+    fn toggleFullscreen(&mut self) -> bool {
+        // TODO @sx @impl
+        println!("DEADBEEF: KeyPoll::toggleFullscreen method not implemented yet");
+
+        false
     }
 
     // void KeyPoll::Poll(void)
@@ -323,47 +355,27 @@ impl KeyPoll {
         }
     }
 
-    // int inline KeyPoll::getThreshold(void)
-    fn getThreshold(&mut self) -> i16 {
-        match self.sensitivity {
-            0 => 28000,
-            1 => 16000,
-            2 => 8000,
-            3 => 4000,
-            4 => 2000,
-            _ => 8000,
+    // bool KeyPoll::isDown(SDL_Keycode key)
+    pub fn isDown(&mut self, key: i32) -> bool {
+        if let Some(key) = sdl2::keyboard::Keycode::from_i32(key) {
+            return match self.keymap.get(&key) {
+                Some(v) => *v,
+                None => false,
+            }
         }
-    }
-
-    // void KeyPoll::enabletextentry(void)
-    // void KeyPoll::disabletextentry(void)
-    // bool KeyPoll::textentry(void)
-    fn textentry (&mut self) -> bool {
-        unsafe {
-            sdl2_sys::SDL_IsTextInputActive() == SDL_TRUE
-        }
-    }
-
-    // void KeyPoll::toggleFullscreen(void)
-    fn toggleFullscreen (&mut self) -> bool {
-        // TODO @sx @impl
-        println!("DEADBEEF: KeyPoll::toggleFullscreen method not implemented yet");
-
         false
     }
 
-    // pub fn is_down<T: PressArtifactTrait>(self, press: T) -> bool {
-    //     false
-    // }
-
-    pub fn isDownKeycode (&mut self, key: Keycode) -> bool {
+    // bool KeyPoll::isDown(SDL_Keycode key)
+    pub fn isDownKeycode(&mut self, key: Keycode) -> bool {
         match self.keymap.get(&key) {
             Some(v) => *v,
             None => false,
         }
     }
 
-    pub fn isDownVec (&mut self, buttons: &Vec<Button>) -> bool {
+    // bool KeyPoll::isDown(std::vector<SDL_GameControllerButton> buttons)
+    pub fn isDownVec(&mut self, buttons: &Vec<Button>) -> bool {
         for button in buttons {
             if self.buttonmap.contains_key(&button) {
                 return true
@@ -373,11 +385,13 @@ impl KeyPoll {
         false
     }
 
-    pub fn isDownSDLButton (&mut self, button: Button) -> bool {
+    // bool KeyPoll::isDown(SDL_GameControllerButton button)
+    pub fn isDownSDLButton(&mut self, button: Button) -> bool {
         self.buttonmap.contains_key(&button)
     }
 
-    pub fn controllerButtonDown (&mut self) -> bool {
+    // bool KeyPoll::controllerButtonDown(void)
+    pub fn controllerButtonDown(&mut self) -> bool {
         for button in Button::iterator() {
             if self.isDownSDLButton(*button) {
                 return true
@@ -386,7 +400,8 @@ impl KeyPoll {
         false
     }
 
-    pub fn controllerWantsLeft (self, includeVert: bool) -> bool {
+    // bool KeyPoll::controllerWantsLeft(bool includeVert)
+    pub fn controllerWantsLeft(self, includeVert: bool) -> bool {
         return self.buttonmap[&Button::DPadLeft] || self.xVel < 0 || (
             includeVert && (
                 self.buttonmap[&Button::DPadUp] || self.yVel < 0
@@ -394,7 +409,8 @@ impl KeyPoll {
         )
     }
 
-    pub fn controllerWantsRight (self, includeVert: bool) -> bool {
+    // bool KeyPoll::controllerWantsRight(bool includeVert)
+    pub fn controllerWantsRight(self, includeVert: bool) -> bool {
         return self.buttonmap[&Button::DPadRight] || self.xVel > 0 || (
             includeVert && (
                 self.buttonmap[&Button::DPadDown] || self.yVel > 0
