@@ -480,7 +480,7 @@ impl Map {
         /* Disable all entities in the room, and deallocate any unnecessary entity slots. */
         /* However don't disable player entities, but do preserve holes between them (if any). */
         let mut player_found = false;
-        // for int i = obj.entities.size() - 1; i >= 0; --i {
+        // for let i = obj.entities.size() - 1; i >= 0; --i {
         for i in obj.entities.len()..=0 {
             /* Iterate in reverse order to prevent unnecessary indice shifting */
             if obj.entities[i].rule == 0 {
@@ -602,7 +602,7 @@ impl Map {
         }
         // @sx: looks like orphaned code, because variable will be redefined with another value later without being used
         // let temp = rx + (ry * 100);
-        self.loadlevel(game.roomx, game.roomy);
+        self.loadlevel(game.roomx, game.roomy, game, graphics, obj);
 
         //Do we need to reload the background?
         let redrawbg = (game.roomx != game.prevroomx) | (game.roomy != game.prevroomy);
@@ -674,10 +674,805 @@ impl Map {
     }
 
     // void mapclass::loadlevel(int rx, int ry)
-    pub fn loadlevel(&mut self, rx: i32, ry: i32) {
-        println!("DEADBEEF: mapclass::loadlevel() method not implemented yet");
+    pub fn loadlevel(&mut self, rx: i32, ry: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass) {
+        let mut t;
+        if !self.finalmode {
+            self.setexplored(rx - 100, ry - 100, true);
+            if rx == 109 && !self.custommode {
+                self.exploretower();
+            }
+        }
+
+        self.roomtexton = false;
+        self.roomtext.clear();
+
+        obj.platformtile = 0;
+        obj.customplatformtile = 0;
+        obj.vertplatforms = false;
+        obj.horplatforms = false;
+        self.roomname = "".to_string();
+        self.hiddenname = "".to_string();
+        self.background = 1;
+        self.warpx = false;
+        self.warpy = false;
+
+        self.towermode = false;
+        self.ypos = 0;
+        self.oldypos = 0;
+        self.extrarow = 0;
+        self.spikeleveltop = 0;
+        self.spikelevelbottom = 0;
+        self.oldspikeleveltop = 0;
+        self.oldspikelevelbottom = 0;
+
+        //Custom stuff for warplines
+        obj.customwarpmode=false;
+        obj.customwarpmodevon=false;
+        obj.customwarpmodehon=false;
+
+        if self.finalmode {
+            t = 6;
+            //check if we're in the towers
+            if rx == 49 && ry == 52 {
+                //entered tower 1
+                t = 7;
+            } else if rx == 49 && ry == 53 {
+                //re entered tower 1
+                t = 8;
+            } else if rx == 51 && ry == 54 {
+                //entered tower 2
+                t = 9;
+            } else if rx == 51 && ry == 53 {
+                //re entered tower 2
+                t = 10;
+            }
+        } else if self.custommode {
+            t = 12;
+        } else {
+            t = self.area(rx, ry);
+
+            if t == 3 {
+                //correct position for tower
+                if ry == 109 {
+                    //entered from ground floor
+                    let player = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(player, obj.entities) {
+                        obj.entities[player].yp += 671 * 8;
+                    }
+
+                    self.ypos = (700-29) * 8;
+                    self.oldypos = self.ypos;
+                    graphics.buffers.towerbg.bypos = self.ypos / 2;
+                    self.cameramode = 0;
+                    graphics.buffers.towerbg.colstate = 0;
+                    self.colsuperstate = 0;
+                } else if ry == 104 {
+                    //you've entered from the top floor
+                    self.ypos = 0;
+                    self.oldypos = self.ypos;
+                    graphics.buffers.towerbg.bypos = 0;
+                    self.cameramode = 0;
+                    graphics.buffers.towerbg.colstate = 0;
+                    self.colsuperstate = 0;
+                }
+            }
+
+            if t < 2 {
+                //on the world map, want to test if we're in the secret lab
+                if rx >= 116 {
+                    if ry >= 105 {
+                        if ry <= 107 {
+                            if rx == 119 && ry == 105 {
+                                //Ah, this is just a normal area
+                            } else {
+                                //in the secret lab! Crazy background!
+                                self.background = 2;
+                                if rx == 116 && ry == 105 { graphics.rcol = 1; }
+                                if rx == 117 && ry == 105 { graphics.rcol = 5; }
+                                if rx == 118 && ry == 105 { graphics.rcol = 4; }
+                                if rx == 117 && ry == 106 { graphics.rcol = 2; }
+                                if rx == 118 && ry == 106 { graphics.rcol = 0; }
+                                if rx == 119 && ry == 106 { graphics.rcol = 3; }
+                                if rx == 119 && ry == 107 { graphics.rcol = 1; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if rx == 119 && ry == 108 && !self.custommode {
+            self.background = 5;
+            graphics.rcol = 3;
+            self.warpx = true;
+            self.warpy = true;
+        }
+
+        match t {
+            // #if !defined(MAKEANDPLAY)
+            0 | 1 => {
+                //World Map
+                self.tileset = 1;
+                self.extrarow = 1;
+                let tmap = self.otherlevel.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                self.roomname = self.otherlevel.roomname;
+                self.tileset = self.otherlevel.roomtileset;
+                //do the appear/remove roomname here
+
+                if game.roomx >= 102 && game.roomx <= 104 && game.roomy >= 110 && game.roomy <= 111 {
+                    self.hiddenname = "The Ship";
+                } else {
+                    self.hiddenname = "Dimension VVVVVV";
+                }
+            },
+            2 => {
+                //The Lab
+                let tmap = self.lablevel.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                self.roomname = self.lablevel.roomname;
+                self.tileset = 1;
+                self.background = 2;
+                graphics.rcol = self.lablevel.rcol;
+            },
+            3 => {
+                //The Tower
+                graphics.buffers.towerbg.tdrawback = true;
+                self.minitowermode = false;
+                self.tower.minitowermode = false;
+                graphics.buffers.towerbg.bscroll = 0;
+                graphics.buffers.towerbg.scrolldir = 0;
+
+                self.roomname = "The Tower";
+                self.tileset = 1;
+                self.background = 3;
+                self.towermode = true;
+                //graphics.buffers.towerbg.bypos = 0; ypos = 0; cameramode = 0;
+
+                //All the entities for here are just loaded here; it's essentially one room after all
+                obj.createentity(48, 5456, 10, Some(1), Some(505007), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(224, 4528, 10, Some(1), Some(505017), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(232, 4168, 10, Some(0), Some(505027), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(280, 3816, 10, Some(1), Some(505037), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(152, 3552, 10, Some(1), Some(505047), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(216, 3280, 10, Some(0), Some(505057), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(216, 4808, 10, Some(1), Some(505067), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(72, 3096, 10, Some(0), Some(505077), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(176, 2600, 10, Some(0), Some(505087), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(216, 2392, 10, Some(0), Some(505097), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(152, 1184, 10, Some(1), Some(505107), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(152, 912, 10, Some(1), Some(505117), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(152, 536, 10, Some(1), Some(505127), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(120, 5136, 10, Some(0), Some(505137), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(144, 1824, 10, Some(0), Some(505147), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(72, 2904, 10, Some(0), Some(505157), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(224, 1648, 10, Some(1), Some(505167), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(112, 5280, 10, Some(1), Some(50517), None, None, None, None, self, game); // (savepoint)
+
+                obj.createentity(24, 4216, 9, Some(7), None, None, None, None, None, self, game); // (shiny trinket)
+                obj.createentity(280, 3216, 9, Some(8), None, None, None, None, None, self, game); // (shiny trinket)
+            },
+            4 => {
+                //The Warpzone
+                let tmap = self.warplevel.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                self.roomname = self.warplevel.roomname;
+                self.tileset = 1;
+                self.background = 3;
+                graphics.rcol = self.warplevel.rcol;
+                graphics.backgrounddrawn = false;
+
+                self.warpx = self.warplevel.warpx;
+                self.warpy = self.warplevel.warpy;
+                self.background = 5;
+                if self.warpy { self.background = 4; }
+                if self.warpx { self.background = 3; }
+                if self.warpx && self.warpy { self.background = 5; }
+            },
+            5 => {
+                //Space station
+                let tmap = self.spacestation2.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                self.roomname = self.spacestation2.roomname;
+                self.tileset = 0;
+            },
+            6 => {
+                //final level
+                let tmap = self.finallevel.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                self.roomname = self.finallevel.roomname;
+                self.tileset = 1;
+                self.background = 3;
+                graphics.backgrounddrawn = false;
+
+                if finalstretch {
+                    self.background = 6;
+                } else {
+                    warpx = self.finallevel.warpx;
+                    warpy = self.finallevel.warpy;
+                    self.background = 5;
+                    if self.warpy { self.background = 4; }
+                    if self.warpx { self.background = 3; }
+                    if self.warpx && self.warpy { self.background = 5; }
+                }
+
+                graphics.rcol = 6;
+                changefinalcol(final_mapcol);
+            },
+            7 => {
+                //Final Level, Tower 1
+                graphics.buffers.towerbg.tdrawback = true;
+                self.minitowermode = true;
+                self.tower.minitowermode = true;
+                graphics.buffers.towerbg.bscroll = 0;
+                graphics.buffers.towerbg.scrolldir = 1;
+
+                self.roomname = "Panic Room";
+                self.tileset = 1;
+                self.background = 3;
+                self.towermode = true;
+
+                self.tower.loadminitower1();
+
+                ypos = 0;
+                oldypos = 0;
+                graphics.buffers.towerbg.bypos = 0;
+                cameramode = 0;
+                graphics.buffers.towerbg.colstate = 0;
+                colsuperstate = 0;
+            },
+            8 => {
+                //Final Level, Tower 1 (reentered from below)
+                graphics.buffers.towerbg.tdrawback = true;
+                self.minitowermode = true;
+                self.tower.minitowermode = true;
+                graphics.buffers.towerbg.bscroll = 0;
+                graphics.buffers.towerbg.scrolldir = 1;
+
+                self.roomname = "Panic Room";
+                self.tileset = 1;
+                self.background = 3;
+                self.towermode = true;
+
+                self.tower.loadminitower1();
+
+                let i = obj.getplayer();
+                if INBOUNDS_VEC!(i, obj.entities) {
+                    obj.entities[i].yp += 71 * 8;
+                }
+                game.roomy -= 1;
+
+                self.ypos = (100-29) * 8;
+                self.oldypos = self.ypos;
+                graphics.buffers.towerbg.bypos = self.ypos/2;
+                self.cameramode = 0;
+                graphics.buffers.towerbg.colstate = 0;
+                self.colsuperstate = 0;
+            },
+            9 => {
+                //Final Level, Tower 2
+                graphics.buffers.towerbg.tdrawback = true;
+                self.minitowermode = true;
+                self.tower.minitowermode = true;
+                graphics.buffers.towerbg.bscroll = 0;
+                graphics.buffers.towerbg.scrolldir = 0;
+                final_colorframe = 2;
+
+                self.roomname = "The Final Challenge";
+                self.tileset = 1;
+                self.background = 3;
+                self.towermode = true;
+
+                self.tower.loadminitower2();
+
+                obj.createentity(56, 556, 11, Some(136), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(184, 592, 10, Some(0), Some(50500), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(184, 644, 11, Some(88), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(56, 460, 11, Some(136), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(216, 440, 10, Some(0), Some(50501), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(104, 508, 11, Some(168), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(219, 264, 12, Some(56), None, None, None, None, None, self, game); // (vertical gravity line)
+                obj.createentity(120, 332, 11, Some(96), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(219, 344, 12, Some(56), None, None, None, None, None, self, game); // (vertical gravity line)
+                obj.createentity(224, 332, 11, Some(48), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(56, 212, 11, Some(144), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(32, 20, 11, Some(96), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(72, 156, 11, Some(200), None, None, None, None, None, self, game); // (horizontal gravity line)
+
+                let i = obj.getplayer();
+                if INBOUNDS_VEC!(i, obj.entities) {
+                    obj.entities[i].yp += 71 * 8;
+                }
+                game.roomy -= 1;
+
+                self.ypos = (100-29) * 8;
+                self.oldypos = self.ypos;
+                graphics.buffers.towerbg.bypos = self.ypos/2;
+                self.cameramode = 0;
+                graphics.buffers.towerbg.colstate = 0;
+                self.colsuperstate = 0;
+            },
+            10 => {
+                //Final Level, Tower 2
+                graphics.buffers.towerbg.tdrawback = true;
+                self.minitowermode = true;
+                self.tower.minitowermode = true;
+                graphics.buffers.towerbg.bscroll = 0;
+                graphics.buffers.towerbg.scrolldir = 0;
+                self.final_colorframe = 2;
+
+                self.roomname = "The Final Challenge".to_string();
+                self.tileset = 1;
+                self.background = 3;
+                self.towermode = true;
+
+                self.tower.loadminitower2();
+
+                obj.createentity(56, 556, 11, Some(136), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(184, 592, 10, Some(0), Some(50500), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(184, 644, 11, Some(88), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(56, 460, 11, Some(136), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(216, 440, 10, Some(0), Some(50501), None, None, None, None, self, game); // (savepoint)
+                obj.createentity(104, 508, 11, Some(168), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(219, 264, 12, Some(56), None, None, None, None, None, self, game); // (vertical gravity line)
+                obj.createentity(120, 332, 11, Some(96), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(219, 344, 12, Some(56), None, None, None, None, None, self, game); // (vertical gravity line)
+                obj.createentity(224, 332, 11, Some(48), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(56, 212, 11, Some(144), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(32, 20, 11, Some(96), None, None, None, None, None, self, game); // (horizontal gravity line)
+                obj.createentity(72, 156, 11, Some(200), None, None, None, None, None, self, game); // (horizontal gravity line)
+
+                self.ypos = 0;
+                self.oldypos = 0;
+                graphics.buffers.towerbg.bypos = 0;
+                self.cameramode = 0;
+                graphics.buffers.towerbg.colstate = 0;
+                self.colsuperstate = 0;
+            },
+            11 => {
+                //Tower Hallways //Content is held in final level routine
+                let tmap = self.finallevel.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+                roomname = self.finallevel.roomname;
+                self.tileset = 2;
+                if rx == 108 {
+                    self.background = 7;
+                    rcol = 15;
+                }
+                if rx == 110 {
+                    self.background = 8;
+                    rcol = 10;
+                }
+                if rx == 111 {
+                    self.background = 9;
+                    rcol = 0;
+                }
+            },
+            // #endif
+            // #if !defined(NO_CUSTOM_LEVELS)
+            12 => {
+                //Custom level
+                let room = ed.getroomprop(rx - 100, ry - 100);
+                game.customcol = ed.getlevelcol(room.tileset, room.tilecol) + 1;
+                obj.customplatformtile = game.customcol * 12;
+
+                match room.tileset {
+                    0 => {
+                        // Space Station
+                        self.tileset = 0;
+                        self.background = 1;
+                    },
+                    1 => {
+                        // Outside
+                        self.tileset = 1;
+                        self.background = 1;
+                    },
+                    2 => {
+                        // Lab
+                        self.tileset = 1;
+                        self.background = 2;
+                        graphics.rcol = room.tilecol;
+                    },
+                    3 => {
+                        // Warp Zone/intermission
+                        self.tileset = 1;
+                        self.background = 6;
+                    },
+                    4 => {
+                        // Ship
+                        self.tileset = 1;
+                        self.background = 1;
+                    },
+                    _ => {
+                        self.tileset = 1;
+                        self.background = 1;
+                    },
+                };
+
+                // If screen warping, then override all that:
+                let redrawbg = game.roomx != game.prevroomx || game.roomy != game.prevroomy;
+                if redrawbg {
+                    graphics.backgrounddrawn = false;
+                }
+
+                match room.warpdir {
+                    1 => {
+                        self.warpx = true;
+                        self.background = 3;
+                        graphics.rcol = ed.getwarpbackground(rx - 100, ry - 100);
+                    },
+                    2 => {
+                        self.warpy = true;
+                        self.background = 4;
+                        graphics.rcol = ed.getwarpbackground(rx - 100, ry - 100);
+                    },
+                    3 => {
+                        self.warpx = true;
+                        self.warpy = true;
+                        self.background = 5;
+                        graphics.rcol = ed.getwarpbackground(rx - 100, ry - 100);
+                    },
+                    _ => (),
+                };
+
+                self.roomname = room.roomname;
+                self.extrarow = 1;
+                let tmap = ed.loadlevel(rx, ry);
+                SDL_memcpy(contents, tmap, sizeof(contents));
+
+                self.roomtexton = false;
+                self.roomtext.clear();
+
+                // Entities have to be created HERE, akwardly
+                let mut tempcheckpoints = 0;
+                let mut tempscriptbox = 0;
+                // for (size_t edi = 0; edi < edentity.size(); edi++) {
+                for edi in 0..edentity.len() {
+                    // If entity is in this room, create it
+                    let tsx = ent.x / 40;
+                    let tsy = ent.y / 30;
+
+                    if tsx != rx-100 || tsy != ry-100 {
+                        continue;
+                    }
+
+                    let ex = (edentity[edi].x % 40) * 8;
+                    let ey = (edentity[edi].y % 30) * 8;
+
+                    // Platform and enemy bounding boxes
+                    let mut bx1 = 0;
+                    let mut by1 = 0;
+                    let mut bx2 = 0;
+                    let mut by2 = 0;
+
+                    let enemy = edentity[edi].t == 1;
+                    let moving_plat = edentity[edi].t == 2 && edentity[edi].p1 <= 4;
+                    if enemy || moving_plat {
+                        if enemy {
+                            bx1 = room.enemyx1;
+                            by1 = room.enemyy1;
+                            bx2 = room.enemyx2;
+                            by2 = room.enemyy2;
+                        }
+                        else if moving_plat {
+                            bx1 = room.platx1;
+                            by1 = room.platy1;
+                            bx2 = room.platx2;
+                            by2 = room.platy2;
+                        }
+
+                        // Enlarge bounding boxes to fix warping entities
+                        if self.warpx && bx1 == 0 && bx2 == 320 {
+                            bx1 -= 100;
+                            bx2 += 100;
+                        }
+                        if self.warpy && by1 == 0 && by2 == 240 {
+                            by1 -= 100;
+                            by2 += 100;
+                        }
+                    }
+
+                    // TODO: @sx HERE
+
+                    match edentity[edi].t {
+                        1 => {
+                            // Enemies
+                            obj.customenemy = room.enemytype;
+                            obj.createentity(ex, ey, 56, edentity[edi].p1, 4, bx1, by1, bx2, by2);
+                        },
+                        2 => {
+                            // Platforms and conveyors
+                            if edentity[edi].p1 <= 4 {
+                                obj.createentity(ex, ey, 2, edentity[edi].p1, room.platv, bx1, by1, bx2, by2);
+                            } else if edentity[edi].p1 >= 5 && edentity[edi].p1 <= 8 {
+                                // Conveyor
+                                obj.createentity(ex, ey, 2, edentity[edi].p1 + 3, 4);
+                            }
+                        },
+                        3 => {
+                            // Disappearing platforms
+                            obj.createentity(ex, ey, 3);
+                        },
+                        9 => {
+                            // Trinkets
+                            obj.createentity(ex, ey, 9, ed.findtrinket(edi));
+                        },
+                        10 => {
+                            // Checkpoints
+                            obj.createentity(ex, ey, 10, edentity[edi].p1, (rx + ry*100) * 20 + tempcheckpoints);
+                            tempcheckpoints += 1;
+                        },
+                        11 => {
+                            // Gravity Lines
+                            if edentity[edi].p1 == 0 {
+                                //Horizontal
+                                obj.createentity(edentity[edi].p2 * 8, ey + 4, 11, edentity[edi].p3);
+                            } else {
+                                //Vertical
+                                obj.createentity(ex + 3, edentity[edi].p2 * 8, 12, edentity[edi].p3);
+                            }
+                        },
+                        13 => {
+                            // Warp Tokens
+                            obj.createentity(ex, ey, 13, edentity[edi].p1, edentity[edi].p2);
+                        },
+                        15 => {
+                            // Collectable crewmate
+                            obj.createentity(ex - 4, ey + 1, 55, ed.findcrewmate(edi), edentity[edi].p1, edentity[edi].p2);
+                        },
+                        17 => {
+                            // Roomtext!
+                            self.roomtexton = true;
+                            let text = Roomtext {
+                                x: ex / 8,
+                                y: ey / 8,
+                                text: edentity[edi].scriptname,
+                            };
+
+                            self.roomtext.push(text);
+                        },
+                        18 => {
+                            // Terminals
+                            obj.customscript = edentity[edi].scriptname;
+
+                            let mut usethistile = edentity[edi].p1;
+                            let mut usethisy = ey;
+
+                            // This isn't a boolean: we just swap 0 and 1 around and leave the rest alone
+                            if usethistile == 0 {
+                                usethistile = 1; // Unflipped
+                            } else if usethistile == 1 {
+                                usethistile = 0; // Flipped;
+                                usethisy -= 8;
+                            }
+
+                            obj.createentity(ex, usethisy + 8, 20, usethistile);
+                            obj.createblock(ACTIVITY, ex - 8, usethisy + 8, 20, 16, 35);
+                        },
+                        19 => {
+                            //Script Box
+                            if INBOUNDS_ARR!(tempscriptbox, game.customscript) {
+                                game.customscript[tempscriptbox] = edentity[edi].scriptname;
+                            }
+                            obj.createblock(TRIGGER, ex, ey, edentity[edi].p1 * 8, edentity[edi].p2 * 8, 300 + tempscriptbox, "custom_" + edentity[edi].scriptname);
+                            tempscriptbox += 1;
+                        },
+                        50 => {
+                            // Warp Lines
+                            obj.customwarpmode = true;
+                            match edentity[edi].p1 {
+                                0 => {
+                                    // Vertical, left
+                                    obj.createentity(ex + 4, edentity[edi].p2 * 8, 51, edentity[edi].p3);
+                                },
+                                1 => {
+                                    //Horizontal, right
+                                    obj.createentity(ex + 4, edentity[edi].p2 * 8, 52, edentity[edi].p3);
+                                },
+                                2 => {
+                                    //Vertical, top
+                                    obj.createentity(edentity[edi].p2 * 8, ey + 7, 53, edentity[edi].p3);
+                                },
+                                3 => {
+                                    // Horizontal, bottom
+                                    obj.createentity(edentity[edi].p2 * 8, ey, 54, edentity[edi].p3);
+                                },
+                                _ => (),
+                            }
+                        },
+                    }
+                }
+
+                //do the appear/remove roomname here
+                break;
+            }
+            // #endif
+
+            _ => println!("loading level {} not implemented yet", t),
+        }
+
+        //The room's loaded: now we fill out damage blocks based on the tiles.
+        if !self.towermode {
+            // for int j = 0; j < 29 + extrarow; j++ {
+            for j in 0..(29+self.extrarow) {
+                // for (let i = 0; i < 40; i++
+                for i in 0..40 {
+                    //Damage blocks
+                    if self.tileset == 0 {
+                        if self.contents[i + self.vmult[j as usize] as usize] == 6 || self.contents[i + self.vmult[j as usize] as usize] == 8 {
+                            //sticking up
+                            obj.createblock(2, (i * 8) as i32, (j * 8)+4, 8, 4, None, None);
+                        }
+                        if self.contents[i + self.vmult[j as usize] as usize] == 7 || self.contents[i + self.vmult[j as usize] as usize] == 9 {
+                            //Sticking down
+                            obj.createblock(2, (i * 8) as i32, (j * 8) as i32, 8, 4, None, None);
+                        }
+                        if self.contents[i + self.vmult[j as usize] as usize] == 49 || self.contents[i + self.vmult[j as usize] as usize] == 50 {
+                            //left or right
+                            obj.createblock(2, (i * 8) as i32, (j * 8)+3, 8, 2, None, None);
+                        }
+                    } else if self.tileset == 1 {
+                        //if self.contents[i + self.vmult[j as usize] as usize] >= 6 && self.contents[i + self.vmult[j as usize] as usize] <= 9) obj.createblock(2, (i * 8) as i32, (j * 8)+1, 8, 6);
+                        //if self.contents[i + self.vmult[j as usize] as usize] >= 49 && self.contents[i + self.vmult[j as usize] as usize] <= 79) obj.createblock(2, (i * 8) as i32 + 1, (j * 8) + 1, 6, 6);
+                        if (
+                            self.contents[i + self.vmult[j as usize] as usize] >= 63 &&
+                            self.contents[i + self.vmult[j as usize] as usize] <= 74
+                        ) || (
+                            self.contents[i + self.vmult[j as usize] as usize] >= 6 &&
+                            self.contents[i + self.vmult[j as usize] as usize] <= 9
+                        ) {
+                            //sticking up) {
+                            if self.contents[i + self.vmult[j as usize] as usize] < 10 {
+                                self.contents[i + self.vmult[j as usize] as usize] += 1;
+                            }
+                            //sticking up
+                            if self.contents[i + self.vmult[j as usize] as usize] % 2 == 0 {
+                                obj.createblock(2, (i * 8) as i32, (j * 8) as i32, 8, 4, None, None);
+                            } else {
+                                //Sticking down
+                                obj.createblock(2, (i * 8) as i32, (j * 8) + 4, 8, 4, None, None);
+                            }
+                            if self.contents[i + self.vmult[j as usize] as usize] < 11 {
+                                self.contents[i + self.vmult[j as usize] as usize] -= 1;
+                            }
+                        }
+                        if self.contents[i + self.vmult[j as usize] as usize] >= 49 && self.contents[i + self.vmult[j as usize] as usize] <= 62 {
+                            //left or right
+                            obj.createblock(2, (i * 8) as i32, (j * 8)+3, 8, 2, None, None);
+                        }
+                    } else if self.tileset == 2 {
+                        if self.contents[i + self.vmult[j as usize] as usize] == 6 || self.contents[i + self.vmult[j as usize] as usize] == 8 {
+                            //sticking up
+                            obj.createblock(2, (i * 8) as i32, (j * 8)+4, 8, 4, None, None);
+                        }
+                        if self.contents[i + self.vmult[j as usize] as usize] == 7 || self.contents[i + self.vmult[j as usize] as usize] == 9 {
+                            //Sticking down
+                            obj.createblock(2, (i * 8) as i32, (j * 8) as i32, 8, 4, None, None);
+                        }
+                    }
+                    //Breakable blocks
+                    if self.contents[i + self.vmult[j as usize] as usize] == 10 {
+                        self.contents[i + self.vmult[j as usize] as usize] = 0;
+                        obj.createentity(i as i32 * 8, j * 8, 4, None, None, None, None, None, None, self, game);
+                    }
+                    //Directional blocks
+                    if self.contents[i + self.vmult[j as usize] as usize] >= 14 && self.contents[i + self.vmult[j as usize] as usize] <= 17 {
+                        obj.createblock(3, i as i32 * 8, j * 8, 8, 8, Some(self.contents[i + self.vmult[j as usize] as usize] as i32 - 14), None);
+                    }
+                }
+            }
+
+            // for size_t i = 0; i < obj.entities.size(); i++ {
+            for i in 0..obj.entities.len() {
+                if obj.entities[i].r#type == 1 && obj.entities[i].behave >= 8 && obj.entities[i].behave < 10 {
+                    //put a block underneath
+                    let temp = obj.entities[i].xp / 8;
+                    let temp2 = obj.entities[i].yp / 8;
+
+                    self.settile(temp, temp2, 1);
+                    self.settile(temp+1, temp2, 1);
+                    self.settile(temp+2, temp2, 1);
+                    self.settile(temp+3, temp2, 1);
+                    if obj.entities[i].w == 64 {
+                        self.settile(temp+4, temp2, 1);
+                        self.settile(temp+5, temp2, 1);
+                        self.settile(temp+6, temp2, 1);
+                        self.settile(temp+7, temp2, 1);
+                    }
+                }
+            }
+        }
 
 
+        //Special scripting: Create objects and triggers based on what crewmembers are rescued.
+        if !self.finalmode && !self.custommode {
+            //First up: the extra bits:
+            //Vermilion's quest:
+            if rx == 100 && ry == 105 {
+                //On path to verdigris
+                if game.crewstats[3] && !game.crewstats[4] {
+                    obj.createentity(87, 105, 18, Some(15), Some(0), Some(18), None, None, None, self, game);
+                    obj.createblock(5, 87-32, 0, 32+32+32, 240, Some(3), None);
+                }
+            } else if rx == 107 && ry == 100 {
+                //victoria
+                if game.crewstats[3] && !game.crewstats[5] {
+                    obj.createentity(140, 137, 18, Some(15), Some(0), Some(18), None, None, None, self, game);
+                    obj.createblock(5, 140-32, 0, 32+32+32, 240, Some(3), None);
+                }
+            } else if rx == 114 && ry == 109 {
+                if game.crewstats[3] && !game.crewstats[2] {
+                    obj.createentity(235, 81, 18, Some(15), Some(0), Some(18), None, None, None, self, game);
+                    obj.createblock(5, 235-32, 0, 32+32+32, 240, Some(3), None);
+                }
+            }
+
+            //Verdigris fixing the ship
+            if rx == 101 && ry == 109 {
+                if game.crewstats[4] {
+                    if game.crewrescued() > 4 && game.crewrescued() != 6 {
+                        obj.createentity(175, 121, 18, Some(13), Some(0), Some(18), None, None, None, self, game);
+                        obj.createblock(5, 175-32, 0, 32+32+32, 240, Some(4), None);
+                    }
+                }
+            } else if rx == 103 && ry == 109 {
+                if game.crewstats[4] {
+                    if game.crewrescued() <= 4 && game.crewrescued() != 6 {
+                        obj.createentity(53, 161, 18, Some(13), Some(1), Some(18), None, None, None, self, game);
+                        obj.createblock(5, 53-32, 0, 32+32+32, 240, Some(4), None);
+                    }
+                }
+            }
+
+            if rx == 104 && ry == 111 {
+                //Red
+                //First: is he rescued?
+                if game.crewstats[3] {
+                    //If so, red will always be at his post
+                    obj.createentity(107, 121, 18, Some(15), Some(0), Some(18), None, None, None, self, game);
+                    //What script do we use?
+                    obj.createblock(5, 107-32, 0, 32+32+32, 240, Some(3), None);
+                }
+            } else if rx == 103 && ry == 111 {
+                //Yellow
+                //First: is he rescued?
+                if game.crewstats[2] {
+                    obj.createentity(198, 105, 18, Some(14), Some(0), Some(18), None, None, None, self, game);
+                    //What script do we use?
+                    obj.createblock(5, 198-32, 0, 32+32+32, 240, Some(2), None);
+                }
+            } else if rx == 103 && ry == 110 {
+                //Green
+                //First: is he rescued?
+                if game.crewstats[4] {
+                    obj.createentity(242, 177, 18, Some(13), Some(0), Some(18), None, None, None, self, game);
+                    //What script do we use?
+                    obj.createblock(5, 242-32, 177-20, 32+32+32, 40, Some(4), None);
+                }
+            } else if rx == 104 && ry == 110 {
+                //Purple
+                //First: is she rescued?
+                if game.crewstats[1] {
+                    obj.createentity(140, 177, 18, Some(20), Some(0), Some(18), None, None, None, self, game);
+                    //What script do we use?
+                    obj.createblock(5, 140-32, 0, 32+32+32, 240, Some(1), None);
+                }
+            } else if rx == 102 && ry == 110 {
+                //Blue
+                //First: is she rescued?
+                if game.crewstats[5] {
+                    //A slight varation - she's upside down
+                    obj.createentity(249, 62, 18, Some(16), Some(0), Some(18), None, None, None, self, game);
+                    let j = obj.getcrewman(5) as usize;
+                    if INBOUNDS_VEC!(j, obj.entities) {
+                        obj.entities[j as usize].rule = 7;
+                        obj.entities[j as usize].tile +=6;
+                    }
+                    //What script do we use?
+                    obj.createblock(5, 249-32, 0, 32+32+32, 240, Some(5), None);
+                }
+            }
+        }
     }
 
     // void mapclass::twoframedelayfix(void)

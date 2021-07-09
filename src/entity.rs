@@ -14,7 +14,7 @@ pub struct EntityClass {
     pub collect: [bool; 100],
     pub customcollect: [bool; 100],
 
-    platformtile: i32,
+    pub platformtile: i32,
     pub vertplatforms: bool,
     pub horplatforms: bool,
 
@@ -33,7 +33,7 @@ pub struct EntityClass {
 
     //Custom stuff
     customenemy: i32,
-    customplatformtile: i32,
+    pub customplatformtile: i32,
     pub customwarpmode: bool,
     pub customwarpmodevon: bool,
     pub customwarpmodehon: bool,
