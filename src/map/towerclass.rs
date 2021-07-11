@@ -5,7 +5,7 @@ pub struct TowerClass {
     // vmult: [i32; 40 * 700],
     vmult: Vec<i32>,
 
-    pub minitowermode: bool,
+    minitowermode: bool,
 }
 
 fn get (i: i32) -> i32 {
