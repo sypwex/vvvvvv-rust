@@ -11,33 +11,71 @@ pub struct GraphicsResources {
     pub sprites: Image,
     pub bfont: Image,
     pub teleporter: Image,
+    pub images: Image,
 }
 
 impl GraphicsResources {
     pub fn new () -> GraphicsResources {
         GraphicsResources {
-            tiles: Image::new("tiles", true, false, 8, 8),
-            tiles2: Image::new("tiles2", true, false, 8, 8),
-            tiles3: Image::new("tiles3", true, false, 8, 8),
-            entcolours: Image::new("entcolours", true, false, 8, 8),
-            flipsprites: Image::new("flipsprites", true, false, 32, 32),
-            sprites: Image::new("sprites", true, false, 32, 32),
-            bfont: Image::new("font", true, false, 8, 8),
-            teleporter: Image::new("teleporter", true, false, 8, 8),
-
-            // im_image0 = LoadImage("graphics/levelcomplete.png", false);
-            // im_image1 = LoadImage("graphics/minimap.png", true, true);
-            // im_image2 = LoadImage("graphics/covered.png", true, true);
-            // im_image3 = LoadImage("graphics/elephant.png");
-            // im_image4 = LoadImage("graphics/gamecomplete.png", false);
-            // im_image5 = LoadImage("graphics/fliplevelcomplete.png", false);
-            // im_image6 = LoadImage("graphics/flipgamecomplete.png", false);
-            // im_image7 = LoadImage("graphics/site.png", false);
-            // im_image8 = LoadImage("graphics/site2.png");
-            // im_image9 = LoadImage("graphics/site3.png");
-            // im_image10 = LoadImage("graphics/ending.png");
-            // im_image11 = LoadImage("graphics/site4.png");
-            // im_image12 = LoadImage("graphics/minimap.png");
+            tiles: Image {
+                name: "tiles".to_string(),
+                surfaces: Image::LoadImage("tiles", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            tiles2: Image {
+                name: "tiles2".to_string(),
+                surfaces: Image::LoadImage("tiles2", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            tiles3: Image {
+                name: "tiles3".to_string(),
+                surfaces: Image::LoadImage("tiles3", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            entcolours: Image {
+                name: "entcolours".to_string(),
+                surfaces: Image::LoadImage("entcolours", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            flipsprites: Image {
+                name: "flipsprites".to_string(),
+                surfaces: Image::LoadImage("flipsprites", true, false, 32, 32),
+                rect: sdl2::rect::Rect::new(0, 0, 32, 32),
+            },
+            sprites: Image {
+                name: "sprites".to_string(),
+                surfaces: Image::LoadImage("sprites", true, false, 32, 32),
+                rect: sdl2::rect::Rect::new(0, 0, 32, 32),
+            },
+            bfont: Image {
+                name: "font".to_string(),
+                surfaces: Image::LoadImage("font", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            teleporter: Image {
+                name: "teleporter".to_string(),
+                surfaces: Image::LoadImage("teleporter", true, false, 8, 8),
+                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+            },
+            images: Image {
+                name: "images".to_string(),
+                surfaces: vec![
+                    Image::LoadOneImage("levelcomplete", false, false, 320, 48),
+                    Image::LoadOneImage("minimap", true, true, 240, 180),
+                    Image::LoadOneImage("covered", true, true, 12, 9),
+                    Image::LoadOneImage("elephant", true, false, 464, 320),
+                    Image::LoadOneImage("gamecomplete", false, false, 320, 48),
+                    Image::LoadOneImage("fliplevelcomplete", false, false, 320, 48),
+                    Image::LoadOneImage("flipgamecomplete", false, false, 320, 48),
+                    Image::LoadOneImage("site", false, true, 121, 5),
+                    Image::LoadOneImage("site2", true, false, 64, 5),
+                    Image::LoadOneImage("site3", true, false, 81, 5),
+                    Image::LoadOneImage("ending", true, false, 320, 240),
+                    Image::LoadOneImage("site4", true, false, 121, 5),
+                    Image::LoadOneImage("minimap", true, false, 64, 5),
+                ],
+                rect: sdl2::rect::Rect::new(0, 0, 0, 0),
+            },
         }
     }
 
@@ -46,12 +84,20 @@ impl GraphicsResources {
 pub struct Image {
     pub name: String,
     pub surfaces: Vec<sdl2::surface::Surface<'static>>,
-    // pub rect: sdl2::rect::Rect,
     pub rect: sdl2::rect::Rect,
 }
 
 impl Image {
-    pub fn new (file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> Image {
+    pub fn new(name: String, surfaces: Vec<sdl2::surface::Surface<'static>>, rect: sdl2::rect::Rect) -> Self {
+        Self {
+            name,
+            surfaces,
+            rect,
+        }
+    }
+
+    // static SDL_Surface* LoadImage(const char *filename, bool noBlend = true, bool noAlpha = false)
+    pub fn LoadImage(file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> Vec<sdl2::surface::Surface<'static>> {
         let file_path = ["assets/graphics/", file, ".png"].concat();
         let decoder = match File::open(file_path.to_owned()) {
             Ok(x) => png::Decoder::new(x),
@@ -131,12 +177,33 @@ impl Image {
         // 	return NULL;
         // }
 
-        let rect = sdl2::rect::Rect::new(0, 0, w, h);
+        surfaces
+    }
 
-        Image {
-            name: String::from(file),
-            surfaces,
-            rect,
-        }
+    // static SDL_Surface* LoadImage(const char *filename, bool noBlend = true, bool noAlpha = false)
+    pub fn LoadOneImage(file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> sdl2::surface::Surface<'static> {
+        let file_path = ["assets/graphics/", file, ".png"].concat();
+        let decoder = match File::open(file_path.to_owned()) {
+            Ok(x) => png::Decoder::new(x),
+            Err(e) => panic!("{}: {}", e, file_path),
+        };
+        let (info, mut reader) = decoder.read_info().unwrap();
+        let mut data: Vec<u8> = vec![0; info.buffer_size()];
+        reader.next_frame(&mut data).unwrap();
+
+        let pf = match no_alpha {
+            true => sdl2::pixels::PixelFormatEnum::RGBA8888,
+            // false => sdl2::pixels::PixelFormatEnum::RGBX8888,
+            false => sdl2::pixels::PixelFormatEnum::ABGR8888,
+        };
+        let surface: sdl2::surface::Surface = match sdl2::surface::Surface::from_data(data.as_mut_slice(), info.width, info.height, info.width * 4, pf) {
+            Ok(x) => x,
+            Err(e) => panic!("{}", e),
+        };
+
+        let mut src_destt = sdl2::surface::Surface::new(0, 0, pf).unwrap();
+        surface.blit(None, &mut src_destt, None).unwrap();
+
+        return src_destt
     }
 }

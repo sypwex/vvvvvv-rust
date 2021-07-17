@@ -78,7 +78,7 @@ pub fn ss_toi(str: &str) -> i32 {
 
         if chr.is_alphanumeric() {
             // retval *= radix;
-			// retval += chr - '0';
+            // retval += chr - '0';
             retval = (retval*radix) + chr.to_digit(10).unwrap() as i32;
         } else {
             break;
@@ -182,9 +182,21 @@ impl UtilityClass {
     }
 
     // std::string UtilityClass::number( int _t )
-    pub fn number(&self, _t: i32) -> &str {
-        println!("DEADBEEF: UtilityClass::number() method not implemented yet");
-        &""
+    pub fn number(&self, t: i32) -> String {
+        static ones_place: [&str;9] = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+        static tens_place: [&str;9] = ["Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+        static teens: [&str;9] = ["Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+
+        match t {
+            t if t < 0 => "???".to_string(),
+            t if t > 100 => "Lots".to_string(),
+            t if t == 0 => "Zero".to_string(),
+            t if t == 100 => "One Hundred".to_string(),
+            t if t >= 1 && t <= 9 => ones_place[t as usize - 1].to_string(),
+            t if t >= 11 && t <= 19 => teens[t as usize - 11].to_string(),
+            t if t % 10 == 0 => tens_place[(t as usize / 10) - 1].to_string(),
+            _ => [tens_place[(t as usize / 10) - 1], " ", ones_place[(t as usize % 10) - 1]].concat(),
+        }
     }
 
     // bool UtilityClass::intersects( SDL_Rect A, SDL_Rect B )

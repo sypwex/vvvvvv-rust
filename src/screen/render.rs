@@ -1,4 +1,4 @@
-use crate::{entity, game::{self, MenuName}, key_poll, map, music, scenes::RenderResult, utility_class};
+use crate::{entity, game::{self, MenuName}, key_poll, map, music, scenes::RenderResult, script, utility_class};
 
 use self::graphics::graphics_util;
 pub mod graphics;
@@ -7,6 +7,16 @@ pub mod graphics;
 pub enum BackGround {
     Title,
     Tower,
+}
+
+// static int inline FLIP(int ypos)
+macro_rules! FLIP {
+    ($ypos:tt) => {
+        match graphics.flipmode {
+            true => 220 - ypos,
+            false => ypos,
+        }
+    };
 }
 
 pub struct Render {
@@ -34,8 +44,6 @@ impl Render {
 
     /* actual Render.cpp goes below */
 
-    // static int inline FLIP(int ypos)
-
     // static inline void drawslowdowntext(void)
     fn drawslowdowntext(&self) {
         println!("DEADBEEF(render.rs): drawslowdowntext not implemented yet");
@@ -56,12 +64,12 @@ impl Render {
         match game.currentmenuname {
             MenuName::mainmenu => {
                 let vsprite = 27; // 23
-                self.graphics.drawsprite((160 - 96) + 0 * 32, temp, vsprite, tr, tg, tb);
-                self.graphics.drawsprite((160 - 96) + 1 * 32, temp, vsprite, tr, tg, tb);
-                self.graphics.drawsprite((160 - 96) + 2 * 32, temp, vsprite, tr, tg, tb);
-                self.graphics.drawsprite((160 - 96) + 3 * 32, temp, vsprite, tr, tg, tb);
-                self.graphics.drawsprite((160 - 96) + 4 * 32, temp, vsprite, tr, tg, tb);
-                self.graphics.drawsprite((160 - 96) + 5 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 0 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 1 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 2 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 3 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 4 * 32, temp, vsprite, tr, tg, tb);
+                self.graphics.drawsprite_rgb((160 - 96) + 5 * 32, temp, vsprite, tr, tg, tb);
 
                 // #if defined(MAKEANDPLAY)
                 // self.graphics.print(-1,temp+35,"     MAKE AND PLAY EDITION",tr, tg, tb, Some(true));
@@ -617,10 +625,10 @@ impl Render {
                         }
                         self.graphics.print(59, 132-20, &game.tele_gametime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
                         let trinketcount = help.number(game.tele_trinkets);
-                        self.graphics.print(262-graphics::Graphics::len(trinketcount), 132-20, trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                        self.graphics.print(262-graphics::Graphics::len(&trinketcount), 132-20, &trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
 
-                        self.graphics.drawsprite_c(34, 126-20, 50, graphics::Color::Clock);
-                        self.graphics.drawsprite_c(270, 126-20, 22, graphics::Color::Trinket);
+                        self.graphics.drawsprite_clru32(34, 126-20, 50, self.graphics.col_clock.colour);
+                        self.graphics.drawsprite_clru32(270, 126-20, 22, self.graphics.col_trinket.colour);
                     },
                     1 => {
                         //Show quick save info
@@ -633,10 +641,10 @@ impl Render {
                         }
                         self.graphics.print(59, 132-20, &game.quick_gametime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
                         let trinketcount = help.number(game.quick_trinkets);
-                        self.graphics.print(262-graphics::Graphics::len(trinketcount), 132-20, trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                        self.graphics.print(262-graphics::Graphics::len(&trinketcount), 132-20, &trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
 
-                        self.graphics.drawsprite_c(34, 126-20, 50, graphics::Color::Clock);
-                        self.graphics.drawsprite_c(270, 126-20, 22, graphics::Color::Trinket);
+                        self.graphics.drawsprite_clru32(34, 126-20, 50, self.graphics.col_clock.colour);
+                        self.graphics.drawsprite_clru32(270, 126-20, 22, self.graphics.col_trinket.colour);
                     },
                     _ => println!("incorrect continue menu option"),
                 };
@@ -1000,7 +1008,7 @@ impl Render {
     }
 
     // void titlerender(void)
-    pub fn titlerender(&mut self, game: &mut game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) -> Option<RenderResult> {
+    pub fn titlerender(&mut self, game: &mut game::Game, music: &music::Music, map: &map::Map, help: &utility_class::UtilityClass, key: &key_poll::KeyPoll, screen_params: crate::screen::ScreenParams) -> Result<Option<RenderResult>, i32> {
         self.graphics.buffers.fill_back_buffer_with_color(sdl2::pixels::Color::BLACK);
 
         if !game.menustart {
@@ -1010,12 +1018,12 @@ impl Render {
 
             let temp = 50;
             let vsprite = 27; // 23
-            self.graphics.drawsprite((160 - 96) + 0 * 32, temp, vsprite, self.tr, self.tg, self.tb);
-            self.graphics.drawsprite((160 - 96) + 1 * 32, temp, vsprite, self.tr, self.tg, self.tb);
-            self.graphics.drawsprite((160 - 96) + 2 * 32, temp, vsprite, self.tr, self.tg, self.tb);
-            self.graphics.drawsprite((160 - 96) + 3 * 32, temp, vsprite, self.tr, self.tg, self.tb);
-            self.graphics.drawsprite((160 - 96) + 4 * 32, temp, vsprite, self.tr, self.tg, self.tb);
-            self.graphics.drawsprite((160 - 96) + 5 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 0 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 1 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 2 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 3 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 4 * 32, temp, vsprite, self.tr, self.tg, self.tb);
+            self.graphics.drawsprite_rgb((160 - 96) + 5 * 32, temp, vsprite, self.tr, self.tg, self.tb);
             // #if defined(MAKEANDPLAY)
             // self.graphics.print(-1,temp+35,"     MAKE AND PLAY EDITION", self.tr, self.tg, self.tb, Some(true));
             // #endif
@@ -1045,14 +1053,14 @@ impl Render {
 
         self.graphics.drawfade();
 
-        Some(RenderResult::WithScreenEffects)
+        Ok(Some(RenderResult::WithScreenEffects))
     }
 
     // void gamecompleterender(void)
     // void gamecompleterender2(void)
 
     // void gamerender(void)
-    pub fn gamerender(&mut self, game: &mut game::Game, map: &mut map::Map, help: &mut utility_class::UtilityClass, obj: &mut entity::EntityClass) -> Option<RenderResult> {
+    pub fn gamerender(&mut self, game: &mut game::Game, map: &mut map::Map, help: &mut utility_class::UtilityClass, obj: &mut entity::EntityClass) -> Result<Option<RenderResult>, i32> {
         if !game.blackout {
             if map.towermode {
                 if !game.colourblindmode {
@@ -1251,9 +1259,9 @@ impl Render {
                 self.graphics.bprint(6, 42, "SHINY:", 255, 255, 255, None);
 
                 if game.timetrialparlost {
-                    self.graphics.bprint(56, 18, game.timestring(help), 196, 80, 80, None);
+                    self.graphics.bprint(56, 18, &game.timestring(help), 196, 80, 80, None);
                 } else {
-                    self.graphics.bprint(56, 18, game.timestring(help), 196, 196, 196, None);
+                    self.graphics.bprint(56, 18, &game.timestring(help), 196, 196, 196, None);
                 }
 
                 if game.deathcounts > 0 {
@@ -1288,9 +1296,634 @@ impl Render {
             self.graphics.drawtrophytext(obj, help);
         }
 
-        Some(RenderResult::WithScreenEffects)
+        Ok(Some(RenderResult::WithScreenEffects))
     }
 
     // void maprender(void)
+    pub fn maprender(&mut self, map: &mut map::Map, help: &mut utility_class::UtilityClass, game: &mut game::Game, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Result<Option<RenderResult>, i32> {
+        graphics_util::ClearSurface(&mut self.graphics.buffers.backBuffer);
+
+        //draw screen alliteration
+        //Roomname:
+        if map.hiddenname != "" {
+            self.graphics.print(5, 2, &map.hiddenname, 196, 196, 255 - help.glow, Some(true));
+        } else {
+            if map.finalmode {
+                self.graphics.print(5, 2, &map.glitchname, 196, 196, 255 - help.glow, Some(true));
+            } else {
+                self.graphics.print(5, 2, &map.roomname, 196, 196, 255 - help.glow, Some(true));
+            }
+        }
+
+        //Background color
+        graphics_util::FillRect_xywh_rgb(&mut self.graphics.buffers.backBuffer, 0, 12, 320, 240, 10, 24, 26 );
+
+        //Menubar:
+        self.graphics.drawtextbox( -10, 212, 42, 3, 65, 185, 207);
+
+        // Draw the selected page name at the bottom
+        // menupage 0 - 3 is the pause screen
+        if script.running && game.menupage == 3 {
+            // While in a cutscene, you can only save
+            self.graphics.print(-1, 220, "[SAVE]", 196, 196, 255 - help.glow, Some(true));
+        } else if game.menupage <= 3 {
+            let tab1 = match (game.insecretlab, obj.flags[67] && !map.custommode) {
+                (true, _) => "GRAV",
+                (_, true) => "SHIP",
+                        _ => "CREW",
+            };
+
+            macro_rules! TAB {
+                ($opt:expr, $text:expr) => {
+                    self.graphics.map_tab($opt, $text, Some(game.menupage == $opt))
+                }
+            }
+
+            TAB!(0, "MAP");
+            TAB!(1, tab1);
+            TAB!(2, "STATS");
+            TAB!(3, "SAVE");
+        }
+
+        // Draw menu header
+        match game.menupage {
+            30 | 31 | 32 | 33 => self.graphics.print(-1, 220, "[ PAUSE ]", 196, 196, 255 - help.glow, Some(true)),
+            _ => (),
+        };
+
+        // Draw menu options
+        if game.menupage >= 30 && game.menupage <= 33 {
+            macro_rules! OPTION {
+                ($opt:expr, $text:expr) => {
+                    self.graphics.map_option($opt, 4, $text, Some(game.menupage - 30 == $opt), help)
+                }
+            }
+            OPTION!(0, "return to game");
+            OPTION!(1, "options");
+            OPTION!(2, "quit to menu");
+        }
+
+        // Draw the actual menu
+        match game.menupage {
+            0 => {
+                if map.finalmode || (map.custommode && !map.customshowmm) {
+                    //draw the map image
+                    self.graphics.drawpixeltextbox(35, 16, 250, 190, 32,24, 65, 185, 207,4,0);
+                    self.graphics.drawimage(1, 40, 21, Some(false));
+                    for j in 0..20 {
+                        for i in 0..20 {
+                            self.graphics.drawimage(2, 40 + (i * 12), 21 + (j * 9), Some(false));
+                        }
+                    }
+                    self.graphics.print(-1, 105, "NO SIGNAL", 245, 245, 245, Some(true));
+                }
+                // #ifndef NO_CUSTOM_LEVELS
+                else if map.custommode {
+                    //draw the map image
+                    self.graphics.drawcustompixeltextbox(35 + map.custommmxoff, 16 + map.custommmyoff, map.custommmxsize + 10, map.custommmysize + 10, (map.custommmxsize+10)/8, (map.custommmysize + 10)/8, 65, 185, 207, 4, 0);
+                    if self.graphics.minimap_mounted {
+                        self.graphics.drawpartimage(1, 40+map.custommmxoff, 21+map.custommmyoff, map.custommmxsize, map.custommmysize);
+                    } else {
+                        self.graphics.drawpartimage(12, 40+map.custommmxoff, 21+map.custommmyoff, map.custommmxsize,map.custommmysize);
+                    }
+
+                    //Black out here
+                    if map.customzoom == 4 {
+                        for j in 0..map.customheight {
+                            for i in 0..map.customwidth {
+                                if !map.isexplored(i, j) {
+                                    //Draw the fog of war on the map
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48), map.custommmyoff+21 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48), map.custommmyoff+21 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48), map.custommmyoff+21 + 9 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48), map.custommmyoff+21 + 9+ (j * 36), Some(false));
+
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48) + 24, map.custommmyoff+21 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48) + 24, map.custommmyoff+21 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48) + 24, map.custommmyoff+ 21 + 9 + (j * 36), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48) + 24, map.custommmyoff+21 + 9+ (j * 36), Some(false));
+
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48), map.custommmyoff+21 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48), map.custommmyoff+21 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48), map.custommmyoff+21 + 9 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48), map.custommmyoff+21 + 9+ (j * 36)+18, Some(false));
+
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48) + 24, map.custommmyoff+21 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48) + 24, map.custommmyoff+21 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 48) + 24, map.custommmyoff+21 + 9 + (j * 36)+18, Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 48) + 24, map.custommmyoff+21 + 9+ (j * 36)+18, Some(false));
+                                }
+                            }
+                        }
+                    } else if map.customzoom == 2 {
+                        for j in 0..map.customheight {
+                            for i in 0..map.customwidth {
+                                if !map.isexplored(i, j) {
+                                    //Draw the fog of war on the map
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 24), map.custommmyoff+21 + (j * 18), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 24), map.custommmyoff+21 + (j * 18), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 24), map.custommmyoff+21 + 9 + (j * 18), Some(false));
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + 12 + (i * 24), map.custommmyoff+21 + 9+ (j * 18), Some(false));
+                                }
+                            }
+                        }
+                    } else {
+                        for j in 0..map.customheight {
+                            for i in 0..map.customwidth {
+                                if !map.isexplored(i, j) {
+                                    //Draw the fog of war on the map
+                                    self.graphics.drawimage(2, map.custommmxoff+40 + (i * 12), map.custommmyoff+21 + (j * 9), Some(false));
+                                }
+                            }
+                        }
+                    }
+
+                    //normal size maps
+                    if map.customzoom == 4 {
+                        if map.cursorstate == 1 {
+                            if (map.cursordelay / 4) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 48) +map.custommmxoff, 21 + ((game.roomy - 100) * 36)+map.custommmyoff , 48 , 36 , 255,255,255);
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 48) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 36) + 2+map.custommmyoff, 48 - 4, 36 - 4, 255,255,255);
+                            }
+                        } else if map.cursorstate == 2 {
+                            if (map.cursordelay / 15) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 48) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 36) + 2+map.custommmyoff, 48 - 4, 36 - 4, 16, 245 - (help.glow), 245 - (help.glow));
+                            }
+                        }
+                    } else if map.customzoom == 2 {
+                        if map.cursorstate == 1 {
+                            if (map.cursordelay / 4) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 24)+map.custommmxoff , 21 + ((game.roomy - 100) * 18)+map.custommmyoff , 24 , 18 , 255,255,255);
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 24) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 18) + 2+map.custommmyoff, 24 - 4, 18 - 4, 255,255,255);
+                            }
+                        } else if map.cursorstate == 2 {
+                            if (map.cursordelay / 15) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 24) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 18) + 2+map.custommmyoff, 24 - 4, 18 - 4, 16, 245 - (help.glow), 245 - (help.glow));
+                            }
+                        }
+                    } else {
+                        if map.cursorstate == 1 {
+                            if (map.cursordelay / 4) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12)+map.custommmxoff , 21 + ((game.roomy - 100) * 9)+map.custommmyoff , 12 , 9 , 255,255,255);
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 9) + 2+map.custommmyoff, 12 - 4, 9 - 4, 255,255,255);
+                            }
+                        } else if map.cursorstate == 2 {
+                            if (map.cursordelay / 15) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2+map.custommmxoff, 21 + ((game.roomy - 100) * 9) + 2+map.custommmyoff, 12 - 4, 9 - 4, 16, 245 - (help.glow), 245 - (help.glow));
+                            }
+                        }
+                    }
+
+                    if map.showtrinkets {
+                        for i in 0..map.shinytrinkets.len() {
+                            if !obj.collect[i] {
+                                let mut temp = 1086;
+                                if self.graphics.flipmode { temp += 3; }
+                                if map.customzoom == 4 {
+                                    self.graphics.drawtile(40 + (map.shinytrinkets[i].x * 48) + 20 + map.custommmxoff, 21 + (map.shinytrinkets[i].y * 36) + 14 + map.custommmyoff, temp);
+                                } else if map.customzoom == 2 {
+                                    self.graphics.drawtile(40 + (map.shinytrinkets[i].x * 24) + 8 + map.custommmxoff, 21 + (map.shinytrinkets[i].y * 18) + 5 + map.custommmyoff, temp);
+                                } else {
+                                    self.graphics.drawtile(40 + 3 + (map.shinytrinkets[i].x * 12) + map.custommmxoff, 22 + (map.shinytrinkets[i].y * 9) + map.custommmyoff, temp);
+                                }
+                            }
+                        }
+                    }
+                }
+                // #endif /* NO_CUSTOM_LEVELS */
+                else {
+                    //draw the map image
+                    self.graphics.drawpixeltextbox(35, 16, 250, 190, 32,24, 65, 185, 207,4,0);
+                    self.graphics.drawimage(1, 40, 21, Some(false));
+
+                    //black out areas we can't see yet
+                    for j in 0..20 {
+                        for i in 0..20 {
+                            if !map.isexplored(i, j) {
+                                //Draw the fog of war on the map
+                                self.graphics.drawimage(2, 40 + (i * 12), 21 + (j * 9), Some(false));
+                            }
+                        }
+                    }
+
+                    //draw the coordinates
+                    if game.roomx == 109 {
+                        //tower!instead of room y, scale map.ypos
+                        if map.cursorstate == 1 {
+                            if (map.cursordelay / 4) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) , 21 , 12, 180, 255,255,255);
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2 , 21  + 2, 12 - 4, 180 - 4, 255,255,255);
+                            }
+                            if map.cursordelay > 30 { map.cursorstate = 2; }
+                        } else if map.cursorstate == 2 {
+                            if (map.cursordelay / 15) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2 , 21  + 2, 12 - 4, 180 - 4,16, 245 - (help.glow), 245 - (help.glow));
+                            }
+                        }
+                    } else {
+                        if map.cursorstate == 1 {
+                            if (map.cursordelay / 4) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) , 21 + ((game.roomy - 100) * 9) , 12 , 9 , 255,255,255);
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2, 21 + ((game.roomy - 100) * 9) + 2, 12 - 4, 9 - 4, 255,255,255);
+                            }
+                        } else if map.cursorstate == 2 {
+                            if (map.cursordelay / 15) % 2 == 0 {
+                                self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2, 21 + ((game.roomy - 100) * 9) + 2, 12 - 4, 9 - 4, 16, 245 - (help.glow), 245 - (help.glow));
+                            }
+                        }
+                    }
+
+                    //draw legend details
+                    for i in 0..map.teleporters.len() {
+                        if map.showteleporters && map.isexplored(map.teleporters[i].x, map.teleporters[i].y) {
+                            let mut temp = 1126 + (if map.isexplored(map.teleporters[i].x, map.teleporters[i].y) { 1 } else { 0 });
+                            if self.graphics.flipmode { temp += 3; }
+                            self.graphics.drawtile(40 + 3 + (map.teleporters[i].x * 12), 22 + (map.teleporters[i].y * 9), temp);
+                        } else if map.showtargets && !map.isexplored(map.teleporters[i].x, map.teleporters[i].y) {
+                            let mut temp = 1126 + (if map.isexplored(map.teleporters[i].x, map.teleporters[i].y) { 1 } else { 0 });
+                            if self.graphics.flipmode { temp += 3; }
+                            self.graphics.drawtile(40 + 3 + (map.teleporters[i].x * 12), 22 + (map.teleporters[i].y * 9), temp);
+                        }
+                    }
+
+                    if map.showtrinkets {
+                        for i in 0..map.shinytrinkets.len() {
+                            if !obj.collect[i] {
+                                let mut temp = 1086;
+                                if self.graphics.flipmode {
+                                    temp += 3;
+                                }
+
+                                self.graphics.drawtile(40 + 3 + (map.shinytrinkets[i].x * 12), 22 + (map.shinytrinkets[i].y * 9),temp);
+                            }
+                        }
+                    }
+                }
+            },
+            1 => {
+                if game.insecretlab {
+                    if self.graphics.flipmode {
+                        self.graphics.print(0, 174, "SUPER GRAVITRON HIGHSCORE", 196, 196, 255 - help.glow, Some(true));
+
+                        let tempstring = help.timestring(game.swnrecord);
+                        self.graphics.print( 240, 124, "Best Time", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.bigrprint( 300, 94, tempstring, 196, 196, 255 - help.glow, true, 2.0);
+
+                        match game.swnbestrank {
+                            0 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 5 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            1 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 10 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            2 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 15 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            3 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 20 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            4 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 30 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            5 => {
+                                self.graphics.print( -1, 40, "Next Trophy at 1 minute", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            6 => {
+                                self.graphics.print( -1, 40, "All Trophies collected!", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            _ => (),
+                        }
+                    } else {
+                        self.graphics.print(0, 40, "SUPER GRAVITRON HIGHSCORE", 196, 196, 255 - help.glow, Some(true));
+
+                        let tempstring = help.timestring(game.swnrecord);
+                        self.graphics.print( 240, 90, "Best Time", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.bigrprint( 300, 104, tempstring, 196, 196, 255 - help.glow, true, 2.0);
+
+                        match game.swnbestrank {
+                            0 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 5 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            1 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 10 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            2 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 15 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            3 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 20 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            4 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 30 seconds", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            5 => {
+                                self.graphics.print( -1, 174, "Next Trophy at 1 minute", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            6 => {
+                                self.graphics.print( -1, 174, "All Trophies collected!", 196, 196, 255 - help.glow, Some(true));
+                            },
+                            _ => (),
+                        }
+                    }
+                } else if obj.flags[67] && !map.custommode {
+                    self.graphics.print(0, 105, "Press ACTION to warp to the ship.", 196, 196, 255 - help.glow, Some(true));
+                }
+                // // #if !defined(NO_CUSTOM_LEVELS)
+                // else if map.custommode {
+                //     LevelMetaData& meta = ed.ListOfMetaData[game.playcustomlevel];
+                //
+                //     self.graphics.bigprint( -1, FLIP!(45), meta.title, 196, 196, 255 - help.glow, Some(true));
+                //     self.graphics.print( -1, FLIP!(70), "by " + meta.creator, 196, 196, 255 - help.glow, Some(true));
+                //     self.graphics.print( -1, FLIP!(80), meta.website, 196, 196, 255 - help.glow, Some(true));
+                //     self.graphics.print( -1, FLIP!(100), meta.Desc1, 196, 196, 255 - help.glow, Some(true));
+                //     self.graphics.print( -1, FLIP!(110), meta.Desc2, 196, 196, 255 - help.glow, Some(true));
+                //     self.graphics.print( -1, FLIP!(120), meta.Desc3, 196, 196, 255 - help.glow, Some(true));
+                //
+                //     let remaining = ed.numcrewmates() - game.crewmates();
+                //
+                //     if remaining == 1 {
+                //         self.graphics.print(1,FLIP!(165), help.number(remaining)+ " crewmate remains", 196, 196, 255 - help.glow, Some(true));
+                //     } else if remaining > 0 {
+                //         self.graphics.print(1,FLIP!(165), help.number(remaining)+ " crewmates remain", 196, 196, 255 - help.glow, Some(true));
+                //     }
+                // }
+                // // #endif
+                else {
+                    if self.graphics.flipmode {
+                        for i in 0..3 {
+                            self.graphics.drawcrewman(16, 32 + (i * 64), 2-i, game.crewstats[2-i as usize], None);
+                            if game.crewstats[2-i as usize] {
+                                self.graphics.printcrewname(44, 32 + (i * 64)+4+10, 2-i);
+                                self.graphics.printcrewnamestatus(44, 32 + (i * 64)+4, 2-i);
+                            } else {
+                                self.graphics.printcrewnamedark(44, 32 + (i * 64)+4+10, 2-i);
+                                self.graphics.print(44, 32 + (i * 64) + 4, "Missing...", 64,64,64, None);
+                            }
+
+                            self.graphics.drawcrewman(16+160, 32 + (i * 64), (2-i)+3, game.crewstats[(2-i as usize)+3], None);
+                            if game.crewstats[(2-i as usize)+3] {
+                                self.graphics.printcrewname(44+160, 32 + (i * 64)+4+10, (2-i)+3);
+                                self.graphics.printcrewnamestatus(44+160, 32 + (i * 64)+4, (2-i)+3);
+                            } else {
+                                self.graphics.printcrewnamedark(44+160, 32 + (i * 64)+4+10, (2-i)+3);
+                                self.graphics.print(44+160, 32 + (i * 64) + 4, "Missing...", 64,64,64, None);
+                            }
+                        }
+                    } else {
+                        for i in 0..3 {
+                            self.graphics.drawcrewman(16, 32 + (i * 64), i, game.crewstats[i as usize], None);
+                            if game.crewstats[i as usize] {
+                                self.graphics.printcrewname(44, 32 + (i * 64)+4, i);
+                                self.graphics.printcrewnamestatus(44, 32 + (i * 64)+4+10, i);
+                            } else {
+                                self.graphics.printcrewnamedark(44, 32 + (i * 64)+4, i);
+                                self.graphics.print(44, 32 + (i * 64) + 4 + 10, "Missing...", 64,64,64, None);
+                            }
+
+                            self.graphics.drawcrewman(16+160, 32 + (i * 64), i+3, game.crewstats[i as usize + 3], None);
+                            if game.crewstats[i as usize + 3] {
+                                self.graphics.printcrewname(44+160, 32 + (i * 64)+4, i+3);
+                                self.graphics.printcrewnamestatus(44+160, 32 + (i * 64)+4+10, i+3);
+                            } else {
+                                self.graphics.printcrewnamedark(44+160, 32 + (i * 64)+4, i+3);
+                                self.graphics.print(44+160, 32 + (i * 64) + 4 + 10, "Missing...", 64,64,64, None);
+                            }
+                        }
+                    }
+                }
+            },
+            2 => {
+                // #if !defined(NO_CUSTOM_LEVELS)
+                // if map.custommode {
+                //     if self.graphics.flipmode {
+                //         self.graphics.print(0, 164, "[Trinkets found]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 152, help.number(game.trinkets()) + " out of " + help.number(ed.numtrinkets()), 96,96,96, Some(true));
+
+                //         self.graphics.print(0, 114, "[Number of Deaths]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 102,help.String(game.deathcounts),  96,96,96, Some(true));
+
+                //         self.graphics.print(0, 64, "[Time Taken]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 52, game.timestring(),  96, 96, 96, Some(true));
+                //     } else {
+                //         self.graphics.print(0, 52, "[Trinkets found]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 64, help.number(game.trinkets()) + " out of "+help.number(ed.numtrinkets()), 96,96,96, Some(true));
+
+                //         self.graphics.print(0, 102, "[Number of Deaths]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 114,help.String(game.deathcounts),  96,96,96, Some(true));
+
+                //         self.graphics.print(0, 152, "[Time Taken]", 196, 196, 255 - help.glow, Some(true));
+                //         self.graphics.print(0, 164, game.timestring(),  96, 96, 96, Some(true));
+                //     }
+                // } else {
+                // #endif
+                {
+                    if self.graphics.flipmode {
+                        self.graphics.print(0, 164, "[Trinkets found]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 152, &(help.number(game.trinkets(obj)).to_owned() + " out of Twenty"), 96,96,96, Some(true));
+
+                        self.graphics.print(0, 114, "[Number of Deaths]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 102,&game.deathcounts.to_string(),  96,96,96, Some(true));
+
+                        self.graphics.print(0, 64, "[Time Taken]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 52, &game.timestring(help).to_string(),  96, 96, 96, Some(true));
+                    } else {
+                        self.graphics.print(0, 52, "[Trinkets found]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 64, &(help.number(game.trinkets(obj)).to_owned() + " out of Twenty"), 96,96,96, Some(true));
+
+                        self.graphics.print(0, 102, "[Number of Deaths]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 114,&game.deathcounts.to_string(),  96,96,96, Some(true));
+
+                        self.graphics.print(0, 152, "[Time Taken]", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 164, &game.timestring(help).to_string(),  96, 96, 96, Some(true));
+                    }
+                }
+            },
+            3 => {
+                if game.inintermission {
+                    self.graphics.print(0, 115, "Cannot Save in Level Replay", 146, 146, 180, Some(true));
+                } else if game.nodeathmode {
+                    self.graphics.print(0, 115, "Cannot Save in No Death Mode", 146, 146, 180, Some(true));
+                } else if game.intimetrial {
+                    self.graphics.print(0, 115, "Cannot Save in Time Trial", 146, 146, 180, Some(true));
+                } else if game.insecretlab {
+                    self.graphics.print(0, 115, "Cannot Save in Secret Lab", 146, 146, 180, Some(true));
+                } else if game.gamesavefailed {
+                    self.graphics.print(0, 115, "ERROR: Could not save game!", 146, 146, 180, Some(true));
+                } else if map.custommode {
+                    if game.gamesaved {
+                        self.graphics.print(0, 36, "Game saved ok!", 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+                        self.graphics.drawpixeltextbox(17, 65, 286, 90, 36,12, 65, 185, 207,0,4);
+
+                        if self.graphics.flipmode {
+                            self.graphics.print(0, 122, &game.customleveltitle, 25, 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+                            self.graphics.print(59, 78, &game.savetime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                            let trinketcount = help.number(game.savetrinkets);
+                            self.graphics.print(262 - graphics::Graphics::len(&trinketcount), 78,&trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+
+                            self.graphics.drawsprite_clru32(34, 74, 50, self.graphics.col_clock.colour);
+                            self.graphics.drawsprite_clru32(270, 74, 22, self.graphics.col_trinket.colour);
+                        } else {
+                            self.graphics.print(0, 90, &game.customleveltitle, 25, 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+                            self.graphics.print(59, 132, &game.savetime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                            let trinketcount = help.number(game.savetrinkets);
+                            self.graphics.print(262 - graphics::Graphics::len(&trinketcount), 132, &trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+
+                            self.graphics.drawsprite_clru32(34, 126, 50, self.graphics.col_clock.colour);
+                            self.graphics.drawsprite_clru32(270, 126, 22, self.graphics.col_trinket.colour);
+                        }
+                    } else {
+                        self.graphics.print(0, 80, "[Press ACTION to save your game]", 255 - (help.glow * 2), 255 - (help.glow * 2), 255 - help.glow, Some(true));
+                    }
+                } else {
+                    if self.graphics.flipmode {
+                        self.graphics.print(0, 186, "(Note: The game is autosaved", 146, 146, 180, Some(true));
+                        self.graphics.print(0, 174, "at every teleporter.)", 146, 146, 180, Some(true));
+                    } else {
+                        self.graphics.print(0, 174, "(Note: The game is autosaved", 146, 146, 180, Some(true));
+                        self.graphics.print(0, 186, "at every teleporter.)", 146, 146, 180, Some(true));
+                    }
+
+                    if game.gamesaved {
+                        self.graphics.print(0, 36, "Game saved ok!", 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+
+                        self.graphics.drawpixeltextbox(17, 65, 286, 90, 36,12, 65, 185, 207,0,4);
+
+                        if self.graphics.flipmode {
+                            self.graphics.print(0, 132, &game.savearea, 25, 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+                            for i in 0..6 {
+                                self.graphics.drawcrewman(169-(3*42)+(i*42), 98, i, game.crewstats[i as usize], Some(true));
+                            }
+                            self.graphics.print(59, 78, &game.savetime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                            let trinketcount = help.number(game.savetrinkets);
+                            self.graphics.print(262 - graphics::Graphics::len(&trinketcount), 78, &trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+
+                            self.graphics.drawsprite_clru32(34, 74, 50, self.graphics.col_clock.colour);
+                            self.graphics.drawsprite_clru32(270, 74, 22, self.graphics.col_trinket.colour);
+                        } else {
+                            self.graphics.print(0, 80, &game.savearea, 25, 255 - (help.glow / 2), 255 - (help.glow / 2), Some(true));
+                            for i in 0..6 {
+                                self.graphics.drawcrewman(169-(3*42)+(i*42), 95, i, game.crewstats[i as usize], Some(true));
+                            }
+                            self.graphics.print(59, 132, &game.savetime, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+                            let trinketcount = help.number(game.savetrinkets);
+                            self.graphics.print(262 - graphics::Graphics::len(&trinketcount), 132, &trinketcount, 255 - (help.glow / 2), 255 - (help.glow / 2), 255 - (help.glow / 2), None);
+
+                            self.graphics.drawsprite_clru32(34, 126, 50, self.graphics.col_clock.colour);
+                            self.graphics.drawsprite_clru32(270, 126, 22, self.graphics.col_trinket.colour);
+                        }
+                    } else {
+                        self.graphics.print(0, 80, "[Press ACTION to save your game]", 255 - (help.glow * 2), 255 - (help.glow * 2), 255 - help.glow, Some(true));
+
+                        if game.quicksummary != "" {
+                            if self.graphics.flipmode {
+                                self.graphics.print(0, 110, "Last Save:", 164 - (help.glow / 4), 164 - (help.glow / 4), 164, Some(true));
+                                self.graphics.print(0, 100, &game.quicksummary, 164  - (help.glow / 4), 164 - (help.glow / 4), 164, Some(true));
+                            } else {
+                                self.graphics.print(0, 100, "Last Save:", 164 - (help.glow / 4), 164 - (help.glow / 4), 164, Some(true));
+                                self.graphics.print(0, 110, &game.quicksummary, 164  - (help.glow / 4), 164 - (help.glow / 4), 164, Some(true));
+                            }
+                        }
+                    }
+                }
+            },
+            10 => {
+                self.graphics.print(128, 220, "[ QUIT ]", 196, 196, 255 - help.glow, None);
+
+                if self.graphics.flipmode {
+                    if game.inspecial() {
+                        self.graphics.print(0, 135, "Return to main menu?", 196, 196, 255 - help.glow, Some(true));
+                    } else {
+                        self.graphics.print(0, 142, "Do you want to quit? You will", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 130, "lose any unsaved progress.", 196, 196, 255 - help.glow, Some(true));
+                    }
+
+                    self.graphics.print(80-16, 88, "[ NO, KEEP PLAYING ]", 196, 196, 255 - help.glow, None);
+                    self.graphics.print(80 + 32, 76, "yes, quit to menu",  96, 96, 96, None);
+                } else {
+                    if game.inspecial() {
+                        self.graphics.print(0, 80, "Return to main menu?", 196, 196, 255 - help.glow, Some(true));
+                    } else {
+                        self.graphics.print(0, 76, "Do you want to quit? You will", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 88, "lose any unsaved progress.", 196, 196, 255 - help.glow, Some(true));
+                    }
+
+                    self.graphics.print(80-16, 130, "[ NO, KEEP PLAYING ]", 196, 196, 255 - help.glow, None);
+                    self.graphics.print(80 + 32, 142, "yes, quit to menu",  96, 96, 96, None);
+
+                }
+            },
+            11 => {
+                self.graphics.print(128, 220, "[ QUIT ]", 196, 196, 255 - help.glow, None);
+
+                if self.graphics.flipmode {
+                    if game.inspecial() {
+                        self.graphics.print(0, 135, "Return to main menu?", 196, 196, 255 - help.glow, Some(true));
+                    } else {
+                        self.graphics.print(0, 142, "Do you want to quit? You will", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 130, "lose any unsaved progress.", 196, 196, 255 - help.glow, Some(true));
+                    }
+
+                    self.graphics.print(80, 88, "no, keep playing", 96,96,96, None);
+                    self.graphics.print(80+32-16, 76, "[ YES, QUIT TO MENU ]",  196, 196, 255 - help.glow, None);
+                } else {
+                    if game.inspecial() {
+                        self.graphics.print(0, 80, "Return to main menu?", 196, 196, 255 - help.glow, Some(true));
+                    } else {
+                        self.graphics.print(0, 76, "Do you want to quit? You will", 196, 196, 255 - help.glow, Some(true));
+                        self.graphics.print(0, 88, "lose any unsaved progress.", 196, 196, 255 - help.glow, Some(true));
+                    }
+
+                    self.graphics.print(80, 130, "no, keep playing", 96,96,96, None);
+                    self.graphics.print(80+32-16, 142, "[ YES, QUIT TO MENU ]", 196, 196, 255 - help.glow, None);
+                }
+            },
+            20 => {
+                self.graphics.print(128, 220, "[ GRAVITRON ]", 196, 196, 255 - help.glow, Some(true));
+
+                if self.graphics.flipmode {
+                    self.graphics.print(0, 76, "the secret laboratory?", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(0, 88, "Do you want to return to", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(80-16, 142, "[ NO, KEEP PLAYING ]", 196, 196, 255 - help.glow, None);
+                    self.graphics.print(80 + 32, 130, "yes, return",  96, 96, 96, None);
+                } else {
+                    self.graphics.print(0, 76, "Do you want to return to", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(0, 88, "the secret laboratory?", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(80-16, 130, "[ NO, KEEP PLAYING ]", 196, 196, 255 - help.glow, None);
+                    self.graphics.print(80 + 32, 142, "yes, return",  96, 96, 96, None);
+                }
+
+            },
+            21 => {
+                self.graphics.print(128, 220, "[ GRAVITRON ]", 196, 196, 255 - help.glow, Some(true));
+
+                if self.graphics.flipmode {
+                    self.graphics.print(0, 76, "the secret laboratory?", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(0, 88, "Do you want to return to", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(80, 142, "no, keep playing", 96, 96, 96, None);
+                    self.graphics.print(80 + 32-16, 130, "[ YES, RETURN ]",  196, 196, 255 - help.glow, None);
+                } else {
+                    self.graphics.print(0, 76, "Do you want to return to", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(0, 88, "the secret laboratory?", 196, 196, 255 - help.glow, Some(true));
+                    self.graphics.print(80, 130, "no, keep playing", 96, 96, 96, None);
+                    self.graphics.print(80 + 32-16, 142, "[ YES, RETURN ]",  196, 196, 255 - help.glow, None);
+                }
+            },
+            _ => eprintln!("unknown menu page {}", game.menupage),
+        }
+
+        // We need to draw the black screen above the menu in order to disguise it
+        // being jankily brought down in glitchrunner mode when exiting to the title
+        // Otherwise, there's no reason to obscure the menu
+        if game.glitchrunnermode || self.graphics.fademode == 3 || self.graphics.fademode == 5 {
+            self.graphics.drawfade();
+        }
+
+        Ok(Some(if self.graphics.resumegamemode || self.graphics.menuoffset > 0 || self.graphics.oldmenuoffset > 0 {
+            RenderResult::MenuOffRender
+        } else {
+            RenderResult::WithScreenEffects
+        }))
+    }
+
     // void teleporterrender(void)
 }

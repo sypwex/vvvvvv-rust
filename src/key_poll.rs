@@ -90,7 +90,7 @@ impl KeyPoll {
     }
 
     // void KeyPoll::Poll(void)
-    pub fn Poll(&mut self, event_pump: &mut EventPump, game: &mut game::Game) {
+    pub fn Poll(&mut self, event_pump: &mut EventPump, game: &mut game::Game) -> Result<(), i32> {
         let mut showmouse = false;
         let mut hidemouse = false;
         let altpressed = false;
@@ -259,6 +259,7 @@ impl KeyPoll {
                 /* Window Events */
                 Event::Window { win_event, .. } => {
                     match win_event {
+                        WindowEvent::Close => return Err(0),
                         /* Window Resize */
                         WindowEvent::Resized(_, _) => {
                             // TODO @sx @impl
@@ -332,12 +333,7 @@ impl KeyPoll {
                 }
 
                 /* Quit Event */
-                Event::Quit { .. } => {
-                    // TODO @sx @impl
-                    println!("DEADBEEF: Event::Quit handler not implemented yet");
-                    panic!("Event::Quit handler");
-                    // VVV_exit(0);
-                },
+                Event::Quit { .. } => return Err(0),
 
                 _ => {},
             }
@@ -352,6 +348,8 @@ impl KeyPoll {
         if fullscreenkeybind {
             self.toggleFullscreen();
         }
+
+        Ok(())
     }
 
     // bool KeyPoll::isDown(SDL_Keycode key)

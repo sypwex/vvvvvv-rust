@@ -8,7 +8,7 @@
       "name": "Debug",
       "type": "gdb",
       "request": "launch",
-      "target": "./target/debug/vvvvvv_on_rust",
+      "target": "./target/debug/vvvvvv-rust",
       "cwd": "${workspaceRoot}",
       "valuesFormatting": "parseText"
     },

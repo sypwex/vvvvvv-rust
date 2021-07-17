@@ -1,4 +1,4 @@
-use crate::{INBOUNDS_VEC, entity, game, map, maths, scenes::RenderResult, screen::render::{BackGround, graphics}, script, utility_class};
+use crate::{INBOUNDS_VEC, entity, game::{self, GameState}, map, maths, scenes::RenderResult, screen::render::{BackGround, graphics}, script, utility_class};
 
 pub struct RenderFixed {
     glow: i32,
@@ -62,7 +62,7 @@ impl RenderFixed {
     }
 
     // void gamerenderfixed(void)
-    pub fn gamerenderfixed(&mut self, obj: &mut entity::EntityClass, game: &mut game::Game, map: &mut map::Map, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
+    pub fn gamerenderfixed(&mut self, obj: &mut entity::EntityClass, game: &mut game::Game, map: &mut map::Map, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
         if !game.blackout && !game.completestop {
             // for size_t i = 0; i < obj.entities.size(); i++ {
             // for (i, entity) in obj.entities.iter_mut().enumerate() {
@@ -170,11 +170,11 @@ impl RenderFixed {
         // }
         // // #endif
 
-        None
+        Ok(None)
     }
 
     // void titlerenderfixed(void)
-    pub fn titlerenderfixed(&mut self, map: &mut map::Map, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+    pub fn titlerenderfixed(&mut self, map: &mut map::Map, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Result<Option<RenderResult>, i32> {
         if !game.colourblindmode {
             graphics.updatetowerbackground(BackGround::Title, map);
         }
@@ -195,22 +195,80 @@ impl RenderFixed {
             graphics.crewframe = (graphics.crewframe + 1) % 2;
         }
 
-        None
+        Ok(None)
     }
 
     // void maprenderfixed(void)
-    pub fn maprenderfixed(&mut self) {
-        println!("DEADBEEF: maprenderfixed method not implemented yet");
+    pub fn maprenderfixed(&mut self, graphics: &mut graphics::Graphics, game: &mut game::Game, map: &mut map::Map, script: &mut script::ScriptClass) -> Result<Option<RenderResult>, i32> {
+        graphics.updatetextboxes();
+        graphics.updatetitlecolours(self.glow);
+
+        graphics.crewframedelay -= 1;
+        if graphics.crewframedelay <= 0 {
+            graphics.crewframedelay = 8;
+            graphics.crewframe = (graphics.crewframe + 1) % 2;
+        }
+
+        graphics.oldmenuoffset = graphics.menuoffset;
+        if graphics.resumegamemode {
+            //Failsafe: if the script command gamemode(teleporter) got ran and the
+            //cutscene stopped without doing gamemode(game), then we need to go
+            //back to GAMEMODE, not game.prevgamestate (TELEPORTERMODE)
+            if game.prevgamestate == GameState::GAMEMODE || !script.running {
+                graphics.menuoffset += 25;
+                let threshold = if map.extrarow != 0 { 230 } else { 240 };
+                if graphics.menuoffset >= threshold {
+                    graphics.menuoffset = threshold;
+                    //go back to gamemode!
+                    game.mapheld = true;
+                    game.gamestate = GameState::GAMEMODE;
+                }
+            } else {
+                game.mapheld = true;
+                game.gamestate = game.prevgamestate;
+                graphics.resumegamemode = false;
+            }
+        } else if graphics.menuoffset > 0 {
+            graphics.menuoffset -= 25;
+            if graphics.menuoffset < 0 {
+                graphics.menuoffset = 0;
+            }
+        }
+
+        if map.cursorstate == 0 {
+            map.cursordelay += 1;
+            if map.cursordelay > 10 {
+                map.cursorstate = 1;
+                map.cursordelay = 0;
+            }
+        } else if map.cursorstate == 1 {
+            map.cursordelay += 1;
+            if map.cursordelay > 30 {
+                map.cursorstate = 2;
+            }
+        } else if map.cursorstate == 2 {
+            map.cursordelay += 1;
+        }
+
+        if map.finalmode {
+            map.glitchname = map.getglitchname(game.roomx, game.roomy);
+        }
+
+        Ok(None)
     }
 
     // void teleporterrenderfixed(void)
-    pub fn teleporterrenderfixed(&mut self) {
+    pub fn teleporterrenderfixed(&mut self) -> Result<Option<RenderResult>, i32> {
         println!("DEADBEEF: teleporterrenderfixed method not implemented yet");
+
+        Ok(None)
     }
 
     // void gamecompleterenderfixed(void)
-    pub fn gamecompleterenderfixed(&mut self) {
+    pub fn gamecompleterenderfixed(&mut self) -> Result<Option<RenderResult>, i32> {
         println!("DEADBEEF: gamecompleterenderfixed method not implemented yet");
+
+        Ok(None)
     }
 
 }

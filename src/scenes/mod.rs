@@ -43,11 +43,13 @@ impl Scenes {
             SceneFunc { state: GameState::GAMEMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
 
             // GameState::MAPMODE => {
-            //     // {Func_fixed, maprenderfixed},
-            //     // {Func_delta, maprender},
-            //     // {Func_input, mapinput},
-            //     // {Func_fixed, maplogic},
-            // },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_begin },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncFixed, fnname: Fns::maprenderfixed },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncDelta, fnname: Fns::maprender },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncInput, fnname: Fns::mapinput },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncFixed, fnname: Fns::maplogic },
+            SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
+
             // GameState::TELEPORTERMODE => {
             //     // {Func_fixed, maprenderfixed},
             //     // {Func_delta, teleporterrender},
@@ -177,14 +179,20 @@ pub enum Fns {
     gamerender,
     gameinput,
     gamelogic,
+
+    // GameState::MAPMODE
+    maprenderfixed,
+    maprender,
+    mapinput,
+    maplogic,
 }
 
 pub trait InputTrait {
-    fn input(&mut self, game: &mut game::Game, key_poll: &mut key_poll::KeyPoll) -> Option<RenderResult>;
+    fn input(&mut self, game: &mut game::Game, key_poll: &mut key_poll::KeyPoll) -> Result<Option<RenderResult>, i32>;
 }
 pub trait RenderFixedTrait {
-    fn render_fixed(&mut self, game: &mut game::Game) -> Option<RenderResult>;
+    fn render_fixed(&mut self, game: &mut game::Game) -> Result<Option<RenderResult>, i32>;
 }
 pub trait RenderTrait {
-    fn render(&mut self, graphics: &mut graphics::Graphics) -> Option<RenderResult>;
+    fn render(&mut self, graphics: &mut graphics::Graphics) -> Result<Option<RenderResult>, i32>;
 }

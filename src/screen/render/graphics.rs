@@ -4,7 +4,7 @@ extern crate sdl2;
 extern crate sdl2_sys;
 use sdl2::render::BlendMode;
 
-use crate::{INBOUNDS_VEC, WHINE_ONCE, entity, game::{self, SLIDERMODE}, map, maths, utility_class};
+use crate::{INBOUNDS_VEC, WHINE_ONCE, entity, filesystem, game::{self, SLIDERMODE}, map, maths, music, utility_class};
 use super::BackGround;
 use self::{graphics_util::ColourTransform, textbox::TextBoxClass};
 
@@ -29,35 +29,35 @@ pub struct Graphics {
     pub ct: graphics_util::ColourTransform,
 
     pub flipmode: bool,
-	pub setflipmode: bool,
-	pub notextoutline: bool,
-	//buffer objects. //TODO refactor buffer objects
-	// SDL_Surface* backBuffer;
-	// Screen* screenbuffer;
-	// SDL_Surface* menubuffer;
-	// SDL_Surface* foregroundBuffer;
-	// SDL_Surface* tempBuffer;
-	// SDL_Surface* warpbuffer;
-	// SDL_Surface* warpbuffer_lerp;
-	// SDL_Surface* footerbuffer;
+    pub setflipmode: bool,
+    pub notextoutline: bool,
+    //buffer objects. //TODO refactor buffer objects
+    // SDL_Surface* backBuffer;
+    // Screen* screenbuffer;
+    // SDL_Surface* menubuffer;
+    // SDL_Surface* foregroundBuffer;
+    // SDL_Surface* tempBuffer;
+    // SDL_Surface* warpbuffer;
+    // SDL_Surface* warpbuffer_lerp;
+    // SDL_Surface* footerbuffer;
 
-	bfont_rect: sdl2::rect::Rect,
-	tiles_rect: sdl2::rect::Rect,
-	sprites_rect: sdl2::rect::Rect,
-	bg_rect: sdl2::rect::Rect,
-	line_rect: sdl2::rect::Rect,
-	tele_rect: sdl2::rect::Rect,
-	towerbuffer_rect: sdl2::rect::Rect,
-	prect: sdl2::rect::Rect,
-	pub footerrect: sdl2::rect::Rect,
-	warprect: sdl2::rect::Rect,
-	// images_rect: sdl2::rect::Rect,
-	// foot_rect: sdl2::rect::Rect,
+    bfont_rect: sdl2::rect::Rect,
+    tiles_rect: sdl2::rect::Rect,
+    sprites_rect: sdl2::rect::Rect,
+    bg_rect: sdl2::rect::Rect,
+    line_rect: sdl2::rect::Rect,
+    tele_rect: sdl2::rect::Rect,
+    towerbuffer_rect: sdl2::rect::Rect,
+    prect: sdl2::rect::Rect,
+    pub footerrect: sdl2::rect::Rect,
+    warprect: sdl2::rect::Rect,
+    // images_rect: sdl2::rect::Rect,
+    // foot_rect: sdl2::rect::Rect,
 
-	pub linestate: i32,
+    pub linestate: i32,
     pub linedelay: i32,
-	backoffset: i32,
-	pub backgrounddrawn: bool,
+    backoffset: i32,
+    pub backgrounddrawn: bool,
     pub foregrounddrawn: bool,
 
     pub trinketcolset: bool,
@@ -65,18 +65,18 @@ pub struct Graphics {
     trinketg: i32,
     trinketb: i32,
 
-	pub menuoffset: i32,
-	pub oldmenuoffset: i32,
-	pub resumegamemode: bool,
+    pub menuoffset: i32,
+    pub oldmenuoffset: i32,
+    pub resumegamemode: bool,
 
-	pub crewframe: i32,
-	pub crewframedelay: i32,
+    pub crewframe: i32,
+    pub crewframedelay: i32,
 
-	pub fademode: i32,
-	fadeamount: i32,
-	oldfadeamount: i32,
-	fadebars: [i32; 15],
-	ingame_fademode: i32,
+    pub fademode: i32,
+    fadeamount: i32,
+    oldfadeamount: i32,
+    fadebars: [i32; 15],
+    pub ingame_fademode: i32,
 
     pub translucentroomname: bool,
 
@@ -85,29 +85,29 @@ pub struct Graphics {
     pub screenshake_x: i32,
     pub screenshake_y: i32,
 
-	pub textbox: Vec<textbox::TextBoxClass>,
+    pub textbox: Vec<textbox::TextBoxClass>,
 
-	pub showcutscenebars: bool,
-	pub cutscenebarspos: i32,
-	oldcutscenebarspos: i32,
+    pub showcutscenebars: bool,
+    pub cutscenebarspos: i32,
+    oldcutscenebarspos: i32,
 
-	stars: [sdl2::rect::Rect; numstars],
-	starsspeed: [i32; numstars],
+    stars: [sdl2::rect::Rect; numstars],
+    starsspeed: [i32; numstars],
 
-	spcol: i32,
+    spcol: i32,
     spcoldel: i32,
     pub rcol: i32,
     m: usize,
-	backboxes: [sdl2::rect::Rect; numbackboxes],
-	backboxvx: [i32; numbackboxes],
-	backboxvy: [i32; numbackboxes],
-	backboxint: [f32; numbackboxes],
+    backboxes: [sdl2::rect::Rect; numbackboxes],
+    backboxvx: [i32; numbackboxes],
+    backboxvy: [i32; numbackboxes],
+    backboxint: [f32; numbackboxes],
 
-	warpskip: i32,
+    warpskip: i32,
     warpfcol: sdl2::pixels::Color,
     warpbcol: sdl2::pixels::Color,
 
-	font_positions: HashMap<i32, i32>,
+    font_positions: HashMap<i32, i32>,
 
     col_crewred: graphics_util::ColourTransform,
     col_crewyellow: graphics_util::ColourTransform,
@@ -127,7 +127,7 @@ pub struct Graphics {
     // #ifndef NO_CUSTOM_LEVELS
     tiles1_mounted: bool,
     tiles2_mounted: bool,
-    minimap_mounted: bool,
+    pub minimap_mounted: bool,
     // #endif
 
     /* @sx: moved here from graphic_util since required storage for variables */
@@ -393,9 +393,26 @@ impl Graphics {
     }
 
     // void Graphics::map_option(int opt, int num_opts, const std::string& text, bool selected /*= false*/)
-    pub fn map_option(&mut self, opt: i32, num_opts: i32, text: &str, selected: Option<bool>) {
+    pub fn map_option(&mut self, opt: i32, num_opts: i32, text: &str, selected: Option<bool>, help: &mut utility_class::UtilityClass) {
         let selected = selected.unwrap_or(false);
-        println!("DEADBEEF: Graphics::map_option() method not implemented yet");
+        let x = 80 + opt * 32;
+        let mut y = 136; // start from middle of menu
+        let mut yoff = -(num_opts * 12) / 2; // could be simplified to -num_opts * 6, this conveys my intent better though
+        yoff += opt * 12;
+
+        if self.flipmode {
+            y -= yoff; // going down, which in Flip Mode means going up
+            y -= 40;
+        } else {
+            y += yoff; // going up
+        }
+
+        if selected {
+            let text_upper = text.to_ascii_uppercase();
+            self.print(x - 16, y, &["[ ", &text_upper, " ]"].concat(), 196, 196, 255 - help.glow, None);
+        } else {
+            self.print(x, y, text, 96, 96, 96, None);
+        }
     }
 
     // void Graphics::Print( int _x, int _y, std::string _s, int r, int g, int b, bool cen /*= false*/ )
@@ -416,7 +433,6 @@ impl Graphics {
         let g = maths::clamp(g, 0, 255) as u8;
         let b = maths::clamp(b, 0, 255) as u8;
         let a = maths::clamp(a, 0, 255) as u8;
-
         self.ct.colour = self.get_rgba(r, g, b, a);
 
         if cen {
@@ -424,7 +440,6 @@ impl Graphics {
         }
 
         let mut bfontpos = 0;
-
         for (_, curr) in s.chars().enumerate() {
             let ix = xx + bfontpos;
             let iy = y;
@@ -570,46 +585,115 @@ impl Graphics {
     }
 
     // void Graphics::printcrewname( int x, int y, int t )
+    pub fn printcrewname(&mut self, x: i32, y: i32, t: i32) {
+        //print the name of crew member t in the right colour
+        match t {
+            0 => self.print(x, y, "viridian", 16, 240, 240, Some(false)),
+            1 => self.print(x, y, "violet", 240, 16, 240, Some(false)),
+            2 => self.print(x, y, "vitellary", 240, 240, 16, Some(false)),
+            3 => self.print(x, y, "vermilion", 240, 16, 16, Some(false)),
+            4 => self.print(x, y, "verdigris", 16, 240, 16, Some(false)),
+            5 => self.print(x, y, "victoria", 16, 16, 240, Some(false)),
+            _ => (),
+        }
+    }
+
     // void Graphics::printcrewnamedark( int x, int y, int t )
+    pub fn printcrewnamedark(&mut self, x: i32, y: i32, t: i32) {
+        //Print the name of crew member t in the right colour
+        match t {
+            0 => self.print(x, y, "Viridian", 128, 128, 128, Some(false)),
+            1 => self.print(x, y, "Violet", 128, 128, 128, Some(false)),
+            2 => self.print(x, y, "Vitellary", 128, 128, 128, Some(false)),
+            3 => self.print(x, y, "Vermilion", 128, 128, 128, Some(false)),
+            4 => self.print(x, y, "Verdigris", 128, 128, 128, Some(false)),
+            5 => self.print(x, y, "Victoria", 128, 128, 128, Some(false)),
+            _ => (),
+        }
+    }
+
     // void Graphics::printcrewnamestatus( int x, int y, int t )
+    pub fn printcrewnamestatus(&mut self, x: i32, y: i32, t: i32) {
+        //print the name of crew member t in the right colour
+        match t {
+            0 => self.print(x, y, "(that's you!)", 16, 240, 240, Some(false)),
+            1 => self.print(x, y, "Rescued!", 240, 16, 240, Some(false)),
+            2 => self.print(x, y, "Rescued!", 240, 240, 16, Some(false)),
+            3 => self.print(x, y, "Rescued!", 240, 16, 16, Some(false)),
+            4 => self.print(x, y, "Rescued!", 16, 240, 16, Some(false)),
+            5 => self.print(x, y, "Rescued!", 16, 16, 240, Some(false)),
+            _ => (),
+        }
+    }
 
     // void Graphics::drawsprite( int x, int y, int t, int r, int g,  int b )
-    pub fn drawsprite(&mut self, x: i32, y: i32, t: i32, r: i32, g: i32, b: i32) {
-        // SDL_Rect rect = { Sint16(x), Sint16(y), sprites_rect.w, sprites_rect.h };
+    pub fn drawsprite_rgb(&mut self, x: i32, y: i32, t: i32, r: i32, g: i32, b: i32) {
+        let c = self.getRGB(r,g,b);
+        self.drawsprite_clru32(x, y, t, c);
+    }
+
+    // void Graphics::drawsprite(int x, int y, int t, Uint32 c)
+    pub fn drawsprite_clru32(&mut self, x: i32, y: i32, t: i32, c: u32) {
         let sprites_rect = self.grphx.sprites.rect;
         let rect_dst = sdl2::rect::Rect::new(x, y, sprites_rect.w as u32, sprites_rect.h as u32);
-
-        let ct = self.getRGB(r,g,b);
-        self.setcolreal(ct);
-
+        self.setcolreal(c);
         let sprite = &self.grphx.sprites.surfaces[t as usize];
         graphics_util::BlitSurfaceColoured(
             sprite,
             None,
             self.buffers.backBuffer.as_mut(),
             rect_dst,
-            ct
+            c
         );
     }
 
-    // void Graphics::drawsprite(int x, int y, int t, Uint32 c)
-    pub fn drawsprite_c(&mut self, x: i32, y: i32, t: i32, c: Color) {
-        // self.graphics.drawsprite_c(34, 126-20, 50, self.graphics.col_clock);
-        // self.graphics.drawsprite_c(270, 126-20, 22, self.graphics.col_trinket);
-        println!("DEADBEEF: draw sprite c not implemented yet");
+    // bool Graphics::shouldrecoloroneway(const int tilenum, const bool mounted)
+
+    // void Graphics::drawtile( int x, int y, int t )
+    pub fn drawtile(&mut self, x: i32, y: i32, t: usize) {
+        if !INBOUNDS_VEC!(t, self.grphx.tiles.surfaces) {
+            WHINE_ONCE!("drawtile() out-of-bounds!");
+            return;
+        }
+
+        let rect = sdl2::rect::Rect::new(x, y, self.grphx.tiles.rect.w as u32, self.grphx.tiles.rect.h as u32);
+        // #if !defined(NO_CUSTOM_LEVELS)
+        // if self.shouldrecoloroneway(t, tiles1_mounted) {
+        //     colourTransform thect = {ed.getonewaycol()};
+        //     BlitSurfaceTinted(tiles[t], NULL, backBuffer, &rect, thect);
+        // } else {
+        // #endif
+        {
+            self.grphx.tiles.surfaces[t].blit(None, &mut self.buffers.backBuffer, rect);
+        }
     }
 
-    // bool Graphics::shouldrecoloroneway(const int tilenum, const bool mounted)
-    // void Graphics::drawtile( int x, int y, int t )
     // void Graphics::drawtile2( int x, int y, int t )
+    fn drawtile2(&mut self, x: i32, y: i32, t: usize) {
+        if !INBOUNDS_VEC!(t, self.grphx.tiles2.surfaces) {
+            WHINE_ONCE!("drawtile2() out-of-bounds!");
+            return;
+        }
+
+        let rect = sdl2::rect::Rect::new(x, y, self.grphx.tiles2.rect.w as u32, self.grphx.tiles2.rect.h as u32);
+        // #if !defined(NO_CUSTOM_LEVELS)
+        // if self.shouldrecoloroneway(t, tiles2_mounted) {
+        //     colourTransform thect = {ed.getonewaycol()};
+        //     BlitSurfaceTinted(tiles2[t], NULL, backBuffer, &rect, thect);
+        // } else {
+        // #endif
+        {
+            self.grphx.tiles2.surfaces[t].blit(None, &mut self.buffers.backBuffer, rect);
+        }
+    }
 
     // void Graphics::drawtile3( int x, int y, int t, int off, int height_subtract /*= 0*/ )
-    fn drawtile3(&self, x: i32, y: i32, t: i32, off: i32, height_subtract: Option<i32>) {
+    fn drawtile3(&mut self, x: i32, y: i32, t: usize, off: i32, height_subtract: Option<i32>) {
         let tiles_rect_width = self.tiles_rect.width();
         let tiles_rect_height = self.tiles_rect.height();
 
         let height_subtract = height_subtract.unwrap_or(0) as u32;
-        let t = t + off * 30;
+        let t = t + off as usize * 30;
 
         if !INBOUNDS_VEC!(t, self.grphx.tiles3.surfaces) {
             WHINE_ONCE!("drawtile3() out-of-bounds!");
@@ -621,7 +705,7 @@ impl Graphics {
 
         WHINE_ONCE!("drawtile3() render not implemented!");
         // BlitSurfaceStandard(self.grphx.tiles3[t], &src_rect, self.buffers.backBuffer, &rect);
-        // self.grphx.tiles3.surfaces[t as usize].blit(&src_rect, &mut self.buffers.backBuffer, &rect);
+        self.grphx.tiles3.surfaces[t].blit(src_rect, &mut self.buffers.backBuffer, rect);
     }
 
     // void Graphics::drawtowertile( int x, int y, int t )
@@ -637,8 +721,8 @@ impl Graphics {
     }
 
     // void Graphics::drawtowertile3( int x, int y, int t, TowerBG& bg_obj )
-    fn drawtowertile3(&self, x: i32, y: i32, t: u8, colstate: i32, tiles_rect_width: u32, tiles_rect_height: u32) -> Option<(usize, sdl2::rect::Rect)> {
-        let t = (t as i32 + colstate * 30) as usize;
+    fn drawtowertile3(&mut self, x: i32, y: i32, t: usize, colstate: i32, tiles_rect_width: u32, tiles_rect_height: u32) -> Option<(usize, sdl2::rect::Rect)> {
+        let t = t + colstate as usize * 30;
         // if !INBOUNDS_VEC!(t, self.grphx.tiles3) {
         if !INBOUNDS_VEC!(t, self.grphx.tiles3.surfaces) {
             WHINE_ONCE!("drawtowertile3() out-of-bounds!");
@@ -728,19 +812,19 @@ impl Graphics {
             }
             if self.textbox[i].tr == 175 && self.textbox[i].tg == 175 {
                 //purple guy
-                self.drawsprite(80 - 6, crew_yp, crew_sprite, 220 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 120 - help.glow / 4, 210 - help.glow / 4);
+                self.drawsprite_rgb(80 - 6, crew_yp, crew_sprite, 220 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 120 - help.glow / 4, 210 - help.glow / 4);
             } else if self.textbox[i].tr == 175 && self.textbox[i].tb == 175 {
                 //red guy
-                self.drawsprite(80 - 6, crew_yp, crew_sprite, 255 - help.glow / 8, 70 - help.glow / 4, 70 - help.glow / 4);
+                self.drawsprite_rgb(80 - 6, crew_yp, crew_sprite, 255 - help.glow / 8, 70 - help.glow / 4, 70 - help.glow / 4);
             } else if self.textbox[i].tr == 175 {
                 //green guy
-                self.drawsprite(80 - 6, crew_yp, crew_sprite, 120 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 220 - help.glow / 4, 120 - help.glow / 4);
+                self.drawsprite_rgb(80 - 6, crew_yp, crew_sprite, 120 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 220 - help.glow / 4, 120 - help.glow / 4);
             } else if self.textbox[i].tg == 175 {
                 //yellow guy
-                self.drawsprite(80 - 6, crew_yp, crew_sprite, 220 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 210 - help.glow / 4, 120 - help.glow / 4);
+                self.drawsprite_rgb(80 - 6, crew_yp, crew_sprite, 220 - help.glow / 4 - (maths::fRandom() * 20.0) as i32, 210 - help.glow / 4, 120 - help.glow / 4);
             } else if self.textbox[i].tb == 175 {
                 //blue guy
-                self.drawsprite(80 - 6, crew_yp, crew_sprite, 75, 75, 255 - help.glow / 4 - (maths::fRandom() * 20.0) as i32);
+                self.drawsprite_rgb(80 - 6, crew_yp, crew_sprite, 75, 75, 255 - help.glow / 4 - (maths::fRandom() * 20.0) as i32);
             }
         }
     }
@@ -765,13 +849,33 @@ impl Graphics {
     }
 
     // void Graphics::drawimage( int t, int xp, int yp, bool cent/*=false*/ )
-    fn drawimage(&mut self, t: i32, xp: i32, yp: i32, cent: Option<bool>) {
-        println!("DEADBEEF: Graphics::drawimage() method not implemented yet");
+    pub fn drawimage(&mut self, t: usize, xp: i32, yp: i32, cent: Option<bool>) {
+        let cent = cent.unwrap_or(true);
+        if !INBOUNDS_VEC!(t, self.grphx.images.surfaces) {
+            return;
+        }
+        let w = self.grphx.images.surfaces[t].width();
+        let h = self.grphx.images.surfaces[t].height();
+
+        let trect = if cent {
+            sdl2::rect::Rect::new(160 - (w as i32 / 2), yp, w, h)
+        } else {
+            sdl2::rect::Rect::new(xp, yp, w, h)
+        };
+
+        self.grphx.images.surfaces[t].blit(None, &mut self.buffers.backBuffer, trect);
     }
 
     // void Graphics::drawpartimage( int t, int xp, int yp, int wp, int hp)
-    fn drawpartimage(&mut self, t: i32, xp: i32, yp: i32, wp: i32, hp: i32) {
-        println!("DEADBEEF: Graphics::drawpartimage() method not implemented yet");
+    pub fn drawpartimage(&mut self, t: usize, xp: i32, yp: i32, wp: i32, hp: i32) {
+        if !INBOUNDS_VEC!(t, self.grphx.images.surfaces) {
+            return;
+        }
+
+        let trect = sdl2::rect::Rect::new(xp, yp, wp as u32, hp as u32);
+        let trect2 = sdl2::rect::Rect::new(0, 0, wp as u32, hp as u32);
+
+        self.grphx.images.surfaces[t].blit(trect2, &mut self.buffers.backBuffer, trect);
     }
 
     // void Graphics::cutscenebars(void)
@@ -809,8 +913,54 @@ impl Graphics {
     }
 
     // void Graphics::drawcrewman( int x, int y, int t, bool act, bool noshift /*=false*/ )
-    pub fn drawcrewman(&self, i: i32, y: i32, t: i32, act: bool, noshift: Option<bool>) {
-        println!("DEADBEEF: drawcrewman is not implemented yet");
+    pub fn drawcrewman(&mut self, x: i32, y: i32, t: i32, act: bool, noshift: Option<bool>) {
+        let noshift = noshift.unwrap_or(false);
+
+        if !act {
+            if noshift {
+                if self.flipmode {
+                    self.drawsprite_clru32(x, y, 14, self.col_crewinactive.colour);
+                } else {
+                    self.drawsprite_clru32(x, y, 12, self.col_crewinactive.colour);
+                }
+            } else {
+                if self.flipmode {
+                    self.drawsprite_clru32(x - 8, y, 14, self.col_crewinactive.colour);
+                } else {
+                    self.drawsprite_clru32(x - 8, y, 12, self.col_crewinactive.colour);
+                }
+            }
+        } else {
+            if self.flipmode {
+                self.crewframe += 6;
+            }
+
+            match t {
+                0 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewcyan.colour);
+                },
+                1 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewpurple.colour);
+                },
+                2 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewyellow.colour);
+                },
+                3 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewred.colour);
+                },
+                4 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewgreen.colour);
+                },
+                5 => {
+                    self.drawsprite_clru32(x, y, self.crewframe, self.col_crewblue.colour);
+                },
+                _ => (),
+            };
+
+            if self.flipmode {
+                self.crewframe -= 6;
+            }
+        }
     }
 
     // void Graphics::drawpixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
@@ -819,10 +969,56 @@ impl Graphics {
     }
 
     // void Graphics::drawcustompixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
+    pub fn drawcustompixeltextbox(&mut self, x: i32, y: i32, w: i32, h: i32, w2: i32, h2: i32, r: i32, g: i32, b: i32, xo: i32, yo: i32) {
+        //given these parameters, draw a textbox with a pixel width
+
+        graphics_util::FillRect_xywh_rgb(&mut self.buffers.backBuffer, x, y, w, h, r/6, g/6, b/6);
+
+        for k in 0..w2-2 {
+            self.drawcoloredtile(x + 8-xo + (k * 8), y, 41, r, g, b);
+            self.drawcoloredtile(x + 8-xo + (k * 8), y + (h) - 8, 46, r, g, b);
+        }
+
+        self.drawcoloredtile(x + (w) - 16, y, 41, r, g, b);
+        self.drawcoloredtile(x + (w) - 16, y + (h) - 8, 46, r, g, b);
+        self.drawcoloredtile(x + (w) - 24, y, 41, r, g, b);
+        self.drawcoloredtile(x + (w) - 24, y + (h) - 8, 46, r, g, b);
+
+        for k in 0..h2-2 {
+            self.drawcoloredtile(x, y + 8-yo + (k * 8), 43, r, g, b);
+            self.drawcoloredtile(x + (w) - 8, y + 8-yo + (k * 8), 44, r, g, b);
+        }
+
+        self.drawcoloredtile(x, y + (h) - 16, 43, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y + (h) - 16, 44, r, g, b);
+        self.drawcoloredtile(x, y + (h) - 24, 43, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y + (h) - 24, 44, r, g, b);
+
+        self.drawcoloredtile(x, y, 40, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y, 42, r, g, b);
+        self.drawcoloredtile(x, y + (h) - 8, 45, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y + (h) - 8, 47, r, g, b);
+    }
 
     // void Graphics::drawtextbox( int x, int y, int w, int h, int r, int g, int b )
     pub fn drawtextbox(&mut self, x: i32, y: i32, w: i32, h: i32, r: i32, g: i32, b: i32) {
-        println!("DEADBEEF: Graphics::drawtextbox() method not implemented yet");
+        //given these parameters, draw a textbox
+        graphics_util::FillRect_xywh_rgb(&mut self.buffers.backBuffer, x, y, w*8, h*8, r/6, g/6, b/6);
+
+        self.drawcoloredtile(x, y, 40, r, g, b);
+        self.drawcoloredtile(x + (w*8) - 8, y, 42, r, g, b);
+        self.drawcoloredtile(x, y + (h*8) - 8, 45, r, g, b);
+        self.drawcoloredtile(x + (w*8) - 8, y + (h*8) - 8, 47, r, g, b);
+
+        for k in 0..(w-2) {
+            self.drawcoloredtile(x + 8 + (k * 8), y, 41, r, g, b);
+            self.drawcoloredtile(x + 8 + (k * 8), y + (h * 8) - 8, 46, r, g, b);
+        }
+
+        for k in 0..(h-2) {
+            self.drawcoloredtile(x, y + 8 + (k * 8), 43, r, g, b);
+            self.drawcoloredtile(x + (w * 8) - 8, y + 8 + (k * 8), 44, r, g, b);
+        }
     }
 
     // void Graphics::textboxactive(void)
@@ -1849,7 +2045,7 @@ impl Graphics {
                 //Static, unscrolling section of the tower
                 for j in 0..30 {
                     for i in 0..40 {
-                        let t = map.tower.backat(i, j, 200) as i32;
+                        let t = map.tower.backat(i, j, 200);
                         self.drawtile3(i * 8, j * 8, t, 15, None);
                     }
                 }
@@ -1858,7 +2054,7 @@ impl Graphics {
                 //Static, unscrolling section of the tower
                 for j in 0..30 {
                     for i in 0..40 {
-                        let t = map.tower.backat(i, j, 200) as i32;
+                        let t = map.tower.backat(i, j, 200);
                         self.drawtile3(i * 8, j * 8, t, 10, None);
                     }
                 }
@@ -1867,7 +2063,7 @@ impl Graphics {
                 //Static, unscrolling section of the tower
                 for j in 0..30 {
                     for i in 0..40 {
-                        let t = map.tower.backat(i, j, 600) as i32;
+                        let t = map.tower.backat(i, j, 600);
                         self.drawtile3(i * 8, j * 8, t, 0, None);
                     }
                 }
@@ -2548,7 +2744,7 @@ impl Graphics {
 
     // void Graphics::renderfixedpost(void)
     pub fn renderfixedpost(&self, game: &mut game::Game) {
-    	/* Screen effects timers */
+        /* Screen effects timers */
         if game.flashlight > 0 {
             game.flashlight -= 1;
         }
@@ -2558,39 +2754,43 @@ impl Graphics {
     }
 
     // void Graphics::bigrprint(int x, int y, std::string& t, int r, int g, int b, bool cen, float sc)
-    fn bigrprint(&mut self, x: i32, y: i32, t: &str, r: i32, g: i32, b: i32, cen: bool, sc: f32) {
-        println!("DEADBEEF: Graphics::bigrprint() method not implemented yet");
-
+    pub fn bigrprint(&mut self, x: i32, y: i32, t: &str, r: i32, g: i32, b: i32, cen: bool, sc: f32) {
         // std::vector<SDL_Surface*>& font = flipmode ? flipbfont : bfont;
 
-        // r = clamp(r, 0, 255);
-        // g = clamp(g, 0, 255);
-        // b = clamp(b, 0, 255);
-        // ct.colour = getRGB(r, g, b);
+        let r = maths::clamp(r, 0, 255);
+        let g = maths::clamp(g, 0, 255);
+        let b = maths::clamp(b, 0, 255);
+        self.ct.colour = self.getRGB(r, g, b);
 
-        // x = (x / sc) - Graphics::len(t);
+        let mut x = (x / sc as i32) - Graphics::len(t) as i32;
+        x = match cen {
+            true => maths::VVV_max(160 - ((t.len() as f32 / 2.0) * sc) as i32, 0 ),
+            false => x * sc as i32,
+        };
 
-        // x = match cen {
-        //     true => VVV_max(160 - (int((len(t)/ 2.0)*sc)), 0 ),
-        //     false => x * sc,
-        // };
+        let mut bfontpos = 0;
+        let mut printrect = sdl2::rect::Rect::new(x + bfontpos, y, self.grphx.bfont.rect.w as u32 * sc as u32, self.grphx.bfont.rect.h as u32 * sc as u32);
+        for (_, curr) in t.chars().enumerate() {
+            let idx = Graphics::font_idx(curr as i32);
 
-        // let bfontpos = 0;
-        // let cur;
-        // let idx;
-        // std::string::iterator iter = t.begin();
-        // while (iter != t.end()) {
-        //     cur = utf8::unchecked::next(iter);
-        //     idx = font_idx(cur);
-        //     if INBOUNDS_VEC!(idx, font))
-        //     {
-        //         SDL_Surface* tempPrint = ScaleSurface(font[idx], font[idx]->w *sc,font[idx]->h *sc);
-        //         SDL_Rect printrect = {x + bfontpos, y, (int) (bfont_rect.w * sc), (int) (bfont_rect.h * sc)};
-        //         BlitSurfaceColoured(tempPrint, NULL, self.buffers.backBuffer, &printrect, self.ct.colour);
-        //         SDL_FreeSurface(tempPrint);
-        //     }
-        //     bfontpos+=bfontlen(cur)* sc;
-        // }
+            match &self.grphx.bfont.surfaces.get(idx) {
+                Some(char_surface) => {
+                    let tempPrint = graphics_util::ScaleSurface(char_surface, char_surface.width() * sc as u32, char_surface.height() * sc as u32);
+                    printrect.x = x + bfontpos;
+                    graphics_util::BlitSurfaceColoured(
+                        &tempPrint,
+                        None,
+                        &mut self.buffers.backBuffer,
+                        printrect,
+                        self.ct.colour
+                    );
+                },
+                None => (),
+            }
+
+            bfontpos += Graphics::bfontlen(curr) * sc as i32;
+        }
+
     }
 
     // void Graphics::bigbrprint(int x, int y, std::string& s, int r, int g, int b, bool cen, float sc)
@@ -2662,13 +2862,13 @@ impl Graphics {
     // Uint32 Graphics::getBGR(Uint8 r, Uint8 g, Uint8 b)
     pub fn getBGR(&self, r: i32, g: i32, b: i32) -> u32 {
         unsafe {
-	        // SDL_MapRGB(backBuffer->format, b, g, r);
+            // SDL_MapRGB(backBuffer->format, b, g, r);
             sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8)
         }
     }
     pub fn getBGR_AsPixelColor(&self, r: i32, g: i32, b: i32) -> sdl2::pixels::Color {
         unsafe {
-	        // SDL_MapRGB(backBuffer->format, b, g, r);
+            // SDL_MapRGB(backBuffer->format, b, g, r);
             let color = sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8);
             let color = sdl2::pixels::Color::from_u32(&self.buffers.backBuffer.pixel_format(), color);
             color
@@ -2679,13 +2879,13 @@ impl Graphics {
     // Uint32 Graphics::RGBflip(Uint8  r, Uint8  g, Uint8  b)
     pub fn RGBflip(&mut self, r: i32, g: i32, b: i32) -> u32 {
         unsafe {
-	        // SDL_MapRGB(backBuffer->format, r, g, b);
+            // SDL_MapRGB(backBuffer->format, r, g, b);
             sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8)
         }
     }
     pub fn RGBflip_AsPixelColor(&mut self, r: i32, g: i32, b: i32) -> sdl2::pixels::Color {
         unsafe {
-	        // SDL_MapRGB(backBuffer->format, r, g, b);
+            // SDL_MapRGB(backBuffer->format, r, g, b);
             let color = sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r as u8, g as u8, b as u8);
             let color = sdl2::pixels::Color::from_u32(&self.buffers.backBuffer.pixel_format(), color);
             color
@@ -2705,7 +2905,7 @@ impl Graphics {
 
     // void Graphics::setcolreal(Uint32 t)
     fn setcolreal(&mut self, t: u32) {
-	    self.ct.colour = t;
+        self.ct.colour = t;
     }
 
     // void Graphics::drawforetile(int x, int y, int t)
@@ -2759,10 +2959,36 @@ impl Graphics {
     }
 
     // void Graphics::drawrect(int x, int y, int w, int h, int r, int g, int b)
+    pub fn drawrect(&mut self, x: i32, y: i32, w: i32, h: i32, r: i32, g: i32, b: i32) {
+        let mut madrect = sdl2::rect::Rect::new(x, y, w as u32, 1);
+
+        //Draw the retangle indicated by that object
+        let rgba = self.getRGB(b, g, r);
+        graphics_util::FillRect_rect_coloru32(&mut self.buffers.backBuffer, madrect, rgba);
+
+        madrect.w = 1;
+        madrect.h = h;
+        let rgba = self.getRGB(b, g, r);
+        graphics_util::FillRect_rect_coloru32(&mut self.buffers.backBuffer, madrect, rgba);
+
+        madrect.x = x + w - 1;
+        madrect.w = 1;
+        madrect.h = h;
+        let rgba = self.getRGB(b, g, r);
+        graphics_util::FillRect_rect_coloru32(&mut self.buffers.backBuffer, madrect, rgba);
+
+        madrect.x = x;
+        madrect.y = y + h - 1;
+        madrect.w = w;
+        madrect.h = 1;
+        let rgba = self.getRGB(b, g, r);
+        graphics_util::FillRect_rect_coloru32(&mut self.buffers.backBuffer, madrect, rgba);
+    }
+
     // bool Graphics::onscreen(int t)
 
     // void Graphics::reloadresources(void)
-    pub fn reload_resources(&mut self) {
+    pub fn reload_resources(&mut self, music: &mut music::Music, fs: &mut filesystem::FileSystem) {
         // TODO @sx @impl
         println!("DEADBEEF: Graphics::reloadresources not fully implemented yet");
 
@@ -2798,7 +3024,7 @@ impl Graphics {
         // }
 
         // music.destroy();
-        // music.init();
+        music.init(fs);
 
         // // #ifndef NO_CUSTOM_LEVELS
         // tiles1_mounted = FILESYSTEM_isAssetMounted("graphics/tiles.png");

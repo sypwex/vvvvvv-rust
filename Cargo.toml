@@ -8,11 +8,14 @@ edition = "2018"
 
 [dependencies]
 # sdl2 = "0.34"
-sdl2 = { path = "/home/sypwex/src/rust-sdl2" }
+sdl2 = { path = "/home/sypwex/src/rust-sdl2", features = ["mixer"] }
 sdl2-sys = { path = "/home/sypwex/src/rust-sdl2/sdl2-sys" }
 png = "0.16"
 libc = "^0.2"
 rand = "0.8.3"
+physfs = { path = "./physfs" }
+log = "0.4.14"
+env_logger = "0.9.0"
 
 [profile.release]
 debug = true

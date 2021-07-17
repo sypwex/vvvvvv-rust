@@ -10,11 +10,15 @@
 
 use std::time::Duration;
 
+#[macro_use]
+extern crate log;
+
 extern crate sdl2;
 use sdl2::EventPump;
 mod sdl2u;
 
 mod entity;
+mod filesystem;
 mod game;
 use game::GameState;
 #[macro_use]
@@ -83,8 +87,6 @@ fn print_logo() {
 // static enum IndexCode increment_gamestate_func_index(void)
 // static void unfocused_run(void);
 // static enum IndexCode increment_unfocused_func_index(void)
-// static void cleanup(void);
-// void VVV_exit(const int exit_code)
 
 struct Main {
     sdl_context: sdl2::Sdl,
@@ -92,13 +94,12 @@ struct Main {
     scenes: scenes::Scenes,
     preloader_scene: Preloader,
 
-    // script: scriptclass,
-
     // #if !defined(NO_CUSTOM_LEVELS)
     // edentity: Vec<edentities>,
     // ed: editorclass;
     // #endif
 
+    fs: filesystem::FileSystem,
     help: utility_class::UtilityClass,
     // graphics: graphics::Graphics,
     music: music::Music,
@@ -121,22 +122,27 @@ struct Main {
 
     playtestname: String,
     accumulator: f32,
+
+    exit_code: i32,
 }
 
 impl Main {
     fn new() -> Main {
         let sdl_context = Main::create_sdl_context();
 
-        // if !FILESYSTEM_init(argv[0], baseDir, assetsPath) {
-        //     puts("Unable to initialize filesystem!");
-        //     return 1;
-        // }
+        let baseDir = None;
+        let assetsPath = None;
+        let argvZero = std::env::args().nth(0).unwrap();
+        let mut fs = match filesystem::FileSystem::new(argvZero, baseDir, assetsPath) {
+            Ok(fs) => fs,
+            Err(s) => panic!("Unable to initialize filesystem!: {}", s),
+        };
         // NETWORK_init();
 
         let mut screen_settings = screen::ScreenSettings::new();
         let mut gameScreen = screen::Screen::new(&sdl_context);
         let mut map = map::Map::new(&mut gameScreen.render.graphics);
-        let music = music::Music::new();
+        let mut music = music::Music::new();
         let screen_params = gameScreen.get_screen_params();
         let mut game = game::Game::new(&mut gameScreen.render.graphics, &music, screen_params, &mut map);
 
@@ -144,7 +150,7 @@ impl Main {
         //Load Ini
         // gameScreen.render.graphics.init(); // @sx: done at Graphics::new()
         //This loads music too...
-        gameScreen.render.graphics.reload_resources();
+        gameScreen.render.graphics.reload_resources(&mut music, &mut fs);
 
         // TODO: @sx load scene from argument
         game.gamestate = GameState::PRELOADER;
@@ -180,10 +186,10 @@ impl Main {
             scenes: scenes::Scenes::new(),
             preloader_scene: scenes::preloader::Preloader::new(),
 
-            // script: scriptclass,
             // edentity: Vec<edentities>,
             // ed: editorclass;
 
+            fs,
             help: utility_class::UtilityClass::new(),
             // graphics: graphics::Graphics::new(),
             music,
@@ -206,6 +212,8 @@ impl Main {
 
             playtestname: String::new(),
             accumulator: 0f32,
+
+            exit_code: -1,
         }
     }
 
@@ -355,7 +363,7 @@ impl Main {
         // #endif
     }
 
-    fn main_loop(&mut self) {
+    fn main_loop(&mut self) -> i32 {
         let mut time_: u32 = 0;
         let mut timePrev: u32 = 0;
         let mut f_time: u32 = 0;
@@ -375,7 +383,7 @@ impl Main {
         self.scenes.update_gamestate_funcs(self.game.gamestate);
         // loop_assign_active_funcs();
 
-        'running: loop {
+        loop {
             // let now = std::time::Instant::now();
 
             f_time = timer.ticks();
@@ -395,6 +403,10 @@ impl Main {
 
             // crate::rustutil::dump_surface(&self.gameScreen.render.graphics.buffers.backBuffer, "buffer", "");
             // println!("main loop iter done in {:?}ms", now.elapsed().as_millis());
+
+            if self.exit_code != -1 {
+                return self.exit_code
+            }
         }
     }
 
@@ -440,7 +452,11 @@ impl Main {
 
         if implfunc.fntype == FuncType::FuncDelta {
             match invoke_scene_function(&mut self.preloader_scene, implfunc.fnname, &mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.help, &mut self.script, &mut self.obj) {
-                Some(rr) => self.gameScreen.do_screen_render(rr, &mut self.game),
+                Ok(Some(rr)) => self.gameScreen.do_screen_render(rr, &mut self.game),
+                Err(exit_code) => {
+                    self.exit_code = exit_code;
+                    return;
+                },
                 _ => (),
             }
             self.gameScreen.FlipScreen();
@@ -464,37 +480,57 @@ impl Main {
                 match meta_func(&mut self.music, &mut self.map, &mut self.game, &mut self.gameScreen, key, &mut self.input, event_pump, &mut self.scenes, &mut self.preloader_scene, &mut self.help, &mut self.script, &mut self.obj) {
                     LoopCode::LoopContinue => (),
                     LoopCode::LoopStop => break 'fixedloop,
+                    LoopCode::BreakTheMain(code) => {
+                        self.exit_code = code;
+                        break 'fixedloop;
+                    }
                 }
             }
         }
         // println!("fixed loop finish");
     }
 
+    // void VVV_exit(const int exit_code)
+    pub fn VVV_exit(&mut self, exit_code: i32) {
+        self.exit_code = exit_code;
+    }
 }
 
 impl Drop for Main {
-    // free_assets
+    // static void cleanup(void);
     fn drop(&mut self) {
-        // game.savestats();
+        eprintln!("Drop The Main!");
+        /* Order matters! */
+        self.game.savestatsandsettings();
+        // gameScreen.destroy();
+        // graphics.grphx.destroy();
+        // graphics.destroy_buffers();
+        // graphics.destroy();
+        // music.destroy();
         // NETWORK_shutdown();
-        // SDL_Quit();
-        // FILESYSTEM_deinit();
+        // SDL_Quit(); // @sx: impl drop
+        // FILESYSTEM_deinit(); // @sx: impl drop
     }
 }
 
 fn main() {
+    env_logger::init();
     let mut m = Main::new();
     m.init_arguments();
     print_logo();
     m.no_custom_levels();
-    m.main_loop();
+    let code = m.main_loop();
+
+    std::process::exit(code)
 }
 
 // static enum LoopCode loop_begin(void);
 fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_begin");
     if game.inputdelay {
-        key.Poll(event_pump, game);
+        if let Err(exit_code) = key.Poll(event_pump, game) {
+            return LoopCode::BreakTheMain(exit_code)
+        }
     }
 
     // Update network per frame.
@@ -534,13 +570,16 @@ fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mu
         // println!("loop_run_active_funcs: {:?} received", implfunc.fnname);
 
         if implfunc.fntype == FuncType::FuncInput && !game.inputdelay {
-            key.Poll(event_pump, game);
+            if let Err(exit_code) = key.Poll(event_pump, game) {
+                return LoopCode::BreakTheMain(exit_code)
+            }
         }
 
         match invoke_scene_function(preloader, implfunc.fnname, music, map, game, gameScreen, key, input, event_pump, help, script, obj) {
-            Some(rr) => gameScreen.do_screen_render(rr, game),
+            Ok(Some(rr)) => gameScreen.do_screen_render(rr, game),
+            Err(exit_code) => return LoopCode::BreakTheMain(exit_code),
             _ => (),
-        }
+        };
 
         let index_code = scenes.increment_gamestate_func_index(game);
 
@@ -559,17 +598,17 @@ fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mu
 }
 
 // static void focused_begin(void);
-fn focused_begin() -> Option<RenderResult> {
-    None
+fn focused_begin() -> Result<Option<RenderResult>, i32> {
+    Ok(None)
 }
 
 // static void focused_end(void);
-fn focused_end(music: &mut music::Music, game: &mut game::Game, graphics: &mut graphics::Graphics) -> Option<RenderResult> {
+fn focused_end(music: &mut music::Music, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map) -> Result<Option<RenderResult>, i32> {
     game.gameclock();
-    music.processmusic();
+    music.processmusic(map, game);
     graphics.processfade();
 
-    None
+    Ok(None)
 }
 
 // static enum LoopCode loop_end(void);
@@ -622,31 +661,39 @@ fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game,
     LoopCode::LoopContinue
 }
 
-fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, help: &mut UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Option<RenderResult> {
+fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, help: &mut UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Result<Option<RenderResult>, i32> {
     // println!("current scene function: {:?}", fnname);
 
     let screen_params = gameScreen.get_screen_params();
 
     match fnname {
         Fns::focused_begin => focused_begin(),
-        Fns::focused_end => focused_end(music, game, &mut gameScreen.render.graphics),
+        Fns::focused_end => focused_end(music, game, &mut gameScreen.render.graphics, map),
 
         // GameState::PRELOADER
         Fns::preloaderinput => preloader.input(game, key),
         Fns::preloaderrenderfixed => preloader.render_fixed(game),
         Fns::preloaderrender => preloader.render(&mut gameScreen.render.graphics),
+
         // GameState::TITLEMODE
         Fns::titleinput => input.titleinput(music, map, game, gameScreen, key, screen_params, script, obj, help),
         Fns::titlerenderfixed => gameScreen.renderfixed.titlerenderfixed(map, game, &mut gameScreen.render.graphics),
         Fns::titlerender => gameScreen.render.titlerender(game, music, map, help, key, screen_params),
         Fns::titlelogic => logic::titlelogic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params),
+
         // GameState::GAMEMODE
         Fns::runscript => script.run(game, obj, map, &mut gameScreen.render.graphics, help, music, key),
         Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(obj, game, map, &mut gameScreen.render.graphics, script, help),
         Fns::gamerender => gameScreen.render.gamerender(game, map, help, obj),
         Fns::gameinput => input.gameinput(game, &mut gameScreen.render.graphics, map, music, key, obj, script, help),
         Fns::gamelogic => logic::gamelogic(game, &mut gameScreen.render.graphics, map, music, obj, help, script),
+
         // GameState::MAPMODE
+        Fns::maprenderfixed => gameScreen.renderfixed.maprenderfixed(&mut gameScreen.render.graphics, game, map, script),
+        Fns::maprender => gameScreen.render.maprender(map, help, game, script, obj),
+        Fns::mapinput => input.mapinput(game, &mut gameScreen.render.graphics, obj, script, music, map, screen_params, help, key),
+        Fns::maplogic => logic::maplogic(help),
+
         // GameState::TELEPORTERMODE
         // GameState::GAMECOMPLETE
         // GameState::GAMECOMPLETE2
@@ -659,5 +706,6 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum LoopCode {
     LoopContinue,
-    LoopStop
+    LoopStop,
+    BreakTheMain(i32),
 }

@@ -1,0 +1,20 @@
+[package]
+name = "physfs"
+build = "build.rs"
+version = "0.0.1"
+authors = ["sypwex <sypwex@gmail.com>"]
+edition = "2018"
+
+# [lib]
+# name = "physfs_sys"
+# path = "src/sys.rs"
+
+[profile.release]
+debug = true
+
+[dependencies]
+log = "0.4.14"
+env_logger = "0.9.0"
+
+[build-dependencies]
+bindgen = "0.58.1"

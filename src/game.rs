@@ -90,7 +90,7 @@ pub struct Game {
     pub menuoptions: Vec<MenuOption>,
     pub currentmenuoption: i32,
     pub currentmenuname: MenuName,
-    kludge_ingametemp: MenuName,
+    pub kludge_ingametemp: MenuName,
     pub current_credits_list_index: i32,
     pub menuxoff: i32,
     pub menuyoff: i32,
@@ -259,7 +259,7 @@ pub struct Game {
     customcol: i32,
     pub levelpage: i32,
     playcustomlevel: i32,
-    customleveltitle: String,
+    pub customleveltitle: String,
     customlevelfilename: String,
 
     // std::vector<CustomLevelStat> customlevelstats,
@@ -282,12 +282,10 @@ pub struct Game {
     playmusic: i32,
     playassets: String,
 
-    // void quittomenu(),
-    // void returntolab(),
-    fadetomenu: bool,
-    fadetomenudelay: i32,
-    fadetolab: bool,
-    fadetolabdelay: i32,
+    pub fadetomenu: bool,
+    pub fadetomenudelay: i32,
+    pub fadetolab: bool,
+    pub fadetolabdelay: i32,
 
     // #if !defined(NO_CUSTOM_LEVELS)
     //   void returntoeditor(),
@@ -295,10 +293,6 @@ pub struct Game {
     // #endif
 
     gametimer: i32,
-
-    //   inline: bool inspecial() {
-    //       return inintermission || insecretlab || intimetrial || nodeathmode,
-    //   }
 
     pub over30mode: bool,
     pub glitchrunnermode: bool, // Have fun speedrunners! <3 Misa
@@ -674,6 +668,11 @@ impl Game {
         game
     }
 
+    // inline: bool inspecial()
+    pub fn inspecial(&self) -> bool {
+        self.inintermission || self.insecretlab || self.intimetrial || self.nodeathmode
+    }
+
     // void Game::init(void);
     pub fn init(&mut self, music: &mut music::Music) {
         // static inline int get_framerate(const int slowdown)
@@ -777,23 +776,13 @@ impl Game {
     // std::string Game::giventimestring(int hrs, int min, int sec);
 
     // std::string Game::timestring(void);
-    pub fn timestring(&mut self, help: &mut utility_class::UtilityClass) -> &str {
-        println!("DEADBEEF: timestring not implemented yet");
-
-        // std::string tempstring = "";
-        // if hours > 0 {
-        //     tempstring += help.String(hours) + ":";
-        // }
-        // tempstring += help.twodigits(minutes) + ":" + help.twodigits(seconds);
-        // return tempstring;
-
-        // let mut tempstring = String::new();
-        // if self.hours > 0 {
-        //     tempstring = format!("{}{}", help.String(self.hours), ":");
-        // }
-        // tempstring = format!("{}{}{}{}", tempstring, help.twodigits(self.minutes), ":", help.twodigits(self.seconds));
-
-        &""
+    pub fn timestring(&mut self, help: &mut utility_class::UtilityClass) -> String {
+        let tempstring = if self.hours > 0 {
+            [help.String(self.hours), ":".to_string()].concat()
+        } else {
+            String::new()
+        };
+        [tempstring, help.twodigits(self.minutes).to_string(), ":".to_string(), help.twodigits(self.seconds).to_string()].concat()
     }
 
     // std::string Game::partimestring(void);
@@ -1412,7 +1401,7 @@ impl Game {
     }
 
     // void Game::updatestate(void);
-    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) {
+    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, music: &mut music::Music) {
         self.statedelay -= 1;
         if self.statedelay <= 0 {
             self.statedelay = 0;
@@ -1482,6 +1471,185 @@ impl Game {
                     }
                     self.state = 0;
                 },
+                9 => {
+                    //Start SWN Minigame Mode B
+                    obj.removetrigger(9);
+
+                    self.swnmode = true;
+                    self.swngame = 6;
+                    self.swndelay = 150;
+                    self.swntimer = 60 * 30;
+
+                    //set the checkpoint in the middle of the screen
+                    self.savepoint = 0;
+                    self.savex = 148;
+                    self.savey = 100;
+                    self.savegc = 0;
+                    self.saverx = self.roomx;
+                    self.savery = self.roomy;
+                    self.savedir = 0;
+
+                    self.state = 0;
+                },
+                10 => {
+                    //Start SWN Minigame Mode A
+                    obj.removetrigger(10);
+
+                    self.swnmode = true;
+                    self.swngame = 4;
+                    self.swndelay = 150;
+                    self.swntimer = 60 * 30;
+
+                    //set the checkpoint in the middle of the screen
+                    self.savepoint = 0;
+                    self.savex = 148;
+                    self.savey = 100;
+                    self.savegc = 0;
+                    self.saverx = self.roomx;
+                    self.savery = self.roomy;
+                    self.savedir = 0;
+
+                    self.state = 0;
+                },
+                11 => {
+                    //Intermission 1 instructional textbox, depends on last saved
+                    graphics.textboxremovefast();
+                    graphics.createtextbox("   When you're NOT standing on   ", -1, 3, 174, 174, 174);
+                    if graphics.flipmode {
+                        if self.lastsaved == 2 {
+                            graphics.addline("   the ceiling, Vitellary will");
+                        } else if self.lastsaved == 3 {
+                            graphics.addline("   the ceiling, Vermilion will");
+                        } else if self.lastsaved == 4 {
+                            graphics.addline("   the ceiling, Verdigris will");
+                        } else if self.lastsaved == 5 {
+                            graphics.addline("   the ceiling, Victoria will");
+                        }
+                    } else {
+                        if self.lastsaved == 2 {
+                            graphics.addline("    the floor, Vitellary will");
+                        } else if self.lastsaved == 3 {
+                            graphics.addline("    the floor, Vermilion will");
+                        } else if self.lastsaved == 4 {
+                            graphics.addline("    the floor, Verdigris will");
+                        } else if self.lastsaved == 5 {
+                            graphics.addline("    the floor, Victoria will");
+                        }
+                    }
+
+                    graphics.addline("     stop and wait for you.");
+                    graphics.textboxtimer(180);
+                    self.state = 0;
+                },
+                12 => {
+                    //Intermission 1 instructional textbox, depends on last saved
+                    obj.removetrigger(12);
+                    if !obj.flags[61] {
+                        obj.flags[61] = true;
+                        graphics.textboxremovefast();
+                        graphics.createtextbox("  You can't continue to the next   ", -1, 8, 174, 174, 174);
+                        if self.lastsaved == 5 {
+                            graphics.addline("  room until she is safely across. ");
+                        } else {
+                            graphics.addline("  room until he is safely across.  ");
+                        }
+                        graphics.textboxtimer(120);
+                    }
+                    self.state = 0;
+                },
+                13 => {
+                    //textbox removal
+                    obj.removetrigger(13);
+                    graphics.textboxremovefast();
+                    self.state = 0;
+                },
+                14 => {
+                    //Intermission 1 instructional textbox, depends on last saved
+                    if graphics.flipmode {
+                        graphics.createtextbox(" When you're standing on the ceiling, ", -1, 3, 174, 174, 174);
+                    } else {
+                        graphics.createtextbox(" When you're standing on the floor, ", -1, 3, 174, 174, 174);
+                    }
+
+                    if self.lastsaved == 2 {
+                        graphics.addline(" Vitellary will try to walk to you. ");
+                    } else if self.lastsaved == 3 {
+                        graphics.addline(" Vermilion will try to walk to you. ");
+                    } else if self.lastsaved == 4 {
+                        graphics.addline(" Verdigris will try to walk to you. ");
+                    } else if self.lastsaved == 5 {
+                        graphics.addline(" Victoria will try to walk to you. ");
+                    }
+                    graphics.textboxtimer(280);
+
+                    self.state = 0;
+                },
+                15 => {
+                    //leaving the naughty corner
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 0;
+                    }
+                    self.state = 0;
+                },
+                16 => {
+                    //entering the naughty corner
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) && obj.entities[i].tile == 0 {
+                        obj.entities[i].tile = 144;
+                        music.playef(2);
+                    }
+                    self.state = 0;
+                },
+                17 => {
+                    //Arrow key tutorial
+                    obj.removetrigger(17);
+                    graphics.createtextbox(" If you prefer, you can press UP or ", -1, 195, 174, 174, 174);
+                    graphics.addline("   DOWN instead of ACTION to flip.");
+                    graphics.textboxtimer(100);
+                    self.state = 0;
+                },
+                20 => {
+                    if !obj.flags[1] {
+                        obj.flags[1] = true;
+                        self.state = 0;
+                        graphics.textboxremove();
+                    }
+                    obj.removetrigger(20);
+                },
+                21 => {
+                    if !obj.flags[2] {
+                        obj.flags[2] = true;
+                        self.state = 0;
+                        graphics.textboxremove();
+                    }
+                    obj.removetrigger(21);
+                },
+                22 => {
+                    if !obj.flags[3] {
+                        graphics.textboxremovefast();
+                        obj.flags[3] = true;
+                        self.state = 0;
+                        graphics.createtextbox("  Press ACTION to flip  ", -1, 25, 174, 174, 174);
+                        graphics.textboxtimer(60);
+                    }
+                    obj.removetrigger(22);
+                },
+                30 => {
+                    //Generic "run script"
+                    if !obj.flags[4] {
+                        obj.flags[4] = true;
+                        self.startscript = true;
+                        self.newscript = "firststeps".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(30);
+                    self.state = 0;
+                },
+
+
+                /* ... */
+
                 _ => println!("DEADBEEF: Game::updatestate(): state {} not implemented yer", self.state),
             }
         }
@@ -1561,7 +1729,7 @@ impl Game {
     }
 
     // void Game::start(void);
-    pub fn start(&mut self, music: &mut music::Music) {
+    pub fn start(&mut self, map: &mut map::Map, music: &mut music::Music) {
         self.jumpheld = true;
 
         self.savex = 232;
@@ -1578,7 +1746,7 @@ impl Game {
         self.lifeseq = 0;
 
         if !self.nocutscenes {
-            music.play(5);
+            music.play(5, map, self);
         }
     }
 
@@ -1612,7 +1780,7 @@ impl Game {
 
         if self.deathseq == 30 {
             if self.nodeathmode {
-                music.fadeout(None);
+                music.fadeout(None, self);
                 self.gameoverdelay = 60;
             }
 
@@ -1777,7 +1945,68 @@ impl Game {
     // void Game::updatecustomlevelstats(std::string clevel, int cscore);
 
     // void Game::quittomenu(void);
+    pub fn quittomenu(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, script: &mut script::ScriptClass, music: &mut music::Music, obj: &mut entity::EntityClass, screen_params: screen::ScreenParams) {
+        self.gamestate = GameState::TITLEMODE;
+        graphics.fademode = 4;
+        // FILESYSTEM_unmountAssets();
+        self.cliplaytest = false;
+        graphics.buffers.titlebg.tdrawback = true;
+        graphics.flipmode = false;
+
+        //Don't be stuck on the summary screen,
+        //or "who do you want to play the level with?"
+        //or "do you want cutscenes?"
+        //or the confirm-load-quicksave menu
+        if self.intimetrial {
+            self.returntomenu(MenuName::timetrials);
+        } else if self.inintermission {
+            self.returntomenu(MenuName::intermissionmenu);
+        } else if self.nodeathmode {
+            self.returntomenu(MenuName::playmodes);
+        } else if map.custommode {
+            if map.custommodeforreal {
+                self.returntomenu(MenuName::levellist);
+            } else {
+                //Returning from editor
+                self.returntomenu(MenuName::playerworlds);
+            }
+        } else if self.save_exists() || self.anything_unlocked() {
+            self.returntomenu(MenuName::play);
+            if !self.insecretlab {
+                //Select "continue"
+                self.currentmenuoption = 0;
+            }
+        } else {
+            self.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map);
+        }
+
+        script.hardreset(self, map, graphics, obj);
+    }
+
     // void Game::returntolab(void);
+    pub fn returntolab(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) {
+        self.gamestate = GameState::GAMEMODE;
+        graphics.fademode = 4;
+        map.gotoroom(119, 107, self, graphics, music, obj, help);
+        let player = obj.getplayer() as usize;
+        if INBOUNDS_VEC!(player, obj.entities) {
+            obj.entities[player].xp = 132;
+            obj.entities[player].yp = 137;
+        }
+        self.gravitycontrol = 0;
+
+        self.savepoint = 0;
+        self.saverx = 119;
+        self.savery = 107;
+        self.savex = 132;
+        self.savey = 137;
+        self.savegc = 0;
+        if INBOUNDS_VEC!(player, obj.entities) {
+            self.savedir = obj.entities[player].dir;
+        }
+
+        music.play(11, map, self);
+    }
 
     // #if !defined(NO_CUSTOM_LEVELS)
     // void Game::returntoeditor(void);

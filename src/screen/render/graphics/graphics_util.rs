@@ -273,6 +273,14 @@ pub fn FillRect_rect_coloru32(_surface: &mut sdl2::surface::SurfaceRef, rect: sd
     FillRect(_surface, rect.x as u32, rect.y as u32, rect.w as u32, rect.h as u32, color);
 }
 
+pub fn FillRect_xywh_rgb(_surface: &mut sdl2::surface::SurfaceRef, x: i32, y: i32, w: i32, h: i32, r: i32, g: i32, b: i32) -> () {
+    unsafe {
+        let rgba = sdl2_sys::SDL_MapRGB(_surface.pixel_format().raw(), r as u8, g as u8, b as u8);
+        let color = sdl2::pixels::Color::from_u32(&_surface.pixel_format(), rgba);
+        FillRect(_surface, x as u32, y as u32, w as u32, h as u32, color);
+    }
+}
+
 /* */
 
 // void ClearSurface(SDL_Surface* surface)

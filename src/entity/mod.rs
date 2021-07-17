@@ -2706,11 +2706,13 @@ impl<'a> EntityClass {
                             self.entities[_i].drawframe += self.entities[_i].walkingframe as usize + 1;
                         }
 
-                        //if self.entities[_i].visualonroof > 0) self.entities[_i].drawframe += 6;
+                        // @sx: this code disabled in original codebase
+                        //if self.entities[_i].visualonroof > 0 { self.entities[_i].drawframe += 6; }
                     } else {
                         self.entities[_i].drawframe  += 1;
-                        //if game.gravitycontrol == 1) {
-                        //	self.entities[_i].drawframe += 6;
+                        // @sx: this code disabled in original codebase
+                        //if game.gravitycontrol == 1 {
+                        //    self.entities[_i].drawframe += 6;
                         //}
                     }
 
@@ -2723,7 +2725,8 @@ impl<'a> EntityClass {
                         if self.entities[_i].rule == 7 {
                             self.entities[_i].drawframe += 2;
                         }
-                        //if game.gravitycontrol == 1) self.entities[_i].drawframe += 2;
+                        // @sx: this code disabled in original codebase
+                        //if game.gravitycontrol == 1 { self.entities[_i].drawframe += 2; }
                     }
                 },
                 100 => { //the teleporter!
@@ -3141,7 +3144,7 @@ impl<'a> EntityClass {
 
         let skipblocks = self.entities[t].rule < 2 || self.entities[t].r#type == 14;
         let mut dx = 0f32;
-        let mut dy = 0f32;
+        let dy = 0f32;
         if self.entities[t].rule == 0 {
             dx = self.entities[t].vx;
         }
@@ -3176,7 +3179,7 @@ impl<'a> EntityClass {
         let temprect = sdl2::rect::Rect::new(tx as i32 + self.entities[t].cx, ty as i32 + self.entities[t].cy, self.entities[t].w as u32, self.entities[t].h as u32);
         let skipblocks = self.entities[t].rule < 2 || self.entities[t].r#type == 14;
 
-        let mut dx = 0.0f32;
+        let dx = 0.0f32;
         let mut dy = 0.0f32;
         if self.entities[t].rule == 0 {
             dy = self.entities[t].vy;

@@ -1,7 +1,7 @@
 use crate::{INBOUNDS_VEC, entity, game, map, maths, music, scenes::RenderResult, screen::{self, render::graphics, renderfixed}, script, utility_class};
 
 
-pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Option<RenderResult> {
+pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Result<Option<RenderResult>, i32> {
     //Misc
     //map.updatetowerglow(&mut graphics.buffers.titlebg);
     renderfixed.update_glow();
@@ -14,7 +14,7 @@ pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game:
 
         if game.menucountdown == 0 {
             if game.menudest == game::MenuName::mainmenu {
-                music.play(6);
+                music.play(6, map, game);
             } else if game.menudest == game::MenuName::gameover2 {
                 music.playef(11);
             } else if game.menudest == game::MenuName::timetrialcomplete3 {
@@ -25,22 +25,25 @@ pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game:
         }
     }
 
-    None
+    Ok(None)
 }
 
-pub fn maplogic() {
+pub fn maplogic(help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
+    //Misc
+    help.updateglow();
 
+    Ok(None)
 }
 
-pub fn gamecompletelogic() {
-
+pub fn gamecompletelogic() -> Result<Option<RenderResult>, i32> {
+    Ok(None)
 }
 
-pub fn gamecompletelogic2() {
-
+pub fn gamecompletelogic2() -> Result<Option<RenderResult>, i32> {
+    Ok(None)
 }
 
-pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass) -> Option<RenderResult> {
+pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass) -> Result<Option<RenderResult>, i32> {
     /* Update old lerp positions of entities */
     for i in 0..obj.entities.len() {
         obj.entities[i].lerpoldxp = obj.entities[i].xp;
@@ -353,7 +356,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             }
         }
         //State machine for game logic
-        game.updatestate(graphics, script, obj);
+        game.updatestate(graphics, script, obj, music);
         if game.startscript {
             script::scripts::load(script, &game.newscript);
             game.startscript = false;
@@ -379,7 +382,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 //intermission, survive 60 seconds game
                 game.swntimer -= 1;
                 if game.swntimer <= 0 {
-                    music.niceplay(8);
+                    music.niceplay(8, game);
                     game.swngame = 5;
                 } else {
                     obj.generateswnwave(0);
@@ -475,7 +478,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 game.swngame = 3;
                 // (horizontal gravity line)
                 obj.createentity(-8, 84 - 32, 11, Some(8), None, None, None, None, None, game);
-                music.niceplay(2);
+                music.niceplay(2, game);
                 game.swndeaths = game.deathcounts;
             } else if game.swngame == 5 {
                 //remove line
@@ -490,7 +493,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             } else if game.swngame == 6 {
                 //Init the super gravitron
                 game.swngame = 7;
-                music.niceplay(3);
+                music.niceplay(3, game);
             } else if game.swngame == 7 {
                 //introduce game b
                 game.swndelay -= 1;
@@ -531,12 +534,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 if game.timetrialcountdown == 60 { music.playef(21); }
                 if game.timetrialcountdown == 30 {
                     match game.timetriallevel {
-                        0 => music.play(1),
-                        1 => music.play(3),
-                        2 => music.play(2),
-                        3 => music.play(1),
-                        4 => music.play(12),
-                        5 => music.play(15),
+                        0 => music.play(1, map, game),
+                        1 => music.play(3, map, game),
+                        2 => music.play(2, map, game),
+                        3 => music.play(1, map, game),
+                        4 => music.play(12, map, game),
+                        5 => music.play(15, map, game),
                         _ => music.playef(22),
                     };
                 }
@@ -1099,7 +1102,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                                 obj.entities[j].dir = obj.entities[i].dir;
                             }
                         }
-                    } else	if game.roomy >= 52 {
+                    } else if game.roomy >= 52 {
                         if obj.flags[59] {
                             obj.createentity(160, 177, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(18), Some(1), None, None, game);
                             let j = obj.getcompanion() as usize;
@@ -1230,5 +1233,5 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
         script.teleport();
     }
 
-    None
+    Ok(None)
 }

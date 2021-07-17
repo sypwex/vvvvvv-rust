@@ -70,8 +70,6 @@ impl ScriptClass {
     // void scriptclass::clearcustom(void)
     // void scriptclass::tokenize( const std::string& t )
     fn tokenize(&mut self, t: &str) {
-        // println!("tokenizing: {:?}", t);
-
         self.j = 0;
         let mut tempword = String::new();
 
@@ -95,14 +93,13 @@ impl ScriptClass {
             self.words[self.j as usize] = tempword;
         }
 
-        // println!("tokenize result: {:?}", self.words);
-        println!("tokenize result: {:?}", self.words.iter().filter(|x| x.len() > 0).collect::<Vec<_>>());
+        debug!("tokenize result: {:?}", self.words.iter().filter(|x| x.len() > 0).collect::<Vec<_>>());
     }
 
     // void scriptclass::run(void)
-    pub fn run(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map, graphics: &mut graphics::Graphics, help: &mut utility_class::UtilityClass, music: &mut music::Music, key: &mut key_poll::KeyPoll) -> Option<RenderResult> {
+    pub fn run(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map, graphics: &mut graphics::Graphics, help: &mut utility_class::UtilityClass, music: &mut music::Music, key: &mut key_poll::KeyPoll) -> Result<Option<RenderResult>, i32> {
         if !self.running {
-            return None;
+            return Ok(None);
         }
 
         // This counter here will stop the function when it gets too high
@@ -273,25 +270,25 @@ impl ScriptClass {
                     }
                 }
                 if self.words[0] == "playef" {
-                    music.playef(utility_class::ss_toi(&self.words[1]));
+                    music.playef(utility_class::ss_toi(&self.words[1]) as usize);
                 }
                 if self.words[0] == "play" {
-                    music.play(utility_class::ss_toi(&self.words[1]));
+                    music.play(utility_class::ss_toi(&self.words[1]), map, game);
                 }
                 if self.words[0] == "stopmusic" {
                     music.haltdasmusik();
                 }
                 if self.words[0] == "resumemusic" {
-                    music.resumefade(0);
+                    music.resumefade(0, game);
                 }
                 if self.words[0] == "musicfadeout" {
-                    music.fadeout(Some(false));
+                    music.fadeout(Some(false), game);
                 }
                 if self.words[0] == "musicfadein" {
-                    music.fadein();
+                    music.fadein(game);
                 }
                 if self.words[0] == "trinketscriptmusic" {
-                    music.play(4);
+                    music.play(4, map, game);
                 }
                 if self.words[0] == "gotoposition" {
                     //USAGE: gotoposition(x position, y position, gravity position)
@@ -1864,7 +1861,7 @@ impl ScriptClass {
             self.scriptdelay -= 1;
         }
 
-        None
+        Ok(None)
     }
 
     // void scriptclass::resetgametomenu(void)
@@ -1873,37 +1870,41 @@ impl ScriptClass {
     }
 
     // void scriptclass::startgamemode( int t )
-    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music, help: &mut utility_class::UtilityClass) {
+    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music, help: &mut utility_class::UtilityClass) -> Result<(), i32>  {
         match t {
-        0 => {
-            game.gamestate = GameState::GAMEMODE;
-            self.hardreset(game, map, graphics, obj);
-            game.start(music);
-            game.jumpheld = true;
-            graphics.showcutscenebars = true;
-            graphics.setbars(320);
+            0 => {
+                game.gamestate = GameState::GAMEMODE;
+                self.hardreset(game, map, graphics, obj);
+                game.start(map, music);
+                game.jumpheld = true;
+                graphics.showcutscenebars = true;
+                graphics.setbars(320);
 
-            //set flipmode
-            if graphics.setflipmode {
-                graphics.flipmode = true;
-            } else {
-                obj.flags[73] = true;
-            }
+                //set flipmode
+                if graphics.setflipmode {
+                    graphics.flipmode = true;
+                } else {
+                    obj.flags[73] = true;
+                }
 
-            if obj.entities.is_empty() {
-                //In this game, constant, never destroyed
-                obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
-            } else {
-                map.resetplayer(None);
-            }
-            map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
-            map.initmapdata();
+                if obj.entities.is_empty() {
+                    //In this game, constant, never destroyed
+                    obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
+                } else {
+                    map.resetplayer(None);
+                }
+                map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
+                map.initmapdata();
 
-            scripts::load(self, "intro");
-        },
-        1..=19 | 100 => println!("gamemode {} not implemented yet", t),
-        _ => println!("incorrect game mode"),
+                scripts::load(self, "intro");
+            },
+            1..=19 => warn!("gamemode {} not implemented yet", t),
+
+            100 => return Err(0),
+            _ => error!("incorrect game mode"),
         }
+
+        Ok(())
     }
 
     // void scriptclass::teleport(void)
@@ -1912,7 +1913,7 @@ impl ScriptClass {
     }
 
     // void scriptclass::hardreset(void)
-    fn hardreset(&mut self, game: &mut game::Game, map: &mut map::Map, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass) {
+    pub fn hardreset(&mut self, game: &mut game::Game, map: &mut map::Map, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass) {
         //Game:
         game.hascontrol = true;
         game.gravitycontrol = 0;

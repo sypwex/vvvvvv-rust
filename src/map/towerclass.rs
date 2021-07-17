@@ -35,7 +35,7 @@ impl TowerClass {
     }
 
     // int backat(int xp, int yp, int yoff);
-    pub fn backat(&self, xp: i32, yp: i32, yoff: i32) -> u8 {
+    pub fn backat(&self, xp: i32, yp: i32, yoff: i32) -> usize {
         let mut yp = yp * 8;
         yp += yoff;
         let yoff = yp % 8;
@@ -49,7 +49,7 @@ impl TowerClass {
                 yp -= 120;
             }
 
-            self.back[xp as usize + self.vmult[yp as usize] as usize]
+            self.back[xp as usize + self.vmult[yp as usize] as usize] as usize
         } else {
             0
         }

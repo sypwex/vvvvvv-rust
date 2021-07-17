@@ -1,6 +1,6 @@
 use crate::{game, screen::render::graphics, utility_class};
 
-// #define		rn( rx,  ry) ((rx) + ((ry) * 100))
+// #define rn( rx,  ry) ((rx) + ((ry) * 100))
 #[macro_export]
 macro_rules! rn {
     ($rx:expr, $ry:expr) => {

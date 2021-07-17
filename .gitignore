@@ -1,8 +1,9 @@
-/target
-/assets
 .DS_Store
+.vscode/settings.json
+/target
+data.zip
+/assets
 /*.bmp
 /tmp
 perf.data*
 flamegraph*
-.vscode/settings.json

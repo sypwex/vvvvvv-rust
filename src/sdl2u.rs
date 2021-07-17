@@ -67,11 +67,36 @@ pub fn sdl_create_rgb_surface_(flags: u32, width: libc::c_int, height: libc::c_i
     }
 }
 
+pub fn malloc(size: usize) -> Result<Vec<u8>, ()> {
+    debug!("sdl2u/malloc({})", size);
+
+    if size == 0 {
+        Ok(vec![0;0])
+    } else {
+        unsafe {
+            let ptr = sdl2_sys::SDL_malloc(size as u64) as *mut u8;
+            if ptr.is_null() {
+                error!("SDL_malloc returned empty pointer!");
+                Err(())
+            } else {
+                Ok(Vec::from_raw_parts(ptr, size, size))
+            }
+        }
+    }
+}
+
 // sdl2 crate
 
 pub fn surface_from_ll<'a> (raw: *mut SDL_Surface) -> Surface<'a> {
     unsafe {
         Surface::from_ll(raw)
+    }
+}
+
+pub fn get_error() -> String {
+    unsafe {
+        let err = sdl2_sys::SDL_GetError();
+        std::ffi::CStr::from_ptr(err as *const _).to_str().unwrap().to_owned()
     }
 }
 

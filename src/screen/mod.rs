@@ -1,5 +1,5 @@
 extern crate sdl2;
-use sdl2_sys::{SDL_TextureAccess, SDL_WindowFlags, SDL_bool};
+use sdl2_sys::{SDL_WindowFlags, SDL_bool};
 
 use crate::{game, scenes::RenderResult};
 use self::render::graphics::graphics_util;
@@ -12,12 +12,12 @@ const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelF
 
 pub struct ScreenSettings {
     pub windowWidth: i32,
-	pub windowHeight: i32,
-	pub fullscreen: bool,
-	pub useVsync: bool,
-	pub stretch: i32,
-	pub linearFilter: bool,
-	pub badSignal: bool,
+    pub windowHeight: i32,
+    pub fullscreen: bool,
+    pub useVsync: bool,
+    pub stretch: i32,
+    pub linearFilter: bool,
+    pub badSignal: bool,
 }
 
 impl ScreenSettings {
@@ -43,27 +43,27 @@ pub struct Screen {
 
     /* Screen.h */
 
-	pub isWindowed: bool,
-	pub isFiltered: bool,
+    pub isWindowed: bool,
+    pub isFiltered: bool,
     pub badSignalEffect: bool,
-	pub stretchMode: i32,
-	pub vsync: bool,
+    pub stretchMode: i32,
+    pub vsync: bool,
 
-	m_window: *mut sdl2_sys::SDL_Window,
-	m_renderer: *mut sdl2_sys::SDL_Renderer,
-	m_screenTexture: *mut sdl2_sys::SDL_Texture,
+    m_window: *mut sdl2_sys::SDL_Window,
+    m_renderer: *mut sdl2_sys::SDL_Renderer,
+    m_screenTexture: *mut sdl2_sys::SDL_Texture,
     m_screen: sdl2::surface::Surface<'static>,
 
-	filterSubrect: sdl2::rect::Rect,
+    filterSubrect: sdl2::rect::Rect,
 }
 
 #[derive(Debug,Copy,Clone)]
 pub struct ScreenParams {
     pub isWindowed: bool,
-	pub isFiltered: bool,
+    pub isFiltered: bool,
     pub badSignalEffect: bool,
-	pub stretchMode: i32,
-	pub vsync: bool,
+    pub stretchMode: i32,
+    pub vsync: bool,
 }
 
 impl Screen {
@@ -155,7 +155,8 @@ impl Screen {
 
             //ALSO FIXME: This SDL_CreateTexture() is duplicated in Graphics::processVsync()!
             // m_screenTexture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 320, 240);
-            self.m_screenTexture = sdl2_sys::SDL_CreateTexture(self.m_renderer, TEXTURE_PIXEL_FORMAT as u32, SDL_TextureAccess::SDL_TEXTUREACCESS_STREAMING as i32, 320, 240);
+            self.m_screenTexture = sdl2_sys::SDL_CreateTexture(self.m_renderer, TEXTURE_PIXEL_FORMAT as u32, sdl2::render::TextureAccess::Streaming as i32, 320, 240);
+
         }
 
         self.badSignalEffect = settings.badSignal;
@@ -223,7 +224,7 @@ impl Screen {
                     println!("Error: could not set logical size: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
-                if sdl2_sys::SDL_RenderSetIntegerScale(self.m_renderer, sdl2_sys::SDL_bool::SDL_FALSE) != 0 {
+                if sdl2_sys::SDL_RenderSetIntegerScale(self.m_renderer, SDL_bool::SDL_FALSE) != 0 {
                     println!("Error: could not set scale: {:?}", sdl2_sys::SDL_GetError());
                     return;
                 }
@@ -323,12 +324,14 @@ impl Screen {
 
     // void Screen::toggleFullScreen(void)
     pub fn toggleFullScreen(&mut self) {
-        println!("DEADBEEF: Screen::toggleFullScreen method not implemented yet");
+        self.isWindowed = !self.isWindowed;
+        self.ResizeScreen(-1, -1);
     }
 
     // void Screen::toggleStretchMode(void)
     pub fn toggleStretchMode(&mut self) {
-        println!("DEADBEEF: Screen::toggleStretchMode method not implemented yet");
+        self.stretchMode = (self.stretchMode + 1) % 3;
+        self.ResizeScreen(-1, -1);
     }
 
     // void Screen::toggleLinearFilter(void)

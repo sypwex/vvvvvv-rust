@@ -1,6 +1,6 @@
 use sdl2::keyboard::Keycode;
 
-use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics}, script::{self, scripts}, utility_class};
+use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics::{self, graphics_util}}, script::{self, scripts}, utility_class};
 
 pub struct Input {
     fadetomode: bool,
@@ -21,7 +21,7 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
+    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
@@ -130,7 +130,7 @@ impl Input {
             if game.press_action {
                 if !game.menustart {
                     game.menustart = true;
-                    music.play(6);
+                    music.play(6, map, game);
                     music.playef(18);
                     game.screenshake = 10;
                     game.flashlight = 5;
@@ -152,14 +152,16 @@ impl Input {
                 self.fadetomodedelay -= 1;
             } else {
                 self.fadetomode = false;
-                script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music, help);
+                if let Err(code) = script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music, help) {
+                    return Err(code)
+                }
             }
         }
 
-        None
+        Ok(None)
     }
 
-    pub fn gameinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
+    pub fn gameinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
         //TODO mouse input
         //game.mx = (mouseX / 2);
         //game.my = (mouseY / 2);
@@ -225,7 +227,7 @@ impl Input {
         if game.intimetrial && graphics.fademode == 1 && game.quickrestartkludge {
             //restart the time trial
             game.quickrestartkludge = false;
-            script.startgamemode(game.timetriallevel + 3, game, graphics, map, obj, music, help);
+            script.startgamemode(game.timetriallevel + 3, game, graphics, map, obj, music, help)?;
             game.deathseq = -1;
             game.completestop = false;
         }
@@ -271,7 +273,7 @@ impl Input {
                                     //We're teleporting! Yey!
                                     game.activetele = false;
                                     game.hascontrol = false;
-                                    music.fadeout(None);
+                                    music.fadeout(None, game);
 
                                     let player = obj.getplayer() as usize;
                                     if INBOUNDS_VEC!(player, obj.entities) {
@@ -296,7 +298,7 @@ impl Input {
                                     //We're teleporting! Yey!
                                     game.activetele = false;
                                     game.hascontrol = false;
-                                    music.fadeout(None);
+                                    music.fadeout(None, game);
 
                                     let player = obj.getplayer() as usize;
                                     if INBOUNDS_VEC!(player, obj.entities) {
@@ -430,7 +432,7 @@ impl Input {
             //Quick restart of time trial
             graphics.fademode = 2;
             game.completestop = true;
-            music.fadeout(None);
+            music.fadeout(None, game);
             game.quickrestartkludge = true;
         } else if game.intimetrial {
             //Do nothing if we're in a Time Trial but a fade animation is playing
@@ -462,23 +464,172 @@ impl Input {
             game.deathseq = 30;
         }
 
-        None
+        Ok(None)
     }
 
-    pub fn mapinput (&mut self) {
-        println!("DEADBEEF(input.rs): input::Input::mapinput is not implemented yet");
+    pub fn mapinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, music: &mut music::Music, map: &mut map::Map, screen_params: screen::ScreenParams, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) -> Result<Option<RenderResult>, i32> {
+        //TODO Mouse Input!
+        //game.mx = (mouseX / 2);
+        //game.my = (mouseY / 2);
+
+        game.press_left = false;
+        game.press_right = false;
+        game.press_action = false;
+        game.press_map = false;
+
+        if game.glitchrunnermode && graphics.fademode == 1 && graphics.menuoffset == 0 {
+            // Deliberate re-addition of the glitchy gamestate-based fadeout!
+
+            // First of all, detecting a black screen means if the glitchy fadeout
+            // gets interrupted but you're still on a black screen, opening a menu
+            // immediately quits you to the title. This has the side effect that if
+            // you accidentally press Esc during a cutscene when it's black, you'll
+            // immediately be quit and lose all your progress, but that's fair in
+            // glitchrunner mode.
+            // Also have to check graphics.menuoffset so this doesn't run every frame
+
+            // Have to close the menu in order to run gamestates
+            graphics.resumegamemode = true;
+            // Remove half-second delay
+            graphics.menuoffset = 250;
+
+            // Technically this was in <=2.2 as well
+            obj.removeallblocks();
+
+            if game.menupage >= 20 && game.menupage <= 21 {
+                game.state = 96;
+                game.statedelay = 0;
+            } else {
+                // Produces more glitchiness! Necessary for credits warp to work.
+                script.running = false;
+                graphics.textbox.clear();
+
+                game.state = 80;
+                game.statedelay = 0;
+            }
+        }
+
+        if game.fadetomenu && !game.glitchrunnermode {
+            if game.fadetomenudelay > 0 {
+                game.fadetomenudelay -= 1;
+            } else {
+                game.quittomenu(graphics, map, script, music, obj, screen_params);
+                music.play(6, map, game); //should be after game.quittomenu()
+                game.fadetomenu = false;
+            }
+        }
+
+        if game.fadetolab && !game.glitchrunnermode {
+            if game.fadetolabdelay > 0 {
+                game.fadetolabdelay -= 1;
+            } else {
+                game.returntolab(graphics, map, music, obj, help);
+                game.fadetolab = false;
+            }
+        }
+
+        if graphics.menuoffset == 0
+        && ((!game.glitchrunnermode && !game.fadetomenu && game.fadetomenudelay <= 0 && !game.fadetolab && game.fadetolabdelay <= 0)
+        || graphics.fademode == 0) {
+            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::A) || key.isDownKeycode(Keycode::W) || key.controllerWantsLeft(true) {
+                game.press_left = true;
+            }
+            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::D) || key.isDownKeycode(Keycode::S) || key.controllerWantsRight(true) {
+                game.press_right = true;
+            }
+            if key.isDownKeycode(Keycode::Z) || key.isDownKeycode(Keycode::Space) || key.isDownKeycode(Keycode::V) || key.isDownVec(&game.controllerButton_flip) {
+                game.press_action = true;
+            }
+            if game.menupage < 12 || (game.menupage >= 30 && game.menupage <= 32) {
+                if key.isDownKeycode(Keycode::KpEnter) || key.isDownVec(&game.controllerButton_map) {
+                    game.press_map = true;
+                }
+
+                if key.isDown(27) && !game.mapheld {
+                    game.mapheld = true;
+                    if game.menupage < 9 {
+                        game.menupage = 30;
+                    } else if game.menupage < 12 {
+                        game.menupage = 32;
+                    } else {
+                        graphics.resumegamemode = true;
+                    }
+                    music.playef(11);
+                }
+            } else {
+                if key.isDownKeycode(Keycode::KpEnter) || key.isDown(27) || key.isDownVec(&game.controllerButton_map) {
+                    game.press_map = true;
+                }
+            }
+
+            //In the menu system, all keypresses are single taps rather than holds. Therefore this test has to be done for all presses
+            if !game.press_action && !game.press_left && !game.press_right {
+                game.jumpheld = false;
+            }
+            if !game.press_map && !key.isDown(27) {
+                game.mapheld = false;
+            }
+        } else {
+            game.mapheld = true;
+            game.jumpheld = true;
+        }
+
+        if !game.mapheld {
+            if game.press_map && game.menupage < 10 {
+                //Normal map screen, do transition later
+                graphics.resumegamemode = true;
+            }
+        }
+
+        if !game.jumpheld {
+            if game.press_action || game.press_left || game.press_right || game.press_map {
+                game.jumpheld = true;
+            }
+
+            if script.running && game.menupage == 3 {
+                // Force the player to stay in the SAVE tab while in a cutscene
+            } else if game.press_left {
+                game.menupage -= 1;
+            } else if game.press_right {
+                game.menupage += 1;
+            }
+
+            if game.press_action {
+                mapmenuactionpress(game, graphics, map, music, obj, help, screen_params);
+            }
+
+            if game.menupage < 0 { game.menupage = 3; }
+            if game.menupage > 3 && game.menupage < 9 { game.menupage = 0; }
+
+            if game.menupage == 9 { game.menupage = 11; }
+            if game.menupage == 12 { game.menupage = 10; }
+
+            if game.menupage == 19 { game.menupage = 21; }
+            if game.menupage == 22 { game.menupage = 20; }
+
+            if game.menupage == 29 { game.menupage = 32; }
+            if game.menupage == 33 { game.menupage = 30; }
+        }
+
+        Ok(None)
     }
 
-    pub fn teleporterinput (&mut self) {
+    pub fn teleporterinput (&mut self) -> Result<Option<RenderResult>, i32> {
         println!("DEADBEEF(input.rs): input::Input::teleporterinput is not implemented yet");
+
+        Ok(None)
     }
 
-    pub fn gamecompleteinput (&mut self) {
+    pub fn gamecompleteinput (&mut self) -> Result<Option<RenderResult>, i32> {
         println!("DEADBEEF(input.rs): input::Input::gamecompleteinput is not implemented yet");
+
+        Ok(None)
     }
 
-    pub fn gamecompleteinput2 (&mut self) {
+    pub fn gamecompleteinput2 (&mut self) -> Result<Option<RenderResult>, i32> {
         println!("DEADBEEF(input.rs): input::Input::gamecompleteinput2 is not implemented yet");
+
+        Ok(None)
     }
 
     // @sx: previously static methods
@@ -929,9 +1080,9 @@ impl Input {
                             let area = map.area(game.roomx, game.roomy);
                             if area == 3 || area == 11 {
                                 if screen.render.graphics.setflipmode {
-                                    music.play(9); // ecroF evitisoP
+                                    music.play(9, map, game); // ecroF evitisoP
                                 } else {
-                                    music.play(2); // Positive Force
+                                    music.play(2, map, game); // Positive Force
                                 }
                             }
                         }
@@ -1029,7 +1180,7 @@ impl Input {
                         music.usingmmmmmm = !music.usingmmmmmm;
                         music.playef(11);
                         if music.currentsong > -1 {
-                            music.play(music.currentsong);
+                            music.play(music.currentsong, map, game);
                         }
                         game.savestatsandsettings_menu();
                     },
@@ -1566,13 +1717,13 @@ impl Input {
                 match game.currentmenuoption {
                     0 => {
                         music.playef(11);
-                        music.play(6);
+                        music.play(6, map, game);
                         game.createmenu(MenuName::playint1, None, &mut screen.render.graphics, music, screen_params, map);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         music.playef(11);
-                        music.play(6);
+                        music.play(6, map, game);
                         game.createmenu(MenuName::playint2, None, &mut screen.render.graphics, music, screen_params, map);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
@@ -1642,7 +1793,7 @@ impl Input {
             MenuName::gameover2 => {
                 //back
                 music.playef(11);
-                music.play(6);
+                music.play(6, map, game);
                 game.returntomenu(MenuName::playmodes);
                 map.nexttowercolour(&mut screen.render.graphics);
             },
@@ -1693,7 +1844,7 @@ impl Input {
                     0 => {
                         //back
                         music.playef(11);
-                        music.play(6);
+                        music.play(6, map, game);
                         game.returntomenu(MenuName::timetrials);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
@@ -1729,7 +1880,7 @@ impl Input {
                 };
             },
             MenuName::gamecompletecontinue | MenuName::nodeathmodecomplete2 => {
-                music.play(6);
+                music.play(6, map, game);
                 music.playef(11);
                 game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
                 map.nexttowercolour(&mut screen.render.graphics);
@@ -1916,6 +2067,116 @@ fn slidermodeinput() {
 }
 
 // static void mapmenuactionpress(void)
-fn mapmenuactionpress() {
-    println!("DEADBEEF(input.rs): input::mapmenuactionpress is not implemented yet");
+fn mapmenuactionpress(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass, screen_params: ScreenParams) {
+    match game.menupage {
+        1 => {
+            if obj.flags[67] && !game.inspecial() && !map.custommode {
+                //Warp back to the ship
+                graphics.resumegamemode = true;
+
+                game.teleport_to_x = 2;
+                game.teleport_to_y = 11;
+
+                //trace(game.recordstring);
+                //We're teleporting! Yey!
+                game.activetele = false;
+                game.hascontrol = false;
+
+                let i = obj.getplayer() as usize;
+                if INBOUNDS_VEC!(i, obj.entities) {
+                    obj.entities[i].colour = 102;
+                }
+
+                //which teleporter script do we use? it depends on the companion!
+                game.state = 4000;
+                game.statedelay = 0;
+            }
+        },
+        3 => {
+            if !game.gamesaved && !game.gamesavefailed && !game.inspecial() {
+                game.flashlight = 5;
+                game.screenshake = 10;
+                music.playef(18);
+
+                game.savetime = game.timestring(help);
+                game.savearea = map.currentarea(map.area(game.roomx, game.roomy)).to_string();
+                game.savetrinkets = game.trinkets(obj);
+
+                if game.roomx >= 102 && game.roomx <= 104 && game.roomy >= 110 && game.roomy <= 111 {
+                    game.savearea = "The Ship".to_string();
+                }
+
+                let success =
+                // #if !defined(NO_CUSTOM_LEVELS)
+                // if map.custommodeforreal {
+                //     game.customsavequick(ed.ListOfMetaData[game.playcustomlevel].filename)
+                // }
+                // else
+                // #endif
+                {
+                    game.savequick()
+                };
+                game.gamesaved = success;
+                game.gamesavefailed = !success;
+            }
+        },
+        10 => {
+            //return to pause menu
+            music.playef(11);
+            game.menupage = 32;
+        },
+        11 => {
+            //quit to menu
+
+            //Kill contents of offset render buffer, since we do that for some reason.
+            //This fixes an apparent frame flicker.
+            graphics_util::ClearSurface(&mut graphics.buffers.tempBuffer);
+            graphics.fademode = 2;
+            music.fadeout(None, game);
+            map.nexttowercolour(graphics);
+            if !game.glitchrunnermode {
+                game.fadetomenu = true;
+                game.fadetomenudelay = 16;
+            }
+        },
+        20 => {
+            //return to game
+            graphics.resumegamemode = true;
+        },
+        21 => {
+            //quit to menu
+            game.swnmode = false;
+            graphics.fademode = 2;
+            music.fadeout(None, game);
+            if !game.glitchrunnermode {
+                game.fadetolab = true;
+                game.fadetolabdelay = 16;
+            }
+        },
+        30 => {
+            // Return to game
+            graphics.resumegamemode = true;
+            music.playef(11);
+        },
+        31 => {
+            // Graphic options and game options
+            music.playef(11);
+            game.gamestate = GameState::TITLEMODE;
+            graphics.flipmode = false;
+            game.ingame_titlemode = true;
+            graphics.ingame_fademode = graphics.fademode;
+            graphics.fademode = 0;
+
+            // Set this before we create the menu
+            game.kludge_ingametemp = game.currentmenuname;
+            game.createmenu(MenuName::options, None, graphics, music, screen_params, map);
+            map.nexttowercolour(graphics);
+        },
+        32 => {
+            // Go to quit prompt
+            music.playef(11);
+            game.menupage = 10;
+        },
+        _ => eprintln!("unknown menupage {}", game.menupage),
+    };
 }

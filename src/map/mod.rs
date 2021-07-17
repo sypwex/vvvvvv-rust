@@ -1,4 +1,4 @@
-use crate::{INBOUNDS_ARR, INBOUNDS_VEC, entity, game, music, screen::render::graphics::{self, towerbg}, script::{self, scripts}, utility_class};
+use crate::{INBOUNDS_ARR, INBOUNDS_VEC, entity, game, maths, music, screen::render::graphics::{self, towerbg}, script::{self, scripts}, utility_class};
 mod towerclass;
 mod otherlevel;
 mod spacestation;
@@ -50,9 +50,12 @@ pub struct Map {
     pub warpx: bool,
     pub warpy: bool,
 
+    //Teleporters and Trinkets on the map
     pub showteleporters: bool,
     pub showtargets: bool,
     pub showtrinkets: bool,
+    pub teleporters: Vec<maths::point>,
+    pub shinytrinkets: Vec<maths::point>,
 
     pub finalmode: bool,
     pub finalstretch: bool,
@@ -66,7 +69,7 @@ pub struct Map {
     pub resumedelay: i32,
     pub minitowermode: bool,
 
-    specialnames: Vec<String>, // size of 8
+    specialnames: [&'static str;8], // size of 8
     glitchmode: i32,
     glitchdelay: i32,
     pub glitchname: String,
@@ -81,15 +84,15 @@ pub struct Map {
 
     pub custommode: bool,
     pub custommodeforreal: bool,
-    customwidth: i32,
-    customheight: i32,
+    pub customwidth: i32,
+    pub customheight: i32,
 
-    custommmxoff: i32,
-    custommmyoff: i32,
-    custommmxsize: i32,
-    custommmysize: i32,
+    pub custommmxoff: i32,
+    pub custommmyoff: i32,
+    pub custommmxsize: i32,
+    pub custommmysize: i32,
 
-    customzoom: i32,
+    pub customzoom: i32,
     pub customshowmm: bool,
 
     pub rcol: i32,
@@ -100,7 +103,7 @@ pub struct Map {
     pub cameramode: i32,
 
     pub roomname: String,
-    hiddenname: String,
+    pub hiddenname: String,
 
     //Roomtext
     pub roomtexton: bool,
@@ -128,9 +131,9 @@ impl Map {
     pub fn new(graphics: &mut graphics::Graphics) -> Self {
         let mut vmult: [i32; 30] = [0; 30];
         //We init the lookup table:
-	    for i in 0..30 {
-		    vmult[i] = i as i32 * 40;
-	    }
+        for i in 0..30 {
+            vmult[i] = i as i32 * 40;
+        }
 
         let mut map = Map {
             roomdeaths: [0i32; 20*20],
@@ -150,9 +153,12 @@ impl Map {
             warpy: false,
             extrarow: 0,
 
+            //Teleporters and Trinkets on the map
             showteleporters: false,
             showtargets: false,
             showtrinkets: false,
+            teleporters: vec![],
+            shinytrinkets: vec![],
 
             finalmode: false,
             finalstretch: false,
@@ -166,7 +172,7 @@ impl Map {
             resumedelay: 0,
             minitowermode: false,
 
-            specialnames: Vec::new(),
+            specialnames: ["";8],
             glitchmode: 0,
             glitchdelay: 0,
             glitchname: String::new(),
@@ -236,12 +242,14 @@ impl Map {
 
     // void mapclass::setteleporter(int x, int y)
     pub fn setteleporter(&mut self, x: i32, y: i32) {
-        println!("DEADBEEF: mapclass::setteleporter() method not implemented yet");
+        let temp = maths::point { x, y };
+        self.teleporters.push(temp);
     }
 
     // void mapclass::settrinket(int x, int y)
     pub fn settrinket(&mut self, x: i32, y: i32) {
-        println!("DEADBEEF: mapclass::settrinket() method not implemented yet");
+        let temp = maths::point { x, y };
+        self.shinytrinkets.push(temp);
     }
 
     // void mapclass::resetmap(void)
@@ -251,12 +259,125 @@ impl Map {
 
     // void mapclass::resetnames(void)
     pub fn resetnames (&mut self) {
+        //Reset all the special names
+        self.specialnames[0] = "Rear Window";
+        self.specialnames[1] = "On the Waterfront";
+        self.specialnames[2] = "The Untouchables";
+        self.specialnames[3] = "Television Newsveel";
+        self.specialnames[4] = "Vwitched";
+        self.specialnames[5] = "Gvnsmoke";
+        self.specialnames[6] = "Please enjoy these repeats";
+        self.specialnames[7] = "Try Jiggling the Antenna";
 
+        self.glitchmode = 0;
+        self.glitchdelay = 0;
     }
 
     // void mapclass::transformname(int t)
     pub fn transformname(&mut self, t: i32) {
-        println!("DEADBEEF: mapclass::transformname() method not implemented yet");
+        //transform special names into new ones, one step at a time
+        self.glitchdelay -= 1;
+
+        if self.glitchdelay <= 0 {
+            match t {
+                3 => {
+                    //Television Newsveel -> The 9 O'Clock News
+                    if self.specialnames[3] == "Television Newsveel" {
+                        self.specialnames[3] = "Television Newsvel";
+                    } else if self.specialnames[3] == "Television Newsvel" {
+                        self.specialnames[3] = "TelevisvonvNewsvel";
+                    } else if self.specialnames[3] == "TelevisvonvNewsvel" {
+                        self.specialnames[3] = "TvlvvvsvonvNevsvel";
+                    } else if self.specialnames[3] == "TvlvvvsvonvNevsvel" {
+                        self.specialnames[3] = "vvvvvvsvovvNe svel";
+                    } else if self.specialnames[3] == "vvvvvvsvovvNe svel" {
+                        self.specialnames[3] = "vhv vvv'vvovv vevl";
+                    } else if self.specialnames[3] == "vhv vvv'vvovv vevl" {
+                        self.specialnames[3] = "vhv V v'Cvovv vewv";
+                    } else if self.specialnames[3] == "vhv V v'Cvovv vewv" {
+                        self.specialnames[3] = "vhe 9 v'Cvovv vewv";
+                    } else if self.specialnames[3] == "vhe 9 v'Cvovv vewv" {
+                        self.specialnames[3] = "vhe 9 v'Cvovv Newv";
+                    } else if self.specialnames[3] == "vhe 9 v'Cvovv Newv" {
+                        self.specialnames[3] = "The 9 O'Cvovk Newv";
+                    } else if self.specialnames[3] == "The 9 O'Cvovk Newv" {
+                        self.specialnames[3] = "The 9 O'Clock News";
+                    }
+                },
+                4 => {
+                    //Vwitched -> Dial M for Murder
+                    if self.specialnames[4] == "Vwitched" {
+                        self.specialnames[4] = "Vwitvhed";
+                    } else if self.specialnames[4] == "Vwitvhed" {
+                        self.specialnames[4] = "vVwivcvedv";
+                    } else if self.specialnames[4] == "vVwivcvedv" {
+                        self.specialnames[4] = "vvvwMvcvMdvv";
+                    } else if self.specialnames[4] == "vvvwMvcvMdvv" {
+                        self.specialnames[4] = "DvvvwMvfvvMdvvv";
+                    } else if self.specialnames[4] == "DvvvwMvfvvMdvvv" {
+                        self.specialnames[4] = "Dvav Mvfvr Mdvvvv";
+                    } else if self.specialnames[4] == "Dvav Mvfvr Mdvvvv" {
+                        self.specialnames[4] = "Diav M for Mdrver";
+                    } else if self.specialnames[4] == "Diav M for Mdrver" {
+                        self.specialnames[4] = "Dial M for Murder";
+                    }
+                },
+                5 => {
+                    //Gvnsmoke -> Gunsmoke 1966
+                    if self.specialnames[5] == "Gvnsmoke" {
+                        self.specialnames[5] = "Gvnsmove";
+                    } else if self.specialnames[5] == "Gvnsmove" {
+                        self.specialnames[5] = "Gvnvmovevv";
+                    } else if self.specialnames[5] == "Gvnvmovevv" {
+                        self.specialnames[5] = "Gunvmove1vv6";
+                    } else if self.specialnames[5] == "Gunvmove1vv6" {
+                        self.specialnames[5] = "Vunsmoke 19v6";
+                    } else if self.specialnames[5] == "Vunsmoke 19v6" {
+                        self.specialnames[5] = "Gunsmoke 1966";
+                    }
+                },
+                6 => {
+                    //Please enjoy these repeats -> In the Margins
+                    if self.specialnames[6] == "Please enjoy these repeats" {
+                        self.specialnames[6] = "Please envoy theve repeats";
+                    } else if self.specialnames[6] == "Please envoy theve repeats" {
+                        self.specialnames[6] = "Plse envoy tse rvpvas";
+                    } else if self.specialnames[6] == "Plase envoy these rvpeas" {
+                        self.specialnames[6] = "Plse envoy tse rvpvas";
+                    } else if self.specialnames[6] == "Plse envoy tse rvpvas" {
+                        self.specialnames[6] = "Vl envoy te rvevs";
+                    } else if self.specialnames[6] == "Vl envoy te rvevs" {
+                        self.specialnames[6] = "Vv evo tv vevs";
+                    } else if self.specialnames[6] == "Vv evo tv vevs" {
+                        self.specialnames[6] = "Iv vhv Mvrvivs";
+                    } else if self.specialnames[6] == "Iv vhv Mvrvivs" {
+                        self.specialnames[6] = "In the Margins";
+                    }
+                },
+                7 => {
+                    //Try Jiggling the Antenna -> Heaven's Gate
+                    if self.specialnames[7] == "Try Jiggling the Antenna" {
+                        self.specialnames[7] = "Try Viggling the Antenna";
+                    } else if self.specialnames[7] == "Try Viggling the Antenna" {
+                        self.specialnames[7] = "TryJivglvng theAvtevna";
+                    } else if self.specialnames[7] == "TryJivglvng theAvtevna" {
+                        self.specialnames[7] = "Tvvivglvng thAvtvvv";
+                    } else if self.specialnames[7] == "Tvvivglvng thAvtvvv" {
+                        self.specialnames[7] = "Vvvgglvnv tvnvva";
+                    } else if self.specialnames[7] == "Vvvgglvnv tvnvva" {
+                        self.specialnames[7] = "Vvavvnvs vvtv";
+                    } else if self.specialnames[7] == "Vvavvnvs vvtv" {
+                        self.specialnames[7] = "Veavvn's Gvte";
+                    } else if self.specialnames[7] == "Veavvn's Gvte" {
+                        self.specialnames[7] = "Heaven's Gate";
+                    }
+                },
+                _ => eprintln!("warning: unknown transformname index {}", t),
+            }
+            self.glitchdelay = 5;
+        } else {
+            self.glitchdelay -= 1;
+        }
     }
 
     // std::string mapclass::getglitchname(int x, int y)
@@ -266,8 +387,52 @@ impl Map {
     }
 
     // void mapclass::initmapdata(void)
-    pub fn initmapdata (&mut self) {
+    pub fn initmapdata(&mut self) {
+        if self.custommode {
+            self.initcustommapdata();
+            return;
+        }
 
+        self.teleporters.clear();
+        self.shinytrinkets.clear();
+
+        //Set up static map information like teleporters and shiny trinkets.
+        self.setteleporter(0, 0);
+        self.setteleporter(0, 16);
+        self.setteleporter(2, 4);
+        self.setteleporter(2, 11);
+        self.setteleporter(7, 9);
+        self.setteleporter(7, 15);
+        self.setteleporter(8, 11);
+        self.setteleporter(10, 5);
+        self.setteleporter(11, 4);
+        self.setteleporter(13, 2);
+        self.setteleporter(13, 8);
+        self.setteleporter(14, 19);
+        self.setteleporter(15, 0);
+        self.setteleporter(17, 12);
+        self.setteleporter(17, 17);
+        self.setteleporter(18, 1);
+        self.setteleporter(18, 7);
+
+        self.settrinket(14, 4);
+        self.settrinket(13, 6);
+        self.settrinket(11, 12);
+        self.settrinket(15, 12);
+        self.settrinket(14, 11);
+        self.settrinket(18, 14);
+        self.settrinket(11, 7);
+        self.settrinket(9, 2);
+        self.settrinket(9, 16);
+        self.settrinket(2, 18);
+        self.settrinket(7, 18);
+        self.settrinket(6, 1);
+        self.settrinket(17, 3);
+        self.settrinket(10, 19);
+        self.settrinket(5, 15);
+        self.settrinket(1, 10);
+        self.settrinket(3, 2);
+        self.settrinket(10, 8);
     }
 
     // void mapclass::initcustommapdata(void)
@@ -322,14 +487,14 @@ impl Map {
     }
 
     // void mapclass::setcol(TowerBG& bg_obj, const int r1, const int g1, const int b1 , const int r2, const int g2, const int b2, const int c)
-    fn setcol (bg_obj: &mut towerbg::TowerBG, r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32, check: i32) {
+    fn setcol(bg_obj: &mut towerbg::TowerBG, r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32, check: i32) {
         bg_obj.r = Map::intpol(r1, r2, check / 5);
         bg_obj.g = Map::intpol(g1, g2, check / 5);
         bg_obj.b = Map::intpol(b1, b2, check / 5);
     }
 
     // void mapclass::updatebgobj(TowerBG& bg_obj)
-    fn updatebgobj (bg_obj: &mut towerbg::TowerBG) {
+    fn updatebgobj(bg_obj: &mut towerbg::TowerBG) {
         let check = bg_obj.colstate % 5; //current state of phase
         let cmode = (bg_obj.colstate - check) / 5; //current colour transition;
 
@@ -467,8 +632,12 @@ impl Map {
 
     // bool mapclass::isexplored(const int rx, const int ry)
     pub fn isexplored(&mut self, rx: i32, ry: i32) -> bool {
-        println!("DEADBEEF: mapclass::isexplored() method not implemented yet");
-        false
+        let roomnum = (rx + ry * 20) as usize;
+        if INBOUNDS_ARR!(roomnum, self.explored) {
+            self.explored[roomnum]
+        } else {
+            false
+        }
     }
 
     // void mapclass::setexplored(const int rx, const int ry, const bool status)
@@ -579,7 +748,7 @@ impl Map {
             if game.intimetrial {
                 if game.roomx == 46 && game.roomy == 54 {
                     //Final level remix
-                    music.niceplay(15);
+                    music.niceplay(15, game);
                 }
             }
         }
@@ -607,53 +776,53 @@ impl Map {
 
             //Alright, change music depending on where we are:
             //Tower
-            if game.roomx == 107 && game.roomy == 106 { music.niceplay(4); }
-            if game.roomx == 107 && game.roomy == 107 { music.niceplay(4); }
-            if game.roomx == 107 && game.roomy == 108 { music.niceplay(4); }
-            if game.roomx == 107 && game.roomy == 109 { music.niceplay(4); }
+            if game.roomx == 107 && game.roomy == 106 { music.niceplay(4, game); }
+            if game.roomx == 107 && game.roomy == 107 { music.niceplay(4, game); }
+            if game.roomx == 107 && game.roomy == 108 { music.niceplay(4, game); }
+            if game.roomx == 107 && game.roomy == 109 { music.niceplay(4, game); }
             if game.roomx == 108 && game.roomy == 109 {
                 if graphics.setflipmode {
-                    music.niceplay(9);
+                    music.niceplay(9, game);
                 } else {
-                    music.niceplay(2);
+                    music.niceplay(2, game);
                 }
             }
             if game.roomx == 109 {
                 if graphics.setflipmode {
-                    music.niceplay(9);
+                    music.niceplay(9, game);
                 } else {
-                    music.niceplay(2);
+                    music.niceplay(2, game);
                 }
             }
             //Warp Zone
-            if game.roomx == 112 && game.roomy == 101 { music.niceplay(4); }
-            if game.roomx == 113 && game.roomy == 101 { music.niceplay(4); }
-            if game.roomx == 113 && game.roomy == 102 { music.niceplay(4); }
-            if game.roomx == 114 && game.roomy == 101 { music.niceplay(12); }
-            if game.roomx == 115 && game.roomy == 101 { music.niceplay(12); }
-            if game.roomx == 115 && game.roomy == 102 { music.niceplay(12); }
+            if game.roomx == 112 && game.roomy == 101 { music.niceplay(4, game); }
+            if game.roomx == 113 && game.roomy == 101 { music.niceplay(4, game); }
+            if game.roomx == 113 && game.roomy == 102 { music.niceplay(4, game); }
+            if game.roomx == 114 && game.roomy == 101 { music.niceplay(12, game); }
+            if game.roomx == 115 && game.roomy == 101 { music.niceplay(12, game); }
+            if game.roomx == 115 && game.roomy == 102 { music.niceplay(12, game); }
             //Lab
-            if game.roomx == 101 && game.roomy == 115 { music.niceplay(4); }
-            if game.roomx == 100 && game.roomy == 115 { music.niceplay(4); }
-            if game.roomx == 101 && game.roomy == 116 { music.niceplay(4); }
-            if game.roomx == 100 && game.roomy == 116 { music.niceplay(4); }
-            if game.roomx == 102 && game.roomy == 116 { music.niceplay(3); }
-            if game.roomx == 102 && game.roomy == 117 { music.niceplay(3); }
-            if game.roomx == 101 && game.roomy == 117 { music.niceplay(3); }
+            if game.roomx == 101 && game.roomy == 115 { music.niceplay(4, game); }
+            if game.roomx == 100 && game.roomy == 115 { music.niceplay(4, game); }
+            if game.roomx == 101 && game.roomy == 116 { music.niceplay(4, game); }
+            if game.roomx == 100 && game.roomy == 116 { music.niceplay(4, game); }
+            if game.roomx == 102 && game.roomy == 116 { music.niceplay(3, game); }
+            if game.roomx == 102 && game.roomy == 117 { music.niceplay(3, game); }
+            if game.roomx == 101 && game.roomy == 117 { music.niceplay(3, game); }
             //Space Station
             if game.intimetrial {
-                if game.roomx == 111 && game.roomy == 112 { music.niceplay(1); }
-                if game.roomx == 111 && game.roomy == 113 { music.niceplay(1); }
-                if game.roomx == 112 && game.roomy == 114 { music.niceplay(1); }
-                if game.roomx == 112 && game.roomy == 115 { music.niceplay(1); }
+                if game.roomx == 111 && game.roomy == 112 { music.niceplay(1, game); }
+                if game.roomx == 111 && game.roomy == 113 { music.niceplay(1, game); }
+                if game.roomx == 112 && game.roomy == 114 { music.niceplay(1, game); }
+                if game.roomx == 112 && game.roomy == 115 { music.niceplay(1, game); }
             } else {
-                if game.roomx == 111 && game.roomy == 112 { music.niceplay(1); }
-                if game.roomx == 111 && game.roomy == 113 { music.niceplay(1); }
-                if game.roomx == 112 && game.roomy == 114 { music.niceplay(4); }
-                if game.roomx == 112 && game.roomy == 115 { music.niceplay(4); }
+                if game.roomx == 111 && game.roomy == 112 { music.niceplay(1, game); }
+                if game.roomx == 111 && game.roomy == 113 { music.niceplay(1, game); }
+                if game.roomx == 112 && game.roomy == 114 { music.niceplay(4, game); }
+                if game.roomx == 112 && game.roomy == 115 { music.niceplay(4, game); }
             }
             //Leaving the Ship
-            if game.roomx == 104 && game.roomy == 112 { music.niceplay(4); }
+            if game.roomx == 104 && game.roomy == 112 { music.niceplay(4, game); }
         }
         // @sx: looks like orphaned code, because variable will be redefined with another value later without being used
         // let temp = rx + (ry * 100);
@@ -723,9 +892,22 @@ impl Map {
     }
 
     // std::string mapclass::currentarea(int t)
-    pub fn  method(&mut self, t: i32) -> &str {
-        println!("DEADBEEF: mapclass() method not implemented yet");
-        &""
+    pub fn currentarea(&mut self, t: i32) -> &str {
+        match t {
+            0 => "Dimension VVVVVV",
+            1 => "Dimension VVVVVV",
+            2 => "Laboratory",
+            3 => "The Tower",
+            4 => "Warp Zone",
+            5 => "Space Station",
+            6 => "Outside Dimension VVVVVV",
+            7 => "Outside Dimension VVVVVV",
+            8 => "Outside Dimension VVVVVV",
+            9 => "Outside Dimension VVVVVV",
+            10 => "Outside Dimension VVVVVV",
+            11 => "The Tower",
+            _ => "???",
+        }
     }
 
     // void mapclass::loadlevel(int rx, int ry)
@@ -1525,11 +1707,11 @@ impl Map {
     // void mapclass::twoframedelayfix(void)
     pub fn twoframedelayfix(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) {
         // Fixes the two-frame delay in custom levels that use scripts to spawn an entity upon room load.
-	    // Because when the room loads and newscript is set to run, newscript has already ran for that frame,
-	    // and when the script gets loaded script.run() has already ran for that frame, too.
-	    // A bit kludge-y, but it's the least we can do without changing the frame ordering.
+        // Because when the room loads and newscript is set to run, newscript has already ran for that frame,
+        // and when the script gets loaded script.run() has already ran for that frame, too.
+        // A bit kludge-y, but it's the least we can do without changing the frame ordering.
 
-	    if game.glitchrunnermode || !self.custommode || game.deathseq != -1 {
+        if game.glitchrunnermode || !self.custommode || game.deathseq != -1 {
             return;
         }
 

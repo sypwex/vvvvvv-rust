@@ -1427,7 +1427,7 @@ obj.createentity(40, 88, 10, Some(1), Some(6020), None, None, None, None, game);
                 return contents;
             },
             t if t == rn!(2, 10) => {
-		        if obj.altstates == 0 {
+                if obj.altstates == 0 {
                     let contents = [
                         113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,
                         113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,113,
@@ -2018,7 +2018,7 @@ obj.createentity(248, 168, 10, Some(1), Some(9030), None, None, None, None, game
                 ];
 
 
-obj.createentity(88, 80, 21, Some(1), None, None, None, None, None, game); //Terminal	// UU Brothers
+obj.createentity(88, 80, 21, Some(1), None, None, None, None, None, game); //Terminal // UU Brothers
                 obj.createblock(5, 88 - 4, 80, 20, 16, Some(25), None);
 
                 if game.stat_trinkets >= 5 {
@@ -7971,7 +7971,7 @@ obj.createentity(168, 88, 10, Some(1), Some(17190), None, None, None, None, game
 
             t if t == rn!(17, 6) => {
                 //Phase 1
-		        if obj.altstates == 1 {
+                if obj.altstates == 1 {
                     let contents = [
                         286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,
                         286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,286,
