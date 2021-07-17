@@ -37,7 +37,7 @@ pub struct Game {
     pub state: i32,
     pub statedelay: i32,
 
-    glitchrunkludge: bool,
+    pub glitchrunkludge: bool,
 
     usingmmmmmm: i32,
 
@@ -45,7 +45,7 @@ pub struct Game {
     pub prevgamestate: GameState, //only used sometimes
     pub hascontrol: bool,
     pub jumpheld: bool,
-    jumppressed: i32,
+    pub jumppressed: i32,
     pub gravitycontrol: i32,
 
     pub muted: bool,
@@ -58,7 +58,7 @@ pub struct Game {
 
     // Menu interaction stuff
     pub mapheld: bool,
-    menupage: i32,
+    pub menupage: i32,
     pub lastsaved: i32,
     pub deathcounts: i32,
     pub silence_settings_error: bool,
@@ -210,7 +210,7 @@ pub struct Game {
     pub edteleportent: i32,
     pub completestop: bool,
 
-    inertia: f32,
+    pub inertia: f32,
 
     pub companion: i32,
     pub roomchange: bool,
@@ -252,7 +252,7 @@ pub struct Game {
     stretchMode: i32,
     controllerSensitivity: i32,
 
-    quickrestartkludge: bool,
+    pub quickrestartkludge: bool,
 
     // Custom stuff
     // customscript: String[50],
@@ -1598,8 +1598,61 @@ impl Game {
     }
 
     // void Game::deathsequence(void);
-    pub fn deathsequence(&mut self) {
-        println!("DEADBEEF: Game::deathsequence() method not implemented yet");
+    pub fn deathsequence(&mut self, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass) {
+        let i = if self.supercrewmate && self.scmhurt {
+            obj.getscm()
+        } else {
+            obj.getplayer()
+        } as usize;
+
+        if INBOUNDS_VEC!(i, obj.entities) {
+            obj.entities[i].colour = 1;
+            obj.entities[i].invis = false;
+        }
+
+        if self.deathseq == 30 {
+            if self.nodeathmode {
+                music.fadeout(None);
+                self.gameoverdelay = 60;
+            }
+
+            self.deathcounts += 1;
+            music.playef(2);
+            if INBOUNDS_VEC!(i, obj.entities) {
+                obj.entities[i].invis = true;
+            }
+
+            if map.finalmode {
+                if self.roomx - 41 >= 0 && self.roomx - 41 < 20 && self.roomy - 48 >= 0 && self.roomy - 48 < 20 {
+                    let i = (self.roomx - 41 + (20 * (self.roomy - 48))) as usize;
+                    map.roomdeathsfinal[i] += 1;
+                    self.currentroomdeaths = map.roomdeathsfinal[i];
+                }
+            } else {
+                if self.roomx - 100 >= 0 && self.roomx - 100 < 20 && self.roomy - 100 >= 0 && self.roomy - 100 < 20 {
+                    let i = (self.roomx - 100 + (20*(self.roomy - 100))) as usize;
+                    map.roomdeaths[i] += 1;
+                    self.currentroomdeaths = map.roomdeaths[i];
+                }
+            }
+        }
+
+        if INBOUNDS_VEC!(i, obj.entities) {
+            if self.deathseq == 25 { obj.entities[i].invis = true; }
+            if self.deathseq == 20 { obj.entities[i].invis = true; }
+            if self.deathseq == 16 { obj.entities[i].invis = true; }
+            if self.deathseq == 14 { obj.entities[i].invis = true; }
+            if self.deathseq == 12 { obj.entities[i].invis = true; }
+            if self.deathseq  < 10 { obj.entities[i].invis = true; }
+        }
+
+        if !self.nodeathmode {
+            if INBOUNDS_VEC!(i, obj.entities) && self.deathseq <= 1 {
+                obj.entities[i].invis = false;
+            }
+        } else {
+            self.gameoverdelay -= 1;
+        }
     }
 
     // void Game::customloadquick(std::string savfile);
@@ -1634,8 +1687,21 @@ impl Game {
     }
 
     // void Game::mapmenuchange(const int newgamestate);
-    pub fn mapmenuchange(&mut self, newgamestate: GameState) {
-        println!("DEADBEEF: Game::mapmenuchange() method not implemented yet");
+    pub fn mapmenuchange(&mut self, newgamestate: GameState, graphics: &mut graphics::Graphics, map: &mut map::Map) {
+        self.prevgamestate = self.gamestate;
+        self.gamestate = newgamestate;
+        graphics.resumegamemode = false;
+        self.mapheld = true;
+
+        if self.prevgamestate == GameState::GAMEMODE {
+            graphics.menuoffset = 240;
+            if map.extrarow != 0 {
+                graphics.menuoffset -= 10;
+            }
+        } else {
+            graphics.menuoffset = 0;
+        }
+        graphics.oldmenuoffset = graphics.menuoffset;
     }
 
     // int Game::get_timestep(void);

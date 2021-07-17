@@ -1,6 +1,16 @@
-use crate::{INBOUNDS_VEC, game, map, maths, music, screen::render::graphics, utility_class::{self, UtilityClass}};
+use crate::{INBOUNDS_ARR, INBOUNDS_VEC, game, map, maths, music, screen::render::graphics::{self, graphics_util}, script, utility_class::{self, UtilityClass}};
 mod ent;
 mod blockv;
+
+#[derive(PartialEq)]
+pub enum EntityEnum {
+    BLOCK = 0,
+    TRIGGER = 1,
+    DAMAGE = 2,
+    DIRECTIONAL = 3,
+    SAFE = 4,
+    ACTIVITY = 5
+}
 
 pub struct EntityClass {
     pub entities: Vec<ent::EntClass>,
@@ -14,7 +24,7 @@ pub struct EntityClass {
     pub collect: [bool; 100],
     pub customcollect: [bool; 100],
 
-    platformtile: i32,
+    pub platformtile: i32,
     pub vertplatforms: bool,
     pub horplatforms: bool,
 
@@ -33,7 +43,7 @@ pub struct EntityClass {
 
     //Custom stuff
     customenemy: i32,
-    customplatformtile: i32,
+    pub customplatformtile: i32,
     pub customwarpmode: bool,
     pub customwarpmodevon: bool,
     pub customwarpmodehon: bool,
@@ -95,6 +105,26 @@ impl<'a> EntityClass {
         self.flags = [false; 100];
     }
 
+    // void fatal_top(void)
+    pub fn fatal_top(&mut self) {
+        self.createblock(EntityEnum::DAMAGE as i32, -8, -8, 384, 16, None, None);
+    }
+
+    // void fatal_bottom(void)
+    pub fn fatal_bottom(&mut self) {
+        self.createblock(EntityEnum::DAMAGE as i32, -8, 224, 384, 16, None, None);
+    }
+
+    // void fatal_left(void)
+    pub fn fatal_left(&mut self) {
+        self.createblock(EntityEnum::DAMAGE as i32, -8, -8, 16, 260, None, None);
+    }
+
+    // void fatal_right(void)
+    pub fn fatal_right(&mut self) {
+        self.createblock(EntityEnum::DAMAGE as i32, 312, -8, 16, 260, None, None);
+    }
+
     // int entityclass::swncolour( int t )
     fn swncolour(&mut self, t: i32) -> i32 {
         println!("DEADBEEF: entityclass::swncolour() method not implemented yet");
@@ -119,12 +149,302 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::createblock( int t, int xp, int yp, int w, int h, int trig /*= 0*/, const std::string& script /*= ""*/ )
-    pub fn createblock(&mut self, t: i32, xp: i32, yp: i32, w: i32, h: i32, trig: Option<i32>, script: Option<String>) -> bool {
-        let trig = trig.unwrap_or(0);
+    pub fn createblock(&mut self, t: i32, xp: i32, yp: i32, w: i32, h: i32, trig: Option<i32>, script: Option<String>) {
+        let mut trig = trig.unwrap_or(0);
         let script = script.unwrap_or(String::new());
 
-        println!("DEADBEEF: entityclass::createblock() method not implemented yet");
-        false
+        self.k = self.blocks.len() as i32;
+        let blockptr = self.get_blockptr();
+        match t {
+            t if t == EntityEnum::BLOCK as i32 => {
+                //Block
+                self.blocks[blockptr].r#type = EntityEnum::BLOCK;
+                self.blocks[blockptr].xp = xp;
+                self.blocks[blockptr].yp = yp;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+            },
+            t if t == EntityEnum::TRIGGER as i32 => {
+                //Trigger
+                self.blocks[blockptr].r#type = EntityEnum::TRIGGER;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+                self.blocks[blockptr].trigger = trig;
+                self.blocks[blockptr].script = script;
+            },
+            t if t == EntityEnum::DAMAGE as i32 => {
+                //Damage
+                self.blocks[blockptr].r#type = EntityEnum::DAMAGE;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+            },
+            t if t == EntityEnum::DIRECTIONAL as i32 => {
+                //Directional
+                self.blocks[blockptr].r#type = EntityEnum::DIRECTIONAL;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+                self.blocks[blockptr].trigger = trig;
+            },
+            t if t == EntityEnum::SAFE as i32 => {
+                //Safe block
+                self.blocks[blockptr].r#type = EntityEnum::SAFE;
+                self.blocks[blockptr].xp = xp;
+                self.blocks[blockptr].yp = yp;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+            },
+            t if t == EntityEnum::ACTIVITY as i32 => {
+                //Activity Zone
+                self.blocks[blockptr].r#type = EntityEnum::ACTIVITY;
+                self.blocks[blockptr].wp = w;
+                self.blocks[blockptr].hp = h;
+                self.blocks[blockptr].rectset(xp, yp, w, h);
+
+                //Ok, each and every activity zone in the game is initilised here. "Trig" in this case is a variable that
+                //assigns all the details.
+                match trig {
+                    0 => {
+                        //testing zone
+                        self.blocks[blockptr].prompt = "Press ENTER to explode".to_string();
+                        self.blocks[blockptr].script = "intro".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 1;
+                    },
+                    1 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to talk to Violet".to_string();
+                        self.blocks[blockptr].script = "talkpurple".to_string();
+                        self.blocks[blockptr].setblockcolour("purple");
+                        trig = 0;
+                    },
+                    2 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to talk to Vitellary".to_string();
+                        self.blocks[blockptr].script = "talkyellow".to_string();
+                        self.blocks[blockptr].setblockcolour("yellow");
+                        trig = 0;
+                    },
+                    3 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to talk to Vermilion".to_string();
+                        self.blocks[blockptr].script = "talkred".to_string();
+                        self.blocks[blockptr].setblockcolour("red");
+                        trig = 0;
+                    },
+                    4 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to talk to Verdigris".to_string();
+                        self.blocks[blockptr].script = "talkgreen".to_string();
+                        self.blocks[blockptr].setblockcolour("green");
+                        trig = 0;
+                    },
+                    5 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to talk to Victoria".to_string();
+                        self.blocks[blockptr].script = "talkblue".to_string();
+                        self.blocks[blockptr].setblockcolour("blue");
+                        trig = 0;
+                    },
+                    6 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_station_1".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    7 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_1".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    8 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_2".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    9 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_3".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    10 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_4".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    11 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_5".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    12 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_outside_6".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    13 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_finallevel".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    14 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_station_2".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    15 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_station_3".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    16 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_station_4".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    17 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_warp_1".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    18 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_warp_2".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    19 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_lab_1".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    20 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_lab_2".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    21 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_secretlab".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    22 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_shipcomputer".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    23 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminals".to_string();
+                        self.blocks[blockptr].script = "terminal_radio".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    24 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "terminal_jukebox".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    25 => {
+                        self.blocks[blockptr].prompt = "Passion for Exploring".to_string();
+                        self.blocks[blockptr].script = "terminal_juke1".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    26 => {
+                        self.blocks[blockptr].prompt = "Pushing Onwards".to_string();
+                        self.blocks[blockptr].script = "terminal_juke2".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    27 => {
+                        self.blocks[blockptr].prompt = "Positive Force".to_string();
+                        self.blocks[blockptr].script = "terminal_juke3".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    28 => {
+                        self.blocks[blockptr].prompt = "Presenting VVVVVV".to_string();
+                        self.blocks[blockptr].script = "terminal_juke4".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    29 => {
+                        self.blocks[blockptr].prompt = "Potential for Anything".to_string();
+                        self.blocks[blockptr].script = "terminal_juke5".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    30 => {
+                        self.blocks[blockptr].prompt = "Predestined Fate".to_string();
+                        self.blocks[blockptr].script = "terminal_juke6".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    31 => {
+                        self.blocks[blockptr].prompt = "Pipe Dream".to_string();
+                        self.blocks[blockptr].script = "terminal_juke7".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    32 => {
+                        self.blocks[blockptr].prompt = "Popular Potpourri".to_string();
+                        self.blocks[blockptr].script = "terminal_juke8".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    33 => {
+                        self.blocks[blockptr].prompt = "Pressure Cooker".to_string();
+                        self.blocks[blockptr].script = "terminal_juke9".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    34 => {
+                        self.blocks[blockptr].prompt = "ecroF evitisoP".to_string();
+                        self.blocks[blockptr].script = "terminal_juke10".to_string();
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    35 => {
+                        self.blocks[blockptr].prompt = "Press ENTER to activate terminal".to_string();
+                        self.blocks[blockptr].script = "custom_".to_owned() + &self.customscript;
+                        self.blocks[blockptr].setblockcolour("orange");
+                        trig = 0;
+                    },
+                    _ => println!("{}", 0),
+                };
+            },
+            _ => println!("TODO: refactor to enum... unmatched type: {}", t),
+        }
+    }
+
+    // TODO: @sx interesting point for borrow checker
+    fn get_blockptr(&mut self) -> usize {
+        /* Can we reuse the slot of a disabled block? */
+        for i in 0..self.blocks.len() {
+            if self.blocks[i].wp == 0 && self.blocks[i].hp == 0 && self.blocks[i].rect.w == 0 && self.blocks[i].rect.h == 0 {
+                self.blocks[i].clear();
+                return i;
+            }
+        }
+
+        let block = blockv::BlockClass::new();
+        self.blocks.push(block);
+        return self.blocks.len() - 1;
     }
 
     // bool entityclass::disableentity(int t)
@@ -139,7 +459,7 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::disableblock( int t )
-    fn disableblock(&mut self, t: i32) {
+    pub fn disableblock(&mut self, t: i32) {
         let t = t as usize;
         if !INBOUNDS_VEC!(t, self.blocks) {
             println!("disableblock() out-of-bounds!");
@@ -216,7 +536,7 @@ impl<'a> EntityClass {
     // void entityclass::createentity(int xp, int yp, int t, int meta1, int meta2)
     // void entityclass::createentity(int xp, int yp, int t, int meta1)
     // void entityclass::createentity(int xp, int yp, int t)
-    pub fn createentity(&mut self, xp: i32, yp: i32, t: i32, meta1: Option<i32>, meta2: Option<i32>, p1: Option<i32>, p2: Option<i32>, p3: Option<i32>, p4: Option<i32>, map: &mut map::Map, game: &mut game::Game) {
+    pub fn createentity(&mut self, xp: i32, yp: i32, t: i32, meta1: Option<i32>, meta2: Option<i32>, p1: Option<i32>, p2: Option<i32>, p3: Option<i32>, p4: Option<i32>, game: &mut game::Game) {
         let mut meta1 = meta1.unwrap_or(0);
         let mut meta2 = meta2.unwrap_or(0);
         let p1 = p1.unwrap_or(0);
@@ -483,7 +803,7 @@ impl<'a> EntityClass {
 
                 //Check if it's already been collected
                 self.entities[entity_id].para = meta1 as f32;
-                // if !INBOUNDS_ARR(meta1, self.collect) || self.collect[meta1] {
+                // if !INBOUNDS_ARR!(meta1, self.collect) || self.collect[meta1] {
                 //     return;
                 // }
             },
@@ -502,7 +822,7 @@ impl<'a> EntityClass {
                 //Check if it's already been collected
                 self.entities[entity_id].para = meta1 as f32;
                 // @sx: TODO
-                // if !INBOUNDS_ARR(meta1, self.collect) || self.collect[meta1] {
+                // if !INBOUNDS_ARR!(meta1, self.collect) || self.collect[meta1] {
                 //     return;
                 // }
             },
@@ -708,7 +1028,7 @@ impl<'a> EntityClass {
                 //Check if it's already been collected
                 self.entities[entity_id].para = meta1 as f32;
                 // @sx: TODO
-                // if INBOUNDS_ARR(meta1, collect) && !collect[meta1] {
+                // if INBOUNDS_ARR!(meta1, collect) && !collect[meta1] {
                 //     return;
                 // }
             },
@@ -971,11 +1291,12 @@ impl<'a> EntityClass {
                     },
                     _ => (),
                 };
-                if map.custommode {
-                    self.customwarpmode = true;
-                    map.warpx = false;
-                    map.warpy = false;
-                }
+                // @sx: TODO: only applicable to custom mode
+                // if map.custommode {
+                //     self.customwarpmode = true;
+                //     map.warpx = false;
+                //     map.warpy = false;
+                // }
             },
             55 => {
                 // Crew Member (custom, collectable)
@@ -983,7 +1304,7 @@ impl<'a> EntityClass {
                 //2 - colour
                 self.entities[entity_id].rule = 3;
                 self.entities[entity_id].r#type = 55;
-                // if INBOUNDS_ARR(meta2, self.customcrewmoods && self.customcrewmoods[meta2]==1) {
+                // if INBOUNDS_ARR!(meta2, self.customcrewmoods && self.customcrewmoods[meta2]==1) {
                 // @sx: TODO
                     self.entities[entity_id].tile = 144;
                 // } else {
@@ -1005,7 +1326,7 @@ impl<'a> EntityClass {
                 //Check if it's already been collected
                 self.entities[entity_id].para = meta1 as f32;
                 // @sx: TODO
-                // if !INBOUNDS_ARR(meta1, self.customcollect) || self.customcollect[meta1] {
+                // if !INBOUNDS_ARR!(meta1, self.customcollect) || self.customcollect[meta1] {
                 //     return;
                 // }
             },
@@ -1091,9 +1412,1033 @@ impl<'a> EntityClass {
     }
 
     // bool entityclass::updateentities( int i )
-    pub fn updateentities(&mut self, i: i32) -> bool {
-        println!("DEADBEEF: entityclass::updateentities() method not implemented yet");
-        false
+    pub fn updateentities(&mut self, i: usize, game: &mut game::Game, map: &mut map::Map, music: &mut music::Music, script: &mut script::ScriptClass) -> bool {
+        if !INBOUNDS_VEC!(i, self.entities) {
+            println!("updateentities() out-of-bounds!");
+            return true;
+        }
+
+        if self.entities[i].statedelay <= 0 {
+            match self.entities[i].r#type {
+                0 => {
+                    //Playerk
+                },
+                1 => {
+                    //Movement behaviors
+                    //Enemies can have a number of different behaviors:
+                    match self.entities[i].behave {
+                        0 => {
+                            //Bounce, Start moving down
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].state = 3;
+                                let entitygone = self.updateentities(i, game, map, music, script);
+                                if entitygone {
+                                    return true;
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vy = -self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vy = self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        1 => {
+                            //Bounce, Start moving up
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].state = 2;
+                                let entitygone = self.updateentities(i, game, map, music, script);
+                                if entitygone {
+                                    return true;
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vy = -self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vy = self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        2 => {
+                            //Bounce, Start moving left
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].state = 3;
+                                let entitygone = self.updateentities(i, game, map, music, script);
+                                if entitygone {
+                                    return true;
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vx = -self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        3 => {
+                            //Bounce, Start moving right
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].state = 3;
+                                let entitygone = self.updateentities(i, game, map, music, script);
+                                if entitygone {
+                                    return true;
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = -self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vx = self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        4 => {
+                            //Always move left
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = self.entities[i].para;
+                            }
+                        },
+                        5 => {
+                            //Always move right
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = self.entities[i].para.trunc();
+                                self.entities[i].state = 1;
+                                self.entities[i].onwall = 2;
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = 0.0;
+                                self.entities[i].onwall = 0;
+                                self.entities[i].xp -= self.entities[i].para.trunc() as i32;
+                                self.entities[i].statedelay = 8;
+                                self.entities[i].state = 0;
+                            }
+                        },
+                        6 => {
+                            //Always move up
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vy = self.entities[i].para.trunc();
+                                self.entities[i].state = 1;
+                                self.entities[i].onwall = 2;
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vy = -self.entities[i].para.trunc();
+                                self.entities[i].onwall = 0;
+                                self.entities[i].yp -= self.entities[i].para.trunc() as i32;
+                                self.entities[i].statedelay = 8;
+                                self.entities[i].state = 0;
+                            }
+                        },
+                        7 => {
+                            //Always move down
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = self.entities[i].para.trunc();
+                            }
+                        },
+                        8 | 9 => {
+                            //Threadmill: don't move, just impart velocity
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = 0.0;
+                                self.entities[i].state = 1;
+                                self.entities[i].onwall = 0;
+                            }
+                        },
+                        10 => {
+                            //Emitter: shoot an enemy every so often
+                            if self.entities[i].state == 0 {
+                                self.createentity(self.entities[i].xp+28, self.entities[i].yp, 1, Some(10), Some(1), None, None, None, None, game);
+                                self.entities[i].state = 1;
+                                self.entities[i].statedelay = 12;
+                            } else if self.entities[i].state == 1 {
+                                self.entities[i].state = 0;
+                            }
+                        },
+                        11 => {
+                            //Always move right, destroy when outside screen
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = self.entities[i].para;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].xp >= 335 {
+                                    return self.disableentity(i);
+                                }
+                                if game.roomx == 117 {
+                                    if self.entities[i].xp >= (33*8)-32 {
+                                        return self.disableentity(i);
+                                    }
+                                    //collector for LIES
+                                }
+                            }
+                        },
+                        12 => {
+                            //Emitter: shoot an enemy every so often (up)
+                            if self.entities[i].state == 0 {
+                                self.createentity(self.entities[i].xp, self.entities[i].yp, 1, Some(12), Some(1), None, None, None, None, game);
+                                self.entities[i].state = 1;
+                                self.entities[i].statedelay = 16;
+                            } else if self.entities[i].state == 1 {
+                                self.entities[i].state = 0;
+                            }
+                        },
+                        13 => {
+                            //Always move up, destroy when outside screen
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vy = self.entities[i].para;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].yp <= -60 {
+                                    return self.disableentity(i);
+                                }
+                                if game.roomx == 113 && game.roomy == 108 {
+                                    if self.entities[i].yp <= 60 {
+                                        return self.disableentity(i);
+                                    }
+                                    //collector for factory
+                                }
+                            }
+                        },
+                        14 => {
+                            //Very special hack: as two, but doesn't move in specific circumstances
+                            if self.entities[i].state == 0 {
+                                //Init
+                                // for (size_t j = 0; j < self.entities.size(); j++ {
+                                for j in 0..self.entities.len() {
+                                    if self.entities[j].r#type == 2 && self.entities[j].state == 3 && self.entities[j].xp == (self.entities[i].xp-32)  {
+                                        self.entities[i].state = 3;
+                                        let entitygone = self.updateentities(i, game, map, music, script);
+                                        if entitygone {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vx = -self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        15 => {
+                            //As above, but for 3!
+                            if self.entities[i].state == 0 {
+                                //Init
+                                // for (size_t j = 0; j < self.entities.size(); j++ {
+                                for j in 0..self.entities.len() {
+                                    if self.entities[j].r#type == 2 && self.entities[j].state == 3 && self.entities[j].xp == self.entities[i].xp + 32 {
+                                        self.entities[i].state = 3;
+                                        let entitygone = self.updateentities(i, game, map, music, script);
+                                        if entitygone {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = -self.entities[i].para;
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vx = self.entities[i].para;
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        16 => {
+                            //MAVERICK BUS FOLLOWS HIS OWN RULES
+                            if self.entities[i].state == 0 {
+                                //Init
+                                let player = self.getplayer() as usize;
+                                //first, y position
+                                if INBOUNDS_VEC!(player, self.entities) && self.entities[player].yp > 14 * 8 {
+                                    self.entities[i].tile = 120;
+                                    self.entities[i].yp = (28*8)-62;
+                                    self.entities[i].lerpoldyp = (28*8)-62;
+                                } else {
+                                    self.entities[i].tile = 96;
+                                    self.entities[i].yp = 24;
+                                    self.entities[i].lerpoldyp = 24;
+                                }
+                                //now, x position
+                                if INBOUNDS_VEC!(player, self.entities) && self.entities[player].xp > 20 * 8 {
+                                    //approach from the left
+                                    self.entities[i].xp = -64;
+                                    self.entities[i].lerpoldxp = -64;
+                                    self.entities[i].state = 2;
+                                    let entitygone = self.updateentities(i, game, map, music, script); //right
+                                    if entitygone {
+                                        return true;
+                                    }
+                                } else {
+                                    //approach from the left
+                                    self.entities[i].xp = 320;
+                                    self.entities[i].lerpoldxp = 320;
+                                    self.entities[i].state = 3;
+                                    let entitygone = self.updateentities(i, game, map, music, script); //left
+                                    if entitygone {
+                                        return true;
+                                    }
+                                }
+
+                            } else if self.entities[i].state == 1 {
+                                if self.entities[i].outside() {
+                                    self.entities[i].state = self.entities[i].onwall;
+                                }
+                            } else if self.entities[i].state == 2 {
+                                self.entities[i].vx = self.entities[i].para.trunc();
+                                self.entities[i].onwall = 3;
+                                self.entities[i].state = 1;
+                            } else if self.entities[i].state == 3 {
+                                self.entities[i].vx = -self.entities[i].para.trunc();
+                                self.entities[i].onwall = 2;
+                                self.entities[i].state = 1;
+                            }
+                        },
+                        17 => {
+                            //Special for ASCII Snake (left)
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].statedelay = 6;
+                                self.entities[i].xp -= self.entities[i].para as i32;
+                                self.entities[i].lerpoldxp -= self.entities[i].para as i32;
+                            }
+                        },
+                        18 => {
+                            //Special for ASCII Snake (right)
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].statedelay = 6;
+                                self.entities[i].xp += self.entities[i].para as i32;
+                                self.entities[i].lerpoldxp += self.entities[i].para as i32;
+                            }
+                        },
+                        _ => println!("unknown movement behaviour ({})", self.entities[i].behave),
+                    }
+                },
+                2 => {
+                    //Disappearing platforms
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        self.entities[i].life = 12;
+                        self.entities[i].state = 2;
+                        self.entities[i].onentity = 0;
+
+                        music.playef(7);
+                    } else if self.entities[i].state == 2 {
+                        self.entities[i].life -= 1;
+                        if self.entities[i].life % 3 == 0 {
+                            self.entities[i].walkingframe += 1;
+                        }
+                        if self.entities[i].life <= 0 {
+                            self.disableblockat(self.entities[i].xp, self.entities[i].yp);
+                            self.entities[i].state = 3;// = false;
+                            self.entities[i].invis = true;
+                        }
+                    } else if self.entities[i].state == 3 {
+                        //wait until recharged!
+                    } else if self.entities[i].state == 4 {
+                        //restart!
+                        self.createblock(0, self.entities[i].xp, self.entities[i].yp, 32, 8, None, None);
+                        self.entities[i].state = 4;
+                        self.entities[i].invis = false;
+                        self.entities[i].walkingframe -= 1;
+                        self.entities[i].state += 1;
+                        self.entities[i].onentity = 1;
+                    } else if self.entities[i].state == 5 {
+                        self.entities[i].life += 3;
+                        if self.entities[i].life % 3 == 0 {
+                            self.entities[i].walkingframe -= 1;
+                        }
+                        if self.entities[i].life >= 12 {
+                            self.entities[i].life = 12;
+                            self.entities[i].state = 0;
+                            self.entities[i].walkingframe += 1;
+                        }
+                    }
+                },
+                3 => {
+                    //Breakable blocks
+                    //Only counts if vy of player entity is non zero
+                    if self.entities[i].state == 1 {
+                        self.entities[i].life = 4;
+                        self.entities[i].state = 2;
+                        self.entities[i].onentity = 0;
+                        music.playef(6);
+                    } else if self.entities[i].state == 2 {
+                        self.entities[i].life -= 1;
+                        self.entities[i].tile += 1;
+                        if self.entities[i].life <= 0 {
+                            self.disableblockat(self.entities[i].xp, self.entities[i].yp);
+                            return self.disableentity(i);
+                        }
+                    }
+                },
+                4 => {
+                    //Gravity token
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        game.gravitycontrol = (game.gravitycontrol + 1) % 2;
+                        return self.disableentity(i);
+                    }
+                },
+                5 => {
+                    //Particle sprays
+                    if self.entities[i].state == 0 {
+                        self.entities[i].life -= 1;
+                        if self.entities[i].life < 0 {
+                            return self.disableentity(i);
+                        }
+                    }
+                },
+                6 => {
+                    //Small pickup
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        music.playef(4);
+                        if INBOUNDS_ARR!(self.entities[i].para as usize, self.collect) {
+                            self.collect[self.entities[i].para as usize] = true;
+                        }
+
+                        return self.disableentity(i);
+                    }
+                },
+                7 => {
+                    //Found a trinket
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        if INBOUNDS_ARR!(self.entities[i].para as usize, self.collect) {
+                            self.collect[self.entities[i].para as usize] = true;
+                        }
+
+                        if game.intimetrial {
+                            music.playef(25);
+                        } else {
+                            game.state = 1000;
+                            if music.currentsong != -1 {
+                                music.silencedasmusik();
+                            }
+                            music.playef(3);
+                            if game.trinkets(self) > game.stat_trinkets && !map.custommode {
+                                game.stat_trinkets = game.trinkets(self);
+                            }
+                        }
+
+                        return self.disableentity(i);
+                    }
+                },
+                8 => {
+                    //Savepoints
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        //First, deactivate all other savepoints
+                        // for (size_t j = 0; j < self.entities.size(); j++ {
+                        for j in 0..self.entities.len() {
+                            if self.entities[j].r#type == 8 {
+                                self.entities[j].colour = 4;
+                                self.entities[j].onentity = 1;
+                            }
+                        }
+                        self.entities[i].colour = 5;
+                        self.entities[i].onentity = 0;
+                        game.savepoint = self.entities[i].para as i32;
+                        music.playef(5);
+
+                        game.savex = self.entities[i].xp - 4;
+
+                        if self.entities[i].tile == 20 {
+                            game.savey = self.entities[i].yp - 2;
+                            game.savegc = 1;
+                        } else if self.entities[i].tile == 21 {
+                            game.savey = self.entities[i].yp - 7;
+                            game.savegc = 0;
+                        }
+
+                        game.saverx = game.roomx;
+                        game.savery = game.roomy;
+                        let player = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(player, self.entities) {
+                            game.savedir = self.entities[player].dir;
+                        }
+                        self.entities[i].state = 0;
+                    }
+                },
+                9 => {
+                    //Gravity Lines
+                    if self.entities[i].state == 1 {
+                        self.entities[i].life -= 1;
+                        self.entities[i].onentity = 0;
+
+                        if self.entities[i].life <= 0 {
+                            self.entities[i].state = 0;
+                            self.entities[i].onentity = 1;
+                        }
+                    }
+                },
+                10 => {
+                    //Vertical gravity Lines
+                    if self.entities[i].state == 1 {
+                        self.entities[i].onentity = 3;
+                        self.entities[i].state = 2;
+
+                        music.playef(8);
+                        game.gravitycontrol = (game.gravitycontrol + 1) % 2;
+                        game.totalflips += 1;
+                        let temp = self.getplayer() as usize;
+                        if game.gravitycontrol == 0 {
+                            if INBOUNDS_VEC!(temp, self.entities) && self.entities[temp].vy < 3.0 {
+                                self.entities[temp].vy = 3.0;
+                            }
+                        } else {
+                            if INBOUNDS_VEC!(temp, self.entities) && self.entities[temp].vy > -3.0 {
+                                self.entities[temp].vy = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 2 {
+                        self.entities[i].life -= 1;
+                        if self.entities[i].life <= 0 {
+                            self.entities[i].state = 0;
+                            self.entities[i].onentity = 1;
+                        }
+                    } else if self.entities[i].state == 3 {
+                        self.entities[i].state = 2;
+                        self.entities[i].life = 4;
+                        self.entities[i].onentity = 3;
+                    } else if self.entities[i].state == 4 {
+                        //Special case for room initilisations: As state one, except without the reversal
+                        self.entities[i].onentity = 3;
+                        self.entities[i].state = 2;
+                    }
+                },
+                11 => {
+                    //Warp point
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        //Depending on the room the warp point is in, teleport to a new location!
+                        self.entities[i].onentity = 0;
+                        //play a sound or somefink
+                        music.playef(10);
+                        game.teleport = true;
+
+                        game.edteleportent = i as i32;
+                        //for the multiple room:
+                        if self.entities[i].xp == 12*8 { game.teleportxpos = 1; }
+                        if self.entities[i].xp == 5*8 { game.teleportxpos = 2; }
+                        if self.entities[i].xp == 28*8 { game.teleportxpos = 3; }
+                        if self.entities[i].xp == 21*8 { game.teleportxpos = 4; }
+                    }
+                },
+                12 => {
+                    //Crew member
+                    //Somewhat complex AI: exactly what they do depends on room, location, state etc
+                    //At state 0, do nothing at all.
+                    if self.entities[i].state == 1 {
+                        //happy!
+                        if INBOUNDS_VEC!(self.k as usize, self.entities) && self.entities[self.k as usize].rule == 6 {
+                            self.entities[self.k as usize].tile = 0;
+                        }
+                        if INBOUNDS_VEC!(self.k as usize, self.entities) && self.entities[self.k as usize].rule == 7 {
+                            self.entities[self.k as usize].tile = 6;
+                        }
+                        //Stay close to the hero!
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                            self.entities[i].dir = 1;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                            self.entities[i].dir = 0;
+                        }
+
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 45 {
+                            self.entities[i].ax = 3.0;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 45 {
+                            self.entities[i].ax = -3.0;
+                        }
+
+                        //Special rules:
+                        if game.roomx == 110 && game.roomy == 105 && !map.custommode {
+                            if self.entities[i].xp < 155 {
+                                if self.entities[i].ax < 0.0 {
+                                    self.entities[i].ax = 0.0;
+                                }
+                            }
+                        }
+                    } else if self.entities[i].state == 2 {
+                        //Basic rules, don't change expression
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                            self.entities[i].dir = 1;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                            self.entities[i].dir = 0;
+                        }
+
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 45 {
+                            self.entities[i].ax = 3.0;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 45 {
+                            self.entities[i].ax = -3.0;
+                        }
+                    } else if self.entities[i].state == 10 {
+                        //Everything from 10 on is for cutscenes
+                        //Basic rules, don't change expression
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                            self.entities[i].dir = 1;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                            self.entities[i].dir = 0;
+                        }
+
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 45 {
+                            self.entities[i].ax = 3.0;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 45 {
+                            self.entities[i].ax = -3.0;
+                        }
+                    } else if self.entities[i].state == 11 {
+                        //11-15 means to follow a specific character, in crew order (cyan, purple, yellow, red, green, blue)
+                        let j = self.getcrewman(1) as usize; //purple
+                        if INBOUNDS_VEC!(j, self.entities) {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 12 {
+                        //11-15 means to follow a specific character, in crew order (cyan, purple, yellow, red, green, blue)
+                        let j = self.getcrewman(2) as usize; //yellow
+                        if INBOUNDS_VEC!(j, self.entities) {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 13 {
+                        //11-15 means to follow a specific character, in crew order (cyan, purple, yellow, red, green, blue)
+                        let j = self.getcrewman(3) as usize; //red
+                        if INBOUNDS_VEC!(j, self.entities) {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 14 {
+                        //11-15 means to follow a specific character, in crew order (cyan, purple, yellow, red, green, blue)
+                        let j = self.getcrewman(4) as usize; //green
+                        if INBOUNDS_VEC!(j, self.entities) {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 15 {
+                        //11-15 means to follow a specific character, in crew order (cyan, purple, yellow, red, green, blue)
+                        let j = self.getcrewman(5) as usize; //blue
+                        if INBOUNDS_VEC!(j, self.entities) {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                        }
+                    } else if self.entities[i].state == 16 {
+                        //Follow a position: given an x coordinate, seek it out.
+                        if self.entities[i].para > self.entities[i].xp as f32 + 5.0 {
+                            self.entities[i].dir = 1;
+                        } else if self.entities[i].para < self.entities[i].xp as f32 - 5.0 {
+                            self.entities[i].dir = 0;
+                        }
+
+                        if self.entities[i].para > self.entities[i].xp as f32 + 45.0 {
+                            self.entities[i].ax = 3.0;
+                        } else if self.entities[i].para < self.entities[i].xp as f32 - 45.0 {
+                            self.entities[i].ax = -3.0;
+                        }
+                    } else if self.entities[i].state == 17 {
+                        //stand still
+                    } else if self.entities[i].state == 18 {
+                        //Stand still and face the player
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                            self.entities[i].dir = 1;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                            self.entities[i].dir = 0;
+                        }
+                    } else if self.entities[i].state == 19 {
+                        //Walk right off the screen after time t
+                        if self.entities[i].para <= 0.0 {
+                            self.entities[i].dir = 1;
+                            self.entities[i].ax = 3.0;
+                        } else {
+                            self.entities[i].para -= 1.0;
+                        }
+                    } else if self.entities[i].state == 20 {
+                        //Panic! For briefing script
+                        if self.entities[i].life == 0 {
+                            //walk left for a bit
+                            self.entities[i].ax = 0.0;
+                            if 40 > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if 40 < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if 40 > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if 40 < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                            if self.entities[i].ax == 0.0 {
+                                self.entities[i].life = 1;
+                                self.entities[i].para = 30.0;
+                            }
+                        } else if self.entities[i].life == 1 {
+                            //Stand around for a bit
+                            self.entities[i].para -= 1.0;
+                            if self.entities[i].para <= 0.0 {
+                                self.entities[i].life += 1;
+                            }
+                        } else if self.entities[i].life == 2 {
+                            //walk right for a bit
+                            self.entities[i].ax = 0.0;
+                            if 280 > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if 280 < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if 280 > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if 280 < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                            if self.entities[i].ax == 0.0 {
+                                self.entities[i].life = 3;
+                                self.entities[i].para = 30.0;
+                            }
+                        } else if self.entities[i].life == 3 {
+                            //Stand around for a bit
+                            self.entities[i].para -= 1.0;
+                            if self.entities[i].para <= 0.0 {
+                                self.entities[i].life = 0;
+                            }
+                        }
+                    }
+                },
+                13 => {
+                    //Terminals (very similar to savepoints)
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        self.entities[i].colour = 5;
+                        self.entities[i].onentity = 0;
+                        music.playef(17);
+
+                        self.entities[i].state = 0;
+                    }
+                },
+                14 => {
+                    //Super Crew member
+                    //Actually needs less complex AI than the scripting crewmember
+                    if self.entities[i].state == 0 {
+                        //follow player, but only if he's on the floor!
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].onground>0 {
+                            if self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if self.entities[j].xp > 15 && self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            if self.entities[j].xp > self.entities[i].xp + 45 {
+                                self.entities[i].ax = 3.0;
+                            } else if self.entities[j].xp < self.entities[i].xp - 45 {
+                                self.entities[i].ax = -3.0;
+                            }
+                            if self.entities[i].ax < 0.0 && self.entities[i].xp < 60 {
+                                self.entities[i].ax = 0.0;
+                            }
+                        } else {
+                            if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                                self.entities[i].dir = 1;
+                            } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                                self.entities[i].dir = 0;
+                            }
+
+                            self.entities[i].ax = 0.0;
+                        }
+
+                        if self.entities[i].xp > 240 {
+                            self.entities[i].ax = 3.0;
+                            self.entities[i].dir = 1;
+                        }
+                        if self.entities[i].xp >= 310 {
+                            game.scmprogress += 1;
+                            return self.disableentity(i);
+                        }
+                    }
+                },
+                15 => {
+                    //Trophy
+                    //wait for collision
+                    if self.entities[i].state == 1 {
+                        if !script.running {
+                            self.trophytext += 2;
+                        }
+                        if self.trophytext > 30 {
+                            self.trophytext = 30;
+                        }
+                        self.trophytype = self.entities[i].para as i32;
+
+                        self.entities[i].state = 0;
+                    }
+                },
+                23 => {
+                    //swn game!
+                    match self.entities[i].behave {
+                        0 => {
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = 7.0;
+                                if self.entities[i].xp > 320 {
+                                    return self.disableentity(i);
+                                }
+                            }
+                        },
+                        1 => {
+                            if self.entities[i].state == 0 {
+                                //Init
+                                self.entities[i].vx = -7.0;
+                                if self.entities[i].xp < -20 {
+                                    return self.disableentity(i);
+                                }
+                            }
+                        },
+                        _ => println!("unknown swn game behaviour ({})", self.entities[i].behave),
+                    };
+                },
+
+                51 => {
+                    //Vertical warp line
+                    if self.entities[i].state == 2 {
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp <= 307 {
+                            self.customwarpmodevon = false;
+                            self.entities[i].state = 0;
+                        }
+                    } else if self.entities[i].state == 1 {
+                        self.entities[i].state = 2;
+                        self.entities[i].statedelay = 2;
+                        self.entities[i].onentity = 1;
+                        self.customwarpmodevon = true;
+                    }
+                },
+                52 => {
+                    //Vertical warp line
+                    if self.entities[i].state == 2 {
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp <= 307 {
+                            self.customwarpmodevon = false;
+                            self.entities[i].state = 0;
+                        }
+                    } else if self.entities[i].state == 1 {
+                        self.entities[i].state = 2;
+                        self.entities[i].statedelay = 2;
+                        self.entities[i].onentity = 1;
+                        self.customwarpmodevon = true;
+                    }
+                },
+                53 => {
+                    //Warp lines Horizonal
+                    if self.entities[i].state == 2 {
+                        self.customwarpmodehon = false;
+                        self.entities[i].state = 0;
+                    } else if self.entities[i].state == 1 {
+                        self.entities[i].state = 2;
+                        self.entities[i].statedelay = 2;
+                        self.entities[i].onentity = 1;
+                        self.customwarpmodehon = true;
+                    }
+                },
+                54 => {
+                    //Warp lines Horizonal
+                    if self.entities[i].state == 2 {
+                        self.customwarpmodehon = false;
+                        self.entities[i].state = 0;
+                    } else if self.entities[i].state == 1 {
+                        self.entities[i].state = 2;
+                        self.entities[i].statedelay = 2;
+                        self.entities[i].onentity = 1;
+                        self.customwarpmodehon = true;
+                    }
+                },
+                55 => {
+                    //Collectable crewmate
+                    //wait for collision
+                    if self.entities[i].state == 0 {
+                        //Basic rules, don't change expression
+                        let j = self.getplayer() as usize;
+                        if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp > self.entities[i].xp + 5 {
+                            self.entities[i].dir = 1;
+                        } else if INBOUNDS_VEC!(j, self.entities) && self.entities[j].xp < self.entities[i].xp - 5 {
+                            self.entities[i].dir = 0;
+                        }
+                    } else if self.entities[i].state == 1 {
+                        if INBOUNDS_ARR!(self.entities[i].para as usize, self.customcollect) {
+                            self.customcollect[self.entities[i].para as usize] = true;
+                        }
+
+                        if game.intimetrial {
+                            music.playef(27);
+                        } else {
+                            game.state = 1010;
+                            //music.haltdasmusik();
+                            if music.currentsong != -1 {
+                                music.silencedasmusik();
+                            }
+                            music.playef(27);
+                        }
+
+                        return self.disableentity(i);
+                    }
+                },
+                100 => {
+                    //The teleporter
+                    if self.entities[i].state == 1 {
+                        //if inactive, activate!
+                        if self.entities[i].tile == 1 {
+                            music.playef(18);
+                            self.entities[i].tile = 2;
+                            self.entities[i].colour = 101;
+                            if !game.intimetrial && !game.nodeathmode {
+                                game.state = 2000;
+                                game.statedelay = 0;
+                            }
+
+                            game.activetele = true;
+                            game.teleblock.x = self.entities[i].xp - 32;
+                            game.teleblock.y = self.entities[i].yp - 32;
+                            game.teleblock.w = 160;
+                            game.teleblock.h = 160;
+
+
+                            //Alright, let's set this as our savepoint too
+                            //First, deactivate all other savepoints
+                            // for (size_t j = 0; j < self.entities.size(); j++ {
+                            for j in 0..self.entities.len() {
+                                if self.entities[j].r#type == 8 {
+                                    self.entities[j].colour = 4;
+                                    self.entities[j].onentity = 1;
+                                }
+                            }
+                            game.savepoint = self.entities[i].para as i32;
+                            game.savex = self.entities[i].xp + 44;
+                            game.savey = self.entities[i].yp + 44;
+                            game.savegc = 0;
+
+                            game.saverx = game.roomx;
+                            game.savery = game.roomy;
+                            let player = self.getplayer() as usize;
+                            if INBOUNDS_VEC!(player, self.entities) {
+                                game.savedir = self.entities[player].dir;
+                            }
+                        }
+
+                        self.entities[i].onentity = 0;
+                        self.entities[i].state = 0;
+                    } else if self.entities[i].state == 2 {
+                        //Initilise the teleporter without changing the game state or playing sound
+                        self.entities[i].onentity = 0;
+                        self.entities[i].tile = 6;
+                        self.entities[i].colour = 102;
+
+                        game.activetele = true;
+                        game.teleblock.x = self.entities[i].xp - 32;
+                        game.teleblock.y = self.entities[i].yp - 32;
+                        game.teleblock.w = 160;
+                        game.teleblock.h = 160;
+
+                        self.entities[i].state = 0;
+                    }
+                },
+                _ => println!("no idea how to update entity type ({})", self.entities[i].r#type),
+            }
+        } else {
+            self.entities[i].statedelay -= 1;
+            if self.entities[i].statedelay < 0 {
+                self.entities[i].statedelay = 0;
+            }
+        }
+
+        return false;
     }
 
     // void entityclass::animateentities( int _i )
@@ -1397,7 +2742,9 @@ impl<'a> EntityClass {
                         }
 
                         self.entities[_i].drawframe = self.entities[_i].tile as usize;
-                        self.entities[_i].drawframe += self.entities[_i].walkingframe as usize;
+                        // TODO: @sx: buffer overflow
+                        // self.entities[_i].drawframe += self.entities[_i].walkingframe as usize;
+                        self.entities[_i].drawframe.checked_add(self.entities[_i].walkingframe as usize).unwrap_or(0);
                     } else if self.entities[_i].tile == 6 {
                         //faster!
                         self.entities[_i].drawframe = self.entities[_i].tile as usize;
@@ -1413,7 +2760,9 @@ impl<'a> EntityClass {
                         }
 
                         self.entities[_i].drawframe = self.entities[_i].tile as usize;
-                        self.entities[_i].drawframe += self.entities[_i].walkingframe as usize;
+                        // TODO: @sx: buffer overflow
+                        // self.entities[_i].drawframe += self.entities[_i].walkingframe as usize;
+                        self.entities[_i].drawframe.checked_add(self.entities[_i].walkingframe as usize).unwrap_or(0);
                     }
                 },
                 _ => {
@@ -1506,14 +2855,31 @@ impl<'a> EntityClass {
 
     // int entityclass::getteleporter(void)
     pub fn getteleporter(&self) -> i32 {
-        println!("DEADBEEF: entityclass::getteleporter() method not implemented yet");
-        0
+        // for (size_t i = 0; i < entities.size(); i++)
+        for i in 0..self.entities.len() {
+            if self.entities[i].r#type == 100 {
+                return i as i32;
+            }
+        }
+
+        return -1;
     }
 
     // bool entityclass::entitycollide( int a, int b )
-    pub fn entitycollide(&self, a: usize, b: usize) -> bool {
-        println!("DEADBEEF: entityclass::entitycollide() method not implemented yet");
-        false
+    pub fn entitycollide(&self, a: usize, b: usize, help: &mut utility_class::UtilityClass) -> bool {
+        if !INBOUNDS_VEC!(a, self.entities) || !INBOUNDS_VEC!(b, self.entities) {
+            println!("entitycollide() out-of-bounds!");
+            return false;
+        }
+
+        //Do self.entities a and b collide?
+        let temprect = sdl2::rect::Rect::new(self.entities[a].xp + self.entities[a].cx, self.entities[a].yp + self.entities[a].cy, self.entities[a].w as u32, self.entities[a].h as u32);
+        let temprect2 = sdl2::rect::Rect::new(self.entities[b].xp + self.entities[b].cx, self.entities[b].yp + self.entities[b].cy, self.entities[b].w as u32, self.entities[b].h as u32);
+
+        if help.intersects(temprect, temprect2) {
+            return true;
+        }
+        return false;
     }
 
     // bool entityclass::checkdamage(bool scm /*= false*/)
@@ -1763,30 +3129,157 @@ impl<'a> EntityClass {
     }
 
     // bool entityclass::testwallsx( int t, int tx, int ty, const bool skipdirblocks )
-    fn testwallsx(&self, t: usize, tx: i32, ty: i32, skipdirblocks: bool) -> bool {
-        println!("DEADBEEF: testwallsx::checkactivity() method not implemented yet");
-        false
+    fn testwallsx(&mut self, t: usize, tx: i32, ty: i32, skipdirblocks: bool, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            println!("testwallsx() out-of-bounds!");
+            return false
+        }
+
+        let temprect = sdl2::rect::Rect::new(tx as i32 + self.entities[t].cx, ty as i32 + self.entities[t].cy, self.entities[t].w as u32, self.entities[t].h as u32);
+
+        let skipblocks = self.entities[t].rule < 2 || self.entities[t].r#type == 14;
+        let mut dx = 0f32;
+        let mut dy = 0f32;
+        if self.entities[t].rule == 0 {
+            dx = self.entities[t].vx;
+        }
+        let dr = self.entities[t].rule;
+
+        //Ok, now we check walls
+        if self.checkwall(temprect, Some(dx), Some(dy), Some(dr as f32), Some(skipblocks), Some(skipdirblocks), map, help) {
+            if self.entities[t].vx > 1.0 {
+                self.entities[t].vx -= 1.0;
+                self.entities[t].newxp = self.entities[t].xp as f32 + self.entities[t].vx;
+                return self.testwallsx(t, self.entities[t].newxp as i32, self.entities[t].yp, skipdirblocks, map, help);
+            } else if self.entities[t].vx < -1.0 {
+                self.entities[t].vx += 1.0;
+                self.entities[t].newxp = self.entities[t].xp as f32 + self.entities[t].vx;
+                return self.testwallsx(t, self.entities[t].newxp as i32, self.entities[t].yp, skipdirblocks, map, help);
+            } else {
+                self.entities[t].vx = 0.0;
+                return false
+            }
+        }
+
+        true
     }
 
     // bool entityclass::testwallsy( int t, float tx, float ty )
-    fn testwallsy(&self, t: i32, tx: f32, ty: f32) -> bool {
-        println!("DEADBEEF: testwallsy::checkactivity() method not implemented yet");
-        false
+    fn testwallsy(&mut self, t: usize, tx: f32, ty: f32, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            println!("testwallsy() out-of-bounds!");
+            return false;
+        }
+
+        let temprect = sdl2::rect::Rect::new(tx as i32 + self.entities[t].cx, ty as i32 + self.entities[t].cy, self.entities[t].w as u32, self.entities[t].h as u32);
+        let skipblocks = self.entities[t].rule < 2 || self.entities[t].r#type == 14;
+
+        let mut dx = 0.0f32;
+        let mut dy = 0.0f32;
+        if self.entities[t].rule == 0 {
+            dy = self.entities[t].vy;
+        }
+        let dr = self.entities[t].rule;
+
+        //Ok, now we check walls
+        if self.checkwall(temprect, Some(dx), Some(dy), Some(dr as f32), Some(skipblocks), Some(false), map, help) {
+            if self.entities[t].vy > 1.0 {
+                self.entities[t].vy -= 1.0;
+                self.entities[t].newyp = self.entities[t].yp as f32 + self.entities[t].vy;
+                return self.testwallsy(t, self.entities[t].xp as f32, self.entities[t].newyp, map, help);
+            } else if self.entities[t].vy < -1.0 {
+                self.entities[t].vy += 1.0;
+                self.entities[t].newyp = self.entities[t].yp as f32 + self.entities[t].vy;
+                return self.testwallsy(t, self.entities[t].xp as f32, self.entities[t].newyp, map, help);
+            } else {
+                self.entities[t].vy = 0.0;
+                return false;
+            }
+        }
+
+        true
     }
 
     // void entityclass::applyfriction( int t, float xrate, float yrate )
-    fn applyfriction(&self, t: i32, xrate: f32, yrate: f32) {
-        println!("DEADBEEF: applyfriction::checkactivity() method not implemented yet");
+    fn applyfriction(&mut self, t: usize, xrate: f32, yrate: f32) {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            println!("applyfriction() out-of-bounds!");
+            return;
+        }
+
+        if self.entities[t].vx > 0.0 { self.entities[t].vx -= xrate; }
+        if self.entities[t].vx < 0.0 { self.entities[t].vx += xrate; }
+        if self.entities[t].vy > 0.0 { self.entities[t].vy -= yrate; }
+        if self.entities[t].vy < 0.0 { self.entities[t].vy += yrate; }
+        if self.entities[t].vy > 10.0 { self.entities[t].vy = 10.0; }
+        if self.entities[t].vy < -10.0 { self.entities[t].vy = -10.0; }
+        if self.entities[t].vx > 6.0 { self.entities[t].vx = 6.0; }
+        if self.entities[t].vx < -6.0 { self.entities[t].vx = -6.0; }
+
+        if self.entities[t].vx.abs() < xrate { self.entities[t].vx = 0.0; }
+        if self.entities[t].vy.abs() < yrate { self.entities[t].vy = 0.0; }
     }
 
     // void entityclass::updateentitylogic( int t )
-    pub fn updateentitylogic(&self, t: i32) {
-        println!("DEADBEEF: entityclass::updateentitylogic() method not implemented yet");
+    pub fn updateentitylogic(&mut self, t: usize, game: &mut game::Game) {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            println!("updateentitylogic() out-of-bounds!");
+            return;
+        }
+
+        self.entities[t].oldxp = self.entities[t].xp;
+        self.entities[t].oldyp = self.entities[t].yp;
+
+        self.entities[t].vx = self.entities[t].vx + self.entities[t].ax;
+        self.entities[t].vy = self.entities[t].vy + self.entities[t].ay;
+        self.entities[t].ax = 0.0;
+
+        if self.entities[t].gravity {
+            if self.entities[t].rule == 0 {
+                if game.gravitycontrol == 0 {
+                    self.entities[t].ay = 3.0;
+                } else {
+                    self.entities[t].ay = -3.0;
+                }
+            } else if self.entities[t].rule == 7 {
+                self.entities[t].ay = -3.0;
+            } else {
+                self.entities[t].ay = 3.0;
+            }
+            self.applyfriction(t, game.inertia, 0.25);
+        }
+
+        self.entities[t].newxp = self.entities[t].xp as f32 + self.entities[t].vx;
+        self.entities[t].newyp = self.entities[t].yp as f32 + self.entities[t].vy;
     }
 
     // void entityclass::entitymapcollision( int t )
-    pub fn entitymapcollision(&self, t: i32) {
-        println!("DEADBEEF: entityclass::entitymapcollision() method not implemented yet");
+    pub fn entitymapcollision(&mut self, t: usize, map: &mut map::Map, help: &mut utility_class::UtilityClass) {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            println!("entitymapcollision() out-of-bounds!");
+            return;
+        }
+
+        if self.testwallsx(t, self.entities[t].newxp as i32, self.entities[t].yp, false, map, help) {
+            self.entities[t].xp = self.entities[t].newxp as i32;
+        } else {
+            if self.entities[t].onwall > 0 {
+                self.entities[t].state = self.entities[t].onwall;
+            }
+            if self.entities[t].onxwall > 0 {
+                self.entities[t].state = self.entities[t].onxwall;
+            }
+        }
+        if self.testwallsy(t, self.entities[t].xp as f32, self.entities[t].newyp, map, help) {
+            self.entities[t].yp = self.entities[t].newyp as i32;
+        } else {
+            if self.entities[t].onwall > 0 {
+                self.entities[t].state = self.entities[t].onwall;
+            }
+            if self.entities[t].onywall > 0 {
+                self.entities[t].state = self.entities[t].onywall;
+            }
+        }
     }
 
     // void entityclass::movingplatformfix( int t, int j )
@@ -1816,22 +3309,23 @@ impl<'a> EntityClass {
                     continue;
                 }
 
-                self.collisioncheck(i, j, Some(scm), game, graphics, map, music);
+                self.collisioncheck(i, j, Some(scm), game, graphics, map, music, help);
             }
         }
 
         //can't have the player being stuck...
-        self.stuckprevention(self.getplayer(), game);
+        self.stuckprevention(self.getplayer(), game, map, help);
 
         //Can't have the supercrewmate getting stuck either!
         if game.supercrewmate {
-            self.stuckprevention(self.getscm(), game);
+            self.stuckprevention(self.getscm(), game, map, help);
         }
 
         //Is the player colliding with any damageblocks?
         if self.checkdamage(None, help) && !map.invincibility {
             //usual player dead stuff
-            game.deathseq = 30;
+            println!("TODO: @sx: oopse, we're dead, uncomment next line");
+            // game.deathseq = 30;
         }
 
         //how about the supercrewmate?
@@ -1861,7 +3355,7 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::collisioncheck(int i, int j, bool scm /*= false*/)
-    fn collisioncheck(&mut self, i: usize, j: usize, scm: Option<bool>, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music) {
+    fn collisioncheck(&mut self, i: usize, j: usize, scm: Option<bool>, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, help: &mut utility_class::UtilityClass) {
         let scm = scm.unwrap_or(false);
 
         if !INBOUNDS_VEC!(i, self.entities) || !INBOUNDS_VEC!(j, self.entities) {
@@ -1876,7 +3370,7 @@ impl<'a> EntityClass {
                 }
 
                 //person i hits enemy or enemy bullet j
-                if self.entitycollide(i, j) && !map.invincibility {
+                if self.entitycollide(i, j, help) && !map.invincibility {
                     if self.entities[i].size == 0 && (self.entities[j].size == 0 || self.entities[j].size == 12) {
                         //They're both sprites, so do a per pixel collision
                         let colpoint1 = maths::point {
@@ -1890,20 +3384,17 @@ impl<'a> EntityClass {
                         let drawframe1 = self.entities[i].drawframe;
                         let drawframe2 = self.entities[j].drawframe;
 
-                        graphics.Hitest();
-                        // std::vector<SDL_Surface*>& spritesvec = graphics.flipmode ? graphics.flipsprites : graphics.sprites;
-                        // if INBOUNDS_VEC!(drawframe1, spritesvec) &&
-                        //     INBOUNDS_VEC!(drawframe2, spritesvec) &&
-                        //     graphics.Hitest(spritesvec[drawframe1], colpoint1, spritesvec[drawframe2], colpoint2)
-                        // {
-                        //     //Do the collision stuff
-                        //     game.deathseq = 30;
-                        //     game.scmhurt = scm;
-                        // }
+                        // TODO: @sx borrow checker interesting point
+                        if graphics.Hitest(drawframe1, colpoint1, drawframe2, colpoint2, help) {
+                            println!("TODO: @sx: oopse, we're dead, uncomment next lines");
+                            // game.deathseq = 30;
+                            // game.scmhurt = scm;
+                        }
                     } else {
                         //Ok, then we just assume a normal bounding box collision
-                        game.deathseq = 30;
-                        game.scmhurt = scm;
+                        println!("TODO: @sx: oopse, we're dead, uncomment next lines");
+                        // game.deathseq = 30;
+                        // game.scmhurt = scm;
                     }
                 }
             },
@@ -1913,7 +3404,7 @@ impl<'a> EntityClass {
                     //We don't want conveyors, moving platforms only
                     return
                 }
-                if self.entitycollide(i, j) {
+                if self.entitycollide(i, j, help) {
                     //Disable collision temporarily so we don't push the person out!
                     //Collision will be restored at end of platform update loop in gamelogic
                     self.disableblockat(self.entities[j].xp, self.entities[j].yp);
@@ -1922,7 +3413,7 @@ impl<'a> EntityClass {
             3 => {
                 //Entity to entity
                 if self.entities[j].onentity > 0 {
-                    if self.entitycollide(i, j) {
+                    if self.entitycollide(i, j, help) {
                         self.entities[j].state = self.entities[j].onentity;
                     }
                 }
@@ -1972,7 +3463,7 @@ impl<'a> EntityClass {
                     if temp > -30 && temp < 30 {
                         temp = self.entities[i].xp - self.entities[j].xp;
                         if temp > -30 && temp < 30 {
-                            if self.entitycollide(i, j) {
+                            if self.entitycollide(i, j, help) {
                                 self.entities[j].state = self.entities[j].onentity;
                             }
                         }
@@ -1990,7 +3481,7 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::stuckprevention(int t)
-    fn stuckprevention(&mut self, t: i32, game: &mut game::Game) {
+    fn stuckprevention(&mut self, t: i32, game: &mut game::Game, map: &mut map::Map, help: &mut utility_class::UtilityClass) {
         if !INBOUNDS_VEC!(t, self.entities) {
             println!("stuckprevention() out-of-bounds!");
             return;
@@ -1998,7 +3489,7 @@ impl<'a> EntityClass {
         let t = t as usize;
 
         // Can't have this entity (player or supercrewmate) being stuck...
-        if !self.testwallsx(t, self.entities[t].xp, self.entities[t].yp, true) {
+        if !self.testwallsx(t, self.entities[t].xp, self.entities[t].yp, true, map, help) {
             // Let's try to get out...
             if game.gravitycontrol == 0 {
                 self.entities[t].yp -= 3;
@@ -2008,14 +3499,4 @@ impl<'a> EntityClass {
         }
     }
 
-}
-
-#[derive(PartialEq)]
-pub enum EntityEnum {
-    BLOCK = 0,
-    TRIGGER = 1,
-    DAMAGE = 2,
-    DIRECTIONAL = 3,
-    SAFE = 4,
-    ACTIVITY = 5
 }

@@ -6,7 +6,7 @@ use rand::Rng;
 // float inline fRandom(void)
 pub fn fRandom() -> f32 {
     // return ( float(rand()) / float(RAND_MAX)) ;
-    rand::thread_rng().gen::<f32>() / i32::MAX as f32
+    rand::thread_rng().gen::<f32>()
 }
 
 // inline int clamp(int x, int a, int b)

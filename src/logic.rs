@@ -265,7 +265,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 //graphical uglyness to avoid breaking the room!
                 let mut entitygone = false;
                 while obj.entities[i].state == 2 {
-                    entitygone = obj.updateentities(i as i32);
+                    entitygone = obj.updateentities(i, game, map, music, script);
                     if entitygone {
                         i -= 1;
                         break;
@@ -301,7 +301,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             }
         }
 
-        game.deathsequence();
+        game.deathsequence(map, music, obj);
         game.deathseq -= 1;
         if game.deathseq <= 0 {
             if game.nodeathmode {
@@ -349,7 +349,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                         let mut temp = 1 + maths::fRandom() as i32 * 6;
                         if temp == map.final_mapcol { temp = (temp + 1) % 6; }
                         if temp == 0 { temp = 6; }
-                        map.changefinalcol(temp);
+                        map.changefinalcol(temp, obj);
                     }
                 }
             }
@@ -476,7 +476,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 //create top line
                 game.swngame = 3;
                 // (horizontal gravity line)
-                obj.createentity(-8, 84 - 32, 11, Some(8), None, None, None, None, None, map, game);
+                obj.createentity(-8, 84 - 32, 11, Some(8), None, None, None, None, None, game);
                 music.niceplay(2);
                 game.swndeaths = game.deathcounts;
             } else if game.swngame == 5 {
@@ -561,7 +561,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
         //Ok, moving platform fuckers
         if !game.completestop {
             if obj.vertplatforms {
-                for i in (obj.entities.len()-1)..=0 {
+                for i in (0..obj.entities.len()).rev() {
                     if !obj.entities[i].isplatform || (obj.entities[i].vx).abs() >= 0.000001f32 {
                         continue;
                     }
@@ -571,14 +571,14 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     obj.disableblockat(prevx, prevy);
 
                     // Behavioral logic
-                    let entitygone = obj.updateentities(i as i32);
+                    let entitygone = obj.updateentities(i, game, map, music, script);
                     if entitygone {
                         continue;
                     }
                     // Basic Physics
-                    obj.updateentitylogic(i as i32);
+                    obj.updateentitylogic(i, game);
                     // Collisions with walls
-                    obj.entitymapcollision(i as i32);
+                    obj.entitymapcollision(i, map, help);
 
                     obj.moveblockto(prevx, prevy, obj.entities[i].xp, obj.entities[i].yp, obj.entities[i].w, obj.entities[i].h);
                     let player = obj.getplayer();
@@ -592,7 +592,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
 
             if obj.horplatforms {
                 // for (int ie = obj.entities.size() - 1; ie >= 0;  ie-- {
-                for ie in (obj.entities.len()-1)..=0 {
+                for ie in (0..obj.entities.len()).rev() {
                     if !obj.entities[ie].isplatform || (obj.entities[ie].vy).abs() >= 0.000001f32 {
                         continue;
                     }
@@ -602,12 +602,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     obj.disableblockat(prevx, prevy);
 
                     // Behavioral logic
-                    let entitygone = obj.updateentities(ie as i32);
+                    let entitygone = obj.updateentities(ie, game, map, music, script);
                     if entitygone { continue; }
                     // Basic Physics
-                    obj.updateentitylogic(ie as i32);
+                    obj.updateentitylogic(ie, game);
                     // Collisions with walls
-                    obj.entitymapcollision(ie as i32);
+                    obj.entitymapcollision(ie, map, help);
 
                     obj.moveblockto(prevx, prevy, obj.entities[ie].xp, obj.entities[ie].yp, obj.entities[ie].w, obj.entities[ie].h);
                 }
@@ -616,29 +616,29 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 let mut j = obj.entitycollideplatformfloor(i as i32);
                 if INBOUNDS_VEC!(i, obj.entities) && j > -1000.0 {
                     obj.entities[i].newxp = obj.entities[i].xp as f32 + j;
-                    obj.entitymapcollision(i as i32);
+                    obj.entitymapcollision(i, map, help);
                 } else {
                     j = obj.entitycollideplatformroof(i as i32);
                     if INBOUNDS_VEC!(i, obj.entities) && j > -1000.0 {
                         obj.entities[i].newxp = obj.entities[i].xp as f32 + j;
-                        obj.entitymapcollision(i as i32);
+                        obj.entitymapcollision(i, map, help);
                     }
                 }
             }
 
             // for (int ie = obj.entities.size() - 1; ie >= 0;  ie-- {
-            for ie in (obj.entities.len()-1)..=0 {
+            for ie in (0..obj.entities.len()).rev() {
                 if obj.entities[ie].isplatform {
                     continue;
                 }
 
                 // Behavioral logic
-                let entitygone = obj.updateentities(ie as i32);
+                let entitygone = obj.updateentities(ie, game, map, music, script);
                 if entitygone { continue; }
                 // Basic Physics
-                obj.updateentitylogic(ie as i32);
+                obj.updateentitylogic(ie, game);
                 // Collisions with walls
-                obj.entitymapcollision(ie as i32);
+                obj.entitymapcollision(ie, map, help);
             }
 
             // Check ent v ent collisions, update states
@@ -826,12 +826,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             let player = obj.getplayer() as usize;
             if INBOUNDS_VEC!(player, obj.entities) && game.door_down > -2 && obj.entities[player].yp >= 238 {
                 obj.entities[player].yp -= 240;
-                map.gotoroom(game.roomx, game.roomy + 1, game, graphics, music, obj);
+                map.gotoroom(game.roomx, game.roomy + 1, game, graphics, music, obj, help);
                 screen_transition = true;
             }
             if INBOUNDS_VEC!(player, obj.entities) && game.door_up > -2 && obj.entities[player].yp < -2 {
                 obj.entities[player].yp += 240;
-                map.gotoroom(game.roomx, game.roomy - 1, game, graphics, music, obj);
+                map.gotoroom(game.roomx, game.roomy - 1, game, graphics, music, obj, help);
                 screen_transition = true;
             }
         }
@@ -841,12 +841,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             let player = obj.getplayer() as usize;
             if INBOUNDS_VEC!(player, obj.entities) && game.door_left > -2 && obj.entities[player].xp < -14 {
                 obj.entities[player].xp += 320;
-                map.gotoroom(game.roomx - 1, game.roomy, game, graphics, music, obj);
+                map.gotoroom(game.roomx - 1, game.roomy, game, graphics, music, obj, help);
                 screen_transition = true;
             }
             if INBOUNDS_VEC!(player, obj.entities) && game.door_right > -2 && obj.entities[player].xp >= 308 {
                 obj.entities[player].xp -= 320;
-                map.gotoroom(game.roomx + 1, game.roomy, game, graphics, music, obj);
+                map.gotoroom(game.roomx + 1, game.roomy, game, graphics, music, obj, help);
                 screen_transition = true;
             }
         }
@@ -858,12 +858,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 let player = obj.getplayer() as usize;
                 if INBOUNDS_VEC!(player, obj.entities) && game.door_left > -2 && obj.entities[player].xp < -14 {
                     obj.entities[player].xp += 320;
-                    map.gotoroom(48, 52, game, graphics, music, obj);
+                    map.gotoroom(48, 52, game, graphics, music, obj, help);
                 }
                 if INBOUNDS_VEC!(player, obj.entities) && game.door_right > -2 && obj.entities[player].xp >= 308 {
                     obj.entities[player].xp -= 320;
                     obj.entities[player].yp -= 71*8;
-                    map.gotoroom(game.roomx + 1, game.roomy+1, game, graphics, music, obj);
+                    map.gotoroom(game.roomx + 1, game.roomy+1, game, graphics, music, obj, help);
                 }
             } else {
                 //This is minitower 2!
@@ -872,15 +872,15 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     if obj.entities[player].yp > 300 {
                         obj.entities[player].xp += 320;
                         obj.entities[player].yp -= 71 * 8;
-                        map.gotoroom(50, 54, game, graphics, music, obj);
+                        map.gotoroom(50, 54, game, graphics, music, obj, help);
                     } else {
                         obj.entities[player].xp += 320;
-                        map.gotoroom(50, 53, game, graphics, music, obj);
+                        map.gotoroom(50, 53, game, graphics, music, obj, help);
                     }
                 }
                 if INBOUNDS_VEC!(player, obj.entities) && game.door_right > -2 && obj.entities[player].xp >= 308 {
                     obj.entities[player].xp -= 320;
-                    map.gotoroom(52, 53, game, graphics, music, obj);
+                    map.gotoroom(52, 53, game, graphics, music, obj, help);
                 }
             }
         } else if map.towermode {
@@ -902,11 +902,11 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 if INBOUNDS_VEC!(player, obj.entities) && game.door_left > -2 && obj.entities[player].xp < -14 {
                     obj.entities[player].xp += 320;
                     obj.entities[player].yp -= 671 * 8;
-                    map.gotoroom(108, 109, game, graphics, music, obj);
+                    map.gotoroom(108, 109, game, graphics, music, obj, help);
                 }
                 if INBOUNDS_VEC!(player, obj.entities) && game.door_right > -2 && obj.entities[player].xp >= 308 {
                     obj.entities[player].xp -= 320;
-                    map.gotoroom(110, 104, game, graphics, music, obj);
+                    map.gotoroom(110, 104, game, graphics, music, obj, help);
                 }
             }
         }
@@ -934,42 +934,42 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].yp = 225;
                     }
-                    map.gotoroom(119, 100, game, graphics, music, obj);
+                    map.gotoroom(119, 100, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 119 && game.roomy == 100 {
                     let i = obj.getplayer() as usize;
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].yp = 225;
                     }
-                    map.gotoroom(119, 103, game, graphics, music, obj);
+                    map.gotoroom(119, 103, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 119 && game.roomy == 103 {
                     let i = obj.getplayer() as usize;
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].xp = 0;
                     }
-                    map.gotoroom(116, 103, game, graphics, music, obj);
+                    map.gotoroom(116, 103, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 116 && game.roomy == 103 {
                     let i = obj.getplayer() as usize;
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].yp = 225;
                     }
-                    map.gotoroom(116, 100, game, graphics, music, obj);
+                    map.gotoroom(116, 100, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 116 && game.roomy == 100 {
                     let i = obj.getplayer() as usize;
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].xp = 0;
                     }
-                    map.gotoroom(114, 102, game, graphics, music, obj);
+                    map.gotoroom(114, 102, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 114 && game.roomy == 102 {
                     let i = obj.getplayer() as usize;
                     if INBOUNDS_VEC!(i, obj.entities) {
                         obj.entities[i].yp = 225;
                     }
-                    map.gotoroom(113, 100, game, graphics, music, obj);
+                    map.gotoroom(113, 100, game, graphics, music, obj, help);
                     game.teleport = false;
                 } else if game.roomx == 116 && game.roomy == 104 {
                     //pre warp zone here
@@ -1003,7 +1003,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
         }
 
         if screen_transition {
-            map.twoframedelayfix();
+            map.twoframedelayfix(game, obj, script, help);
         }
     }
 
@@ -1031,7 +1031,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             match game.companion {
                 6 => {
                     //Y=121, the floor in that particular place!
-                    obj.createentity(obj.entities[i].xp, 121, 15, Some(1), None, None, None, None, None, map, game);
+                    obj.createentity(obj.entities[i].xp, 121, 15, Some(1), None, None, None, None, None, game);
                     let j = obj.getcompanion() as usize;
                     if INBOUNDS_VEC!(j, obj.entities) {
                         obj.entities[j].vx = obj.entities[i].vx;
@@ -1043,10 +1043,10 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     if game.roomy <= 105 {
                         if game.roomx == 110 {
                             //Y=86, the ROOF in that particular place!
-                            obj.createentity(320, 86, 16, Some(1), None, None, None, None, None, map, game);
+                            obj.createentity(320, 86, 16, Some(1), None, None, None, None, None, game);
                         } else {
                             //Y=86, the ROOF in that particular place!
-                            obj.createentity(obj.entities[i].xp, 86, 16, Some(1), None, None, None, None, None, map, game);
+                            obj.createentity(obj.entities[i].xp, 86, 16, Some(1), None, None, None, None, None, game);
                         }
                         let j = obj.getcompanion() as usize;
                         if INBOUNDS_VEC!(j, obj.entities) {
@@ -1059,14 +1059,14 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     //don't jump after him!
                     if game.roomy >= 104 {
                         if game.roomx == 102 {
-                            obj.createentity(310, 177, 17, Some(1), None, None, None, None, None, map, game);
+                            obj.createentity(310, 177, 17, Some(1), None, None, None, None, None, game);
                             let j = obj.getcompanion() as usize;
                             if INBOUNDS_VEC!(j, obj.entities) {
                                 obj.entities[j].vx = obj.entities[i].vx;
                                 obj.entities[j].dir = obj.entities[i].dir;
                             }
                         } else {
-                            obj.createentity(obj.entities[i].xp, 177, 17, Some(1), None, None, None, None, None, map, game);
+                            obj.createentity(obj.entities[i].xp, 177, 17, Some(1), None, None, None, None, None, game);
                             let j = obj.getcompanion() as usize;
                             if INBOUNDS_VEC!(j, obj.entities) {
                                 obj.entities[j].vx = obj.entities[i].vx;
@@ -1079,9 +1079,9 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     //don't go back into the tower!
                     if !map.towermode {
                         if game.roomx == 110 && obj.entities[i].xp < 20 {
-                            obj.createentity(100, 185, 18, Some(15), Some(0), Some(1), None, None, None, map, game);
+                            obj.createentity(100, 185, 18, Some(15), Some(0), Some(1), None, None, None, game);
                         } else {
-                            obj.createentity(obj.entities[i].xp, 185, 18, Some(15), Some(0), Some(1), None, None, None, map, game);
+                            obj.createentity(obj.entities[i].xp, 185, 18, Some(15), Some(0), Some(1), None, None, None, game);
                         }
                         let j = obj.getcompanion() as usize;
                         if INBOUNDS_VEC!(j, obj.entities) {
@@ -1094,7 +1094,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     //intermission 2, choose colour based on lastsaved
                     if game.roomy == 51 {
                         if !obj.flags[59] {
-                            obj.createentity(225, 169, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(10), None, None, None, map, game);
+                            obj.createentity(225, 169, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(10), None, None, None, game);
                             let j = obj.getcompanion() as usize;
                             if INBOUNDS_VEC!(j, obj.entities) {
                                 obj.entities[j].vx = obj.entities[i].vx;
@@ -1103,7 +1103,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                         }
                     } else	if game.roomy >= 52 {
                         if obj.flags[59] {
-                            obj.createentity(160, 177, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(18), Some(1), None, None, map, game);
+                            obj.createentity(160, 177, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(18), Some(1), None, None, game);
                             let j = obj.getcompanion() as usize;
                             if INBOUNDS_VEC!(j, obj.entities) {
                                 obj.entities[j].vx = obj.entities[i].vx;
@@ -1111,7 +1111,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                             }
                         } else {
                             obj.flags[59] = true;
-                            obj.createentity(obj.entities[i].xp, -20, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(10), Some(0), None, None, map, game);
+                            obj.createentity(obj.entities[i].xp, -20, 18, Some(graphics.crewcolour(game.lastsaved)), Some(0), Some(10), Some(0), None, None, game);
                             let j = obj.getcompanion() as usize;
                             if INBOUNDS_VEC!(j, obj.entities) {
                                 obj.entities[j].vx = obj.entities[i].vx;
@@ -1125,52 +1125,52 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     if game.roomx - 41 == game.scmprogress {
                         match game.scmprogress {
                             0 => {
-                                obj.createentity(76, 161, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(76, 161, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             1 => {
-                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             2 => {
-                                obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             3 => {
                                 if game.scmmoveme {
                                     let player = obj.getplayer() as usize;
-                                    obj.createentity(obj.entities[player].xp, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                    obj.createentity(obj.entities[player].xp, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                                     game.scmmoveme = false;
                                 } else {
-                                    obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                    obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                                 }
                             },
                             4 => {
-                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             5 => {
-                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             6 => {
-                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 185, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             7 => {
-                                obj.createentity(10, 41, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 41, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             8 => {
-                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             9 => {
-                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 169, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             10 => {
-                                obj.createentity(10, 129, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 129, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             11 => {
-                                obj.createentity(10, 129, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 129, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             12 => {
-                                obj.createentity(10, 65, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, map, game);
+                                obj.createentity(10, 65, 24, Some(graphics.crewcolour(game.lastsaved)), Some(2), None, None, None, None, game);
                             },
                             13 => {
-                                obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), None, None, None, None, None, map, game);
+                                obj.createentity(10, 177, 24, Some(graphics.crewcolour(game.lastsaved)), None, None, None, None, None, game);
                             },
                             _ => (),
                         };

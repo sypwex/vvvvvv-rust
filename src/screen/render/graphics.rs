@@ -4,6 +4,8 @@ extern crate sdl2_sys;
 use sdl2::render::BlendMode;
 
 use crate::{INBOUNDS_VEC, INBOUNDS_ARR, WHINE_ONCE, entity, game::{self, SLIDERMODE}, map, maths, screen::render::graphics::graphics_util::ColourTransform, utility_class};
+use self::textbox::TextBoxClass;
+
 use super::BackGround;
 pub mod graphics_util;
 mod graphics_resources;
@@ -62,8 +64,8 @@ pub struct Graphics {
     trinketg: i32,
     trinketb: i32,
 
-	menuoffset: i32,
-	oldmenuoffset: i32,
+	pub menuoffset: i32,
+	pub oldmenuoffset: i32,
 	pub resumegamemode: bool,
 
 	pub crewframe: i32,
@@ -72,7 +74,7 @@ pub struct Graphics {
 	pub fademode: i32,
 	fadeamount: i32,
 	oldfadeamount: i32,
-	fadebars: Vec<i32>,
+	fadebars: [i32; 15],
 	ingame_fademode: i32,
 
     pub translucentroomname: bool,
@@ -94,6 +96,7 @@ pub struct Graphics {
 	spcol: i32,
     spcoldel: i32,
     pub rcol: i32,
+    m: usize,
 	backboxes: [sdl2::rect::Rect; numbackboxes],
 	backboxvx: [i32; numbackboxes],
 	backboxvy: [i32; numbackboxes],
@@ -135,6 +138,40 @@ pub struct Graphics {
 impl Graphics {
     // void Graphics::init(void)
     pub fn new(pf: sdl2::pixels::PixelFormatEnum) -> Graphics {
+        //Background inits
+        let mut stars = [sdl2::rect::Rect::new(0, 0, 0, 0); numstars];
+        let mut starsspeed = [0; numstars];
+        for i in 0..numstars {
+            stars[i].x = (maths::fRandom() * 320.0) as i32;
+            stars[i].y = (maths::fRandom() * 240.0) as i32;
+            stars[i].w = 2;
+            stars[i].h = 2;
+            starsspeed[i] = 4 + (maths::fRandom() * 4.0) as i32;
+        }
+
+        let mut backboxes = [sdl2::rect::Rect::new(0, 0, 0, 0); numbackboxes];
+        let mut backboxvx = [0; numbackboxes];
+        let mut backboxvy = [0; numbackboxes];
+        let mut backboxint = [0.0; numbackboxes];
+        for i in 0..numbackboxes {
+            let mut bvx = 0;
+            let mut bvy = 0;
+            backboxes[i] = if maths::fRandom() * 100.0 > 50.0 {
+                bvx = 9 - (maths::fRandom() * 19.0) as i32;
+                if bvx > -6 && bvx < 6 { bvx = 6; }
+                bvx = bvx * 3 / 2;
+                sdl2::rect::Rect::new((maths::fRandom() * 320.0) as i32, (maths::fRandom() * 240.0) as i32, 32, 12)
+            } else {
+                bvy = 9 - (maths::fRandom() * 19.0) as i32;
+                if bvy > -6 && bvy < 6 { bvy = 6; }
+                bvy = bvy * 3 / 2;
+                sdl2::rect::Rect::new((maths::fRandom() * 320.0) as i32, (maths::fRandom() * 240.0) as i32, 12, 32)
+            };
+            backboxvx[i] = bvx;
+            backboxvy[i] = bvy;
+            backboxint[i] = 0.5 + (maths::fRandom() * 100.0 / 200.0);
+        }
+
         Graphics {
             screen_pixelformat: pf,
             grphx: graphics_resources::GraphicsResources::new(),
@@ -189,7 +226,7 @@ impl Graphics {
             fademode: 0,
             fadeamount: 0, // TODO @sx set via mutator
             oldfadeamount: 0, // TODO @sx set via mutator
-            fadebars: vec![],
+            fadebars: [0; 15],
             ingame_fademode: 0,
 
             translucentroomname: false,
@@ -205,16 +242,17 @@ impl Graphics {
             cutscenebarspos: 0,
             oldcutscenebarspos: 0,
 
-            stars: [sdl2::rect::Rect::new(0, 0, 0, 0); numstars],
-            starsspeed: [0; numstars],
+            stars,
+            starsspeed,
 
             spcol: 0,
             spcoldel: 0,
             rcol: 0,
-            backboxes: [sdl2::rect::Rect::new(0, 0, 0, 0); numbackboxes],
-            backboxvx: [0; numbackboxes],
-            backboxvy: [0; numbackboxes],
-            backboxint: [0f32; numbackboxes],
+            m: 0,
+            backboxes,
+            backboxvx,
+            backboxvy,
+            backboxint,
 
             warpskip: 0,
             warpfcol: sdl2::pixels::Color::BLACK,
@@ -629,10 +667,8 @@ impl Graphics {
                 true => self.textbox[i].line.len() as i32 * 8,
                 false => 8,
             };
-            let mut yp: i32;
-            let mut opaque: bool;
 
-            yp = self.textbox[i].yp;
+            let mut yp = self.textbox[i].yp;
             if self.flipmode && self.textbox[i].flipme {
                 yp += 2 * (120 - yp) - 8 * (self.textbox[i].line.len() + 2) as i32;
             }
@@ -671,8 +707,7 @@ impl Graphics {
                 }
             }
 
-            opaque = self.textbox[i].tl >= 1.0;
-
+            let opaque = self.textbox[i].tl >= 1.0;
             if !opaque {
                 continue;
             }
@@ -711,23 +746,12 @@ impl Graphics {
 
     // void Graphics::updatetextboxes(void)
     pub fn updatetextboxes(&mut self) {
-        let mut to_delete = vec![];
-
-        // for (size_t i = 0; i < textbox.size(); i++) {
-        // for i in 0..self.textbox.len() {
-        for (i, tx) in self.textbox.iter_mut().enumerate() {
-            tx.update();
-
-            if tx.tm == 2 && tx.tl <= 0.5 {
-                // self.textbox.erase(self.textbox.begin() + i);
-            }
-            to_delete.push(i);
-        }
-
-        for i in to_delete {
-            self.textbox.remove(i);
-        }
-
+        for text in self.textbox.iter_mut() {
+            text.update();
+        };
+        self.textbox.retain(|text| {
+            !(text.tm == 2 && text.tl <= 0.5)
+        });
     }
 
     // void Graphics::drawimagecol( int t, int xp, int yp, int r = 0, int g = 0, int b = 0, bool cent/*= false*/ )
@@ -754,7 +778,9 @@ impl Graphics {
         let usethispos = self.lerp(self.oldcutscenebarspos as f32, self.cutscenebarspos as f32) as u32;
         if self.showcutscenebars {
             graphics_util::FillRect(&mut self.buffers.backBuffer, 0, 0, usethispos, 16, sdl2::pixels::Color::BLACK);
-            graphics_util::FillRect(&mut self.buffers.backBuffer, 360 - usethispos, 224, usethispos, 16, sdl2::pixels::Color::BLACK);
+            // TODO: @sx double check for buffer overflow
+            let x: u32 = 360u32.checked_sub(usethispos).unwrap_or(0);
+            graphics_util::FillRect(&mut self.buffers.backBuffer, x, 224, usethispos, 16, sdl2::pixels::Color::BLACK);
         } else if self.cutscenebarspos > 0 {
             //disappearing
             graphics_util::FillRect(&mut self.buffers.backBuffer, 0, 0, usethispos, 16, sdl2::pixels::Color::BLACK);
@@ -800,42 +826,89 @@ impl Graphics {
 
     // void Graphics::textboxactive(void)
     pub fn textboxactive(&mut self) {
-        println!("DEADBEEF: Graphics::textboxactive() method not implemented yet");
+        //Remove all but the most recent textbox
+        // for (int i = 0; i < (int) textbox.size(); i++) {
+        for i in 0..self.textbox.len() {
+            if self.m != i {
+                self.textbox[i].remove();
+            }
+        }
     }
 
     // void Graphics::textboxremovefast(void)
     pub fn textboxremovefast(&mut self) {
-        println!("DEADBEEF: Graphics::textboxremovefast() method not implemented yet");
+        //Remove all textboxes
+        // for (size_t i = 0; i < textbox.size(); i++) {
+        for i in 0..self.textbox.len() {
+            self.textbox[i].removefast();
+        }
     }
 
     // void Graphics::textboxremove(void)
     pub fn textboxremove(&mut self) {
-        println!("DEADBEEF: Graphics::textboxremove() method not implemented yet");
+        //Remove all textboxes
+        // for (size_t i = 0; i < textbox.size(); i++)
+        for i in 0..self.textbox.len() {
+            self.textbox[i].remove();
+        }
     }
 
     // void Graphics::textboxtimer( int t )
     pub fn textboxtimer(&mut self, t: i32) {
-        println!("DEADBEEF: Graphics::textboxtimer() method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("textboxtimer() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].timer = t;
     }
 
     // void Graphics::addline( std::string t )
     pub fn addline(&mut self, t: &str) {
-        println!("DEADBEEF: Graphics::addline() method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("addline() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].addline(t);
     }
 
     // void Graphics::textboxadjust(void)
     pub fn textboxadjust(&mut self) {
-        println!("DEADBEEF: Graphics::textboxadjust() method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("textboxadjust() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].adjust();
     }
 
     // void Graphics::createtextboxreal(std::string t, int xp, int yp, int r, int g, int b, bool flipme)
     pub fn createtextboxreal(&mut self, t: &str, xp: i32, yp: i32, r: i32, g: i32, b: i32, flipme: bool) {
-        println!("DEADBEEF: Graphics::createtextboxreal() method not implemented yet");
+        let m = self.textbox.len();
+
+        if m < 20 {
+            let mut text = TextBoxClass::new();
+            text.line.push(t.to_string());
+            text.xp = xp;
+            // let length = utf8::unchecked::distance(t.begin(), t.end());
+            let length = t.len() as i32;
+
+            if xp == -1 {
+                text.xp = 160 - (((length / 2) + 1) * 8);
+            }
+            text.yp = yp;
+            text.initcol(r, g, b);
+            text.flipme = flipme;
+            text.resize();
+
+            self.textbox.push(text);
+        }
     }
 
     // void Graphics::createtextbox(std::string t, int xp, int yp, int r, int g, int b)
     pub fn createtextbox(&mut self, t: &str, xp: i32, yp: i32, r: i32, g: i32, b: i32) {
-        println!("DEADBEEF: Graphics::createtextbox() method not implemented yet");
+        self.createtextboxreal(t, xp, yp, r, g, b, false);
     }
 
     // void Graphics::createtextboxflipme(std::string t, int xp, int yp, int r, int g, int b)
@@ -864,7 +937,8 @@ impl Graphics {
                 for (i, fadebar) in self.fadebars.iter().enumerate() {
                     let i = i as u32;
                     let fadebar = *fadebar as u32;
-                    graphics_util::FillRect(self.buffers.backBuffer.as_mut(), fadebar - usethisamount, i * 16, 500, 16, sdl2::pixels::Color::BLACK);
+                    let x = fadebar.checked_sub(usethisamount).unwrap_or(0);
+                    graphics_util::FillRect(self.buffers.backBuffer.as_mut(), x, i * 16, 500, 16, sdl2::pixels::Color::BLACK);
                 }
             },
             2 => (), // 2 - fade out
@@ -880,25 +954,29 @@ impl Graphics {
         self.oldfadeamount = self.fadeamount;
         if self.fademode > 1 {
             if self.fademode == 2 {
-                // prepare fade out
-                self.fadebars = vec![-(maths::fRandom() * 12.0f32) as i32 * 8; self.fadebars.len()];
+                //prepare fade out
+                for i in 0..self.fadebars.len() {
+                    self.fadebars[i] = -(maths::fRandom() * 12.0) as i32 * 8;
+                }
                 self.setfade(0);
                 self.fademode = 3;
             } else if self.fademode == 3 {
                 self.fadeamount += 24;
                 if self.fadeamount > 416 {
-                    self.fademode = 1; // faded
+                    self.fademode = 1; //faded
                 }
             } else if self.fademode == 4 {
-                // prepare fade in
-                self.fadebars = vec![320 + (maths::fRandom() * 12.0f32) as i32 * 8; self.fadebars.len()];
-
+                //prepare fade in
+                for i in 0..self.fadebars.len() {
+                    self.fadebars[i] = 320 + (maths::fRandom() * 12.0) as i32 * 8;
+                }
+                println!("{:?} fadebars", self.fadebars);
                 self.setfade(416);
                 self.fademode = 5;
             } else if self.fademode == 5 {
                 self.fadeamount -= 24;
                 if self.fadeamount <= 0 {
-                    self.fademode = 0; // normal
+                    self.fademode = 0; //normal
                 }
             }
         }
@@ -971,13 +1049,66 @@ impl Graphics {
     }
 
     // void Graphics::drawcoloredtile( int x, int y, int t, int r, int g, int b )
-    pub fn drawcoloredtile(&mut self, x: i32, y: i32, t: i32, r: i32, g: i32, b: i32) {
-        println!("DEADBEEF: Graphics::drawcoloredtile method not implemented yet");
+    pub fn drawcoloredtile(&mut self, x: i32, y: i32, t: usize, r: i32, g: i32, b: i32) {
+        if !INBOUNDS_VEC!(t, self.grphx.tiles.surfaces) {
+            return;
+        }
+        self.setcolreal(self.getRGB(r, g, b));
+
+        let rect = sdl2::rect::Rect::new(x, y, self.tiles_rect.w as u32, self.tiles_rect.h as u32);
+        // self.grphx.tiles.surfaces[t].blit(None, self.buffers.backBuffer, &rect, self.ct);
+        graphics_util::BlitSurfaceColoured(&self.grphx.tiles.surfaces[t], None, &mut self.buffers.backBuffer, rect, self.ct.colour);
     }
 
     // bool Graphics::Hitest(SDL_Surface* surface1, point p1, SDL_Surface* surface2, point p2)
-    pub fn Hitest(&mut self) {
-        println!("DEADBEEF: Graphics::Hitest method not implemented yet");
+    pub fn Hitest(&mut self, drawframe1: usize, p1: maths::point, drawframe2: usize, p2: maths::point, help: &mut utility_class::UtilityClass) -> bool {
+        let (surface1, surface2) = if self.flipmode {
+            if INBOUNDS_VEC!(drawframe1, self.grphx.flipsprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.flipsprites.surfaces) {
+                return false
+            }
+            (&self.grphx.flipsprites.surfaces[drawframe1], &self.grphx.flipsprites.surfaces[drawframe2])
+        } else {
+            if INBOUNDS_VEC!(drawframe1, self.grphx.sprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.sprites.surfaces) {
+                return false
+            }
+            (&self.grphx.sprites.surfaces[drawframe1], &self.grphx.sprites.surfaces[drawframe2])
+        };
+
+        //find rectangle where they intersect:
+        let r1_left = p1.x;
+        let r1_right = r1_left + surface1.width() as i32;
+        let r2_left = p2.x;
+        let r2_right = r2_left + surface2.width() as i32;
+
+        let r1_bottom = p1.y;
+        let r1_top = p1.y + surface1.height() as i32;
+        let r2_bottom  = p2.y;
+        let r2_top = p2.y + surface2.height() as i32;
+
+        let rect1 = sdl2::rect::Rect::new(p1.x, p1.y, surface1.width(), surface1.height());
+        let rect2 = sdl2::rect::Rect::new(p2.x, p2.y, surface2.width(), surface2.height());
+        let intersection = help.intersects(rect1, rect2);
+
+        if intersection {
+            let r3_left = maths::VVV_max(r1_left, r2_left);
+            let r3_top = maths::VVV_min(r1_top, r2_top);
+            let r3_right = maths::VVV_min(r1_right, r2_right);
+            let r3_bottom = maths::VVV_max(r1_bottom, r2_bottom);
+
+            //for every pixel inside rectangle
+            for x in r3_left..r3_right {
+                for y in r3_bottom..r3_top {
+                    let pixel1 = graphics_util::ReadPixel(surface1, x - p1.x, y - p1.y);
+                    let pixel2 = graphics_util::ReadPixel(surface2, x - p2.x, y - p2.y);
+                    // TODO: @sx recheck conditions
+                    if ((pixel1 & 0x000000FF) > 0) && ((pixel2 & 0x000000FF) > 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     // void Graphics::drawgravityline( int t )
@@ -1082,19 +1213,19 @@ impl Graphics {
         };
 
         if !map.custommode {
-            for i in (obj.entities.len() - 1)..=0 {
+            for i in (0..obj.entities.len()).rev() {
                 if !obj.entities[i].ishumanoid() {
                     self.drawentity(i, yoff, game, obj, map);
                 }
             }
 
-            for i in (obj.entities.len() - 1)..=0 {
+            for i in (0..obj.entities.len()).rev() {
                 if obj.entities[i].ishumanoid() {
                     self.drawentity(i, yoff, game, obj, map);
                 }
             }
         } else {
-            for i in obj.entities.len() - 1..=0 {
+            for i in (0..obj.entities.len()).rev() {
                 self.drawentity(i, yoff, game, obj, map);
             }
         }
@@ -1108,6 +1239,7 @@ impl Graphics {
         }
 
         if obj.entities[i].invis {
+            println!("{:?} - entity is invisible!", i);
             return;
         }
 
@@ -1139,6 +1271,7 @@ impl Graphics {
         let xp: i32 = lerp(self.alpha, obj.entities[i].lerpoldxp as f32, obj.entities[i].xp as f32) as i32;
         let yp: i32 = lerp(self.alpha, obj.entities[i].lerpoldyp as f32, obj.entities[i].yp as f32) as i32;
 
+        // println!("{:?} - drawing {:?}", i, obj.entities[i]);
         match obj.entities[i].size {
             0 => {
                 // Sprites
@@ -1153,6 +1286,7 @@ impl Graphics {
                 drawRect = self.sprites_rect;
                 drawRect.x += tpoint.x;
                 drawRect.y += tpoint.y;
+
                 graphics_util::BlitSurfaceColoured(&spritesvec[obj.entities[i].drawframe], None, &mut self.buffers.backBuffer, drawRect, self.ct.colour);
 
                 //screenwrapping!
@@ -1173,8 +1307,7 @@ impl Graphics {
                 if tpoint.y < 8 {
                     wrapY = true;
                     wrappedPoint.y += 232;
-                }
-                else if tpoint.y > 210 {
+                } else if tpoint.y > 210 {
                     wrapY = true;
                     wrappedPoint.y -= 232;
                 }
@@ -1244,7 +1377,7 @@ impl Graphics {
             4 => {
                 // Small pickups
                 self.setcolreal(obj.entities[i].realcol);
-                self.drawhuetile(xp, yp - yoff, obj.entities[i].tile);
+                self.drawhuetile(xp, yp - yoff, obj.entities[i].tile as usize);
             },
             5 => {
                 //Horizontal Line
@@ -1270,10 +1403,6 @@ impl Graphics {
                 //Teleporter
                 self.drawtele(xp, yp - yoff, obj.entities[i].drawframe, obj.entities[i].realcol);
             },
-            // 8 => {
-            //     // Special: Moving platform, 8 tiles
-            //     // Note: This code is in the 4-tile code
-            // },
             9 => {
                 // Really Big Sprite! (2x2)
                 // self.setcolreal(obj.entities[i].realcol);
@@ -1413,7 +1542,7 @@ impl Graphics {
                 let TempSurface = graphics_util::ScaleSurface( &spritesvec[obj.entities[i].drawframe], 6 * self.sprites_rect.w as u32, 6* self.sprites_rect.h as u32);
                 graphics_util::BlitSurfaceColoured(&TempSurface, None, &mut self.buffers.backBuffer,  drawRect, self.ct.colour);
             },
-            _ => (),
+            _ => println!("warning! unknown entity size, ({})", obj.entities[i].size),
         };
     }
 
@@ -1423,24 +1552,21 @@ impl Graphics {
 
     // void Graphics::drawbackground( int t )
     pub fn drawbackground(&mut self, map: &mut map::Map) {
-        let mut temp = 0;
-        let t = map.background;
-
-        match t {
+        match map.background {
             1 => {
                 //Starfield
                 graphics_util::ClearSurface(&mut self.buffers.backBuffer);
                 for i in 0..numstars {
                     self.stars[i].w = 2;
                     self.stars[i].h = 2;
-                    let mut star_rect = self.stars[i];
-                    star_rect.x = self.lerp((star_rect.x + self.starsspeed[i]) as f32, star_rect.x as f32) as i32;
+
+                    self.stars[i].x = self.lerp((self.stars[i].x + self.starsspeed[i]) as f32, self.stars[i].x as f32) as i32;
                     if self.starsspeed[i] <= 6 {
-                        let rgba = self.getRGB_AsPixelColor(0x22,0x22,0x22);
-                        graphics_util::FillRect_rect(&mut self.buffers.backBuffer, star_rect, rgba);
+                        let rgba = self.getRGB_AsPixelColor(0x22, 0x22, 0x22);
+                        graphics_util::FillRect_rect(&mut self.buffers.backBuffer, self.stars[i], rgba);
                     } else {
-                        let rgba = self.getRGB_AsPixelColor(0x55,0x55,0x55);
-                        graphics_util::FillRect_rect(&mut self.buffers.backBuffer, star_rect, rgba);
+                        let rgba = self.getRGB_AsPixelColor(0x55, 0x55, 0x55);
+                        graphics_util::FillRect_rect(&mut self.buffers.backBuffer, self.stars[i], rgba);
                     }
                 }
             },
@@ -1900,6 +2026,9 @@ impl Graphics {
     pub fn drawmap(&mut self, map: &mut map::Map) {
         if !self.foregrounddrawn {
             graphics_util::ClearSurface(&mut self.buffers.foregroundBuffer);
+
+            // println!("drawing map with tileset ({}) and some contents of ", map.tileset);
+
             if map.tileset == 0 {
                 for j in 0..30 {
                     for i in 0..40 {
@@ -1927,17 +2056,49 @@ impl Graphics {
             }
             self.foregrounddrawn = true;
         }
+
         self.buffers.foregroundBuffer.blit(None, &mut self.buffers.backBuffer, None);
     }
 
     // void Graphics::drawfinalmap(void)
-    pub fn drawfinalmap(&mut self) {
-        println!("DEADBEEF: Graphics::drawfinalmap method not implemented yet");
+    pub fn drawfinalmap(&mut self, map: &mut map::Map) {
+        if !self.foregrounddrawn {
+            graphics_util::ClearSurface(&mut self.buffers.foregroundBuffer);
+
+            if map.tileset == 0 {
+                for j in 0..30 {
+                    for i in 0..40 {
+                        if (map.contents[i as usize + map.vmult[j as usize] as usize]) > 0 {
+                            self.drawforetile(i*8, j*8, map.finalat(i, j));
+                        }
+                    }
+                }
+            } else if map.tileset == 1 {
+                for j in 0..30 {
+                    for i in 0..40 {
+                        if (map.contents[i as usize + map.vmult[j as usize] as usize]) > 0 {
+                            self.drawforetile2(i*8, j*8, map.finalat(i, j));
+                        }
+                    }
+                }
+            }
+            self.foregrounddrawn = true;
+        }
+
+        self.buffers.foregroundBuffer.blit(None, &mut self.buffers.backBuffer, None);
     }
 
     // void Graphics::drawtowermap(void)
     pub fn drawtowermap(&mut self) {
         println!("DEADBEEF: Graphics::drawtowermap method not implemented yet");
+        // int temp;
+        // int yoff = lerp(map.oldypos, map.ypos);
+        // for (int j = 0; j < 31; j++) {
+        //     for (int i = 0; i < 40; i++) {
+        //         temp = map.tower.at(i, j, yoff);
+        //         if (temp > 0) drawtile3(i * 8, (j * 8) - (yoff % 8), temp, towerbg.colstate);
+        //     }
+        // }
     }
 
     // void Graphics::drawtowerspikes(void)
@@ -2284,13 +2445,23 @@ impl Graphics {
     }
 
     // void Graphics::drawhuetile( int x, int y, int t )
-    fn drawhuetile(&mut self, x: i32, y: i32, t: i32) {
-        println!("DEADBEEF: drawhuetile method not implemented yet");
+    fn drawhuetile(&mut self, x: i32, y: i32, t: usize) {
+        if !INBOUNDS_VEC!(t, self.grphx.tiles.surfaces) {
+            return;
+        }
+
+        let tpoint = maths::point {x, y};
+        let rect = sdl2::rect::Rect::new(tpoint.x, tpoint.y, self.tiles_rect.w as u32, self.tiles_rect.h as u32);
+        graphics_util::BlitSurfaceColoured(&self.grphx.tiles.surfaces[t], None, &mut self.buffers.backBuffer, rect, self.ct.colour);
     }
 
     // void Graphics::huetilesetcol(int t)
     pub fn huetilesetcol(&mut self, t: i32) {
-        println!("DEADBEEF: huetilesetcol method not implemented yet");
+        match t {
+            0 => self.setcolreal(self.getRGB(250-(maths::fRandom()*32.0) as i32, 250-(maths::fRandom()*32.0) as i32, 10)),
+            1 => self.setcolreal(self.getRGB(250-(maths::fRandom()*32.0) as i32, 250-(maths::fRandom()*32.0) as i32, 10)),
+            _ => self.setcolreal(self.getRGB(250-(maths::fRandom()*32.0) as i32, 250-(maths::fRandom()*32.0) as i32, 10)),
+        };
     }
 
     // Uint32 Graphics::bigchunkygetcol(int t)
@@ -2314,24 +2485,46 @@ impl Graphics {
 
     // int Graphics::textboxwidth(void)
     pub fn textboxwidth(&mut self) -> i32 {
-        println!("DEADBEEF: textboxwidth method not implemented yet");
-        0
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("textboxwidth() out-of-bounds!");
+            return 0;
+        }
+
+        return self.textbox[self.m].w;
     }
 
     // void Graphics::textboxmoveto(int xo)
     pub fn textboxmoveto(&mut self, xo: i32) {
-        println!("DEADBEEF: textboxmoveto method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("textboxmoveto() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].xp = xo;
     }
 
     // void Graphics::textboxcentery(void)
     pub fn textboxcentery(&mut self) {
-        println!("DEADBEEF: textboxcentery method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            println!("textboxcentery() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].centery();
     }
 
     // int Graphics::crewcolour(const int t)
     pub fn crewcolour(&mut self, t: i32) -> i32 {
-        println!("DEADBEEF: crewcolour method not implemented yet");
-        0
+        //given crewmate t, return colour in setcol
+        match t {
+            0 => 0,
+            1 => 20,
+            2 => 14,
+            3 => 15,
+            4 => 13,
+            5 => 16,
+            _ => 0,
+        }
     }
 
     // void Graphics::updatescreenshake(void)

@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct TextBoxClass {
     //Fundamentals
     pub line: Vec<String>,
@@ -12,7 +13,7 @@ pub struct TextBoxClass {
     pub tr: i32,
     pub tg: i32,
     pub tb: i32,
-    timer: i32,
+    pub timer: i32,
 
     pub tl: f32,
     pub prev_tl: f32,
@@ -59,31 +60,43 @@ impl TextBoxClass {
     }
 
     // void centery(void);
-    fn centery(&mut self) {
-        println!("DEADBEEF: TextBox::centery() method not implemented yet");
+    pub fn centery(&mut self) {
+        self.resize();
+        self.yp = 120 - (self.h / 2);
+        self.resize();
     }
 
     // void adjust(void);
-    fn adjust(&mut self) {
-        println!("DEADBEEF: TextBox::adjust() method not implemented yet");
+    pub fn adjust(&mut self) {
+        self.resize();
+        if self.xp < 10 { self.xp = 10; }
+        if self.yp < 10 { self.yp = 10; }
+        if self.xp + self.w > 310 { self.xp = 310 - self.w; }
+        if self.yp + self.h > 230 { self.yp = 230 - self.h; }
+        self.resize();
     }
 
     // void initcol(int rr, int gg, int bb);
-    fn initcol(&mut self, rr: i32, gg: i32, bb: i32) {
-        println!("DEADBEEF: TextBox::initcol() method not implemented yet");
+    pub fn initcol(&mut self, rr: i32, gg: i32, bb: i32) {
+        self.tr = rr;
+        self.tg = gg;
+        self.tb = bb;
+        self.r = 0;
+        self.g = 0;
+        self.b = 0;
+        self.tl = 0.5;
     }
 
     // void setcol(int rr, int gg, int bb);
     pub fn setcol(&mut self, rr: i32, gg: i32, bb: i32) {
-        println!("DEADBEEF: TextBox::setcol() method not implemented yet");
+        self.r = rr;
+        self.g = gg;
+        self.b = bb;
     }
-
     pub fn setcol_tl_lerp(&mut self, lerp: f32) {
-        let rr = self.tr * lerp as i32;
-        let gg = self.tg * lerp as i32;
-        let bb = self.tb * lerp as i32;
-
-        println!("DEADBEEF: TextBox::setcol() method not implemented yet");
+        self.r = self.tr * lerp as i32;
+        self.g = self.tg * lerp as i32;
+        self.b = self.tb * lerp as i32;
     }
 
     // void update(void);
@@ -113,23 +126,43 @@ impl TextBoxClass {
     }
 
     // void remove(void);
-    fn remove(&mut self) {
-        println!("DEADBEEF: TextBox::remove() method not implemented yet");
+    pub fn remove(&mut self) {
+        self.tm = 2;
+        self.tl = 1.0; //Remove mode
     }
 
     // void removefast(void);
-    fn removefast(&mut self) {
-        println!("DEADBEEF: TextBox::removefast() method not implemented yet");
+    pub fn removefast(&mut self) {
+        self.tm = 2;
+        self.tl = 0.4; //Remove mode
     }
 
     // void resize(void);
-    fn resize(&mut self) {
-        println!("DEADBEEF: TextBox::resize() method not implemented yet");
+    pub fn resize(&mut self) {
+        //Set the width and height to the correct sizes
+        self.max = 0;
+        // for (size_t iter = 0; iter < line.size(); iter++) {
+        for iter in 0..self.line.len() {
+            // let len = utf8::unchecked::distance(self.line[iter].begin(), self.line[iter].end());
+            let len = self.line[iter].len() as i32;
+
+            if len > self.max {
+                self.max = len;
+            }
+        }
+
+        self.lw = self.max;
+        self.w = (self.max + 2) * 8;
+        self.h = (self.line.len() as i32 + 2) * 8;
     }
 
     // void addline(std::string t);
-    fn addline(&mut self, t: &str) {
-        println!("DEADBEEF: TextBox::addline() method not implemented yet");
+    pub fn addline(&mut self, t: &str) {
+        self.line.push(t.to_string());
+        self.resize();
+        if self.line.len() >= 12 {
+            self.line.clear();
+        }
     }
 
 }

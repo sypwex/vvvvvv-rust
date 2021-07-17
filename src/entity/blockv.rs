@@ -3,8 +3,8 @@ pub struct BlockClass {
     pub rect: sdl2::rect::Rect,
     pub r#type: super::EntityEnum,
     pub trigger: i32,
-    xp: i32,
-    yp: i32,
+    pub xp: i32,
+    pub yp: i32,
     pub wp: i32,
     pub hp: i32,
     pub script: String,
@@ -16,7 +16,6 @@ pub struct BlockClass {
 
 impl BlockClass {
     // blockclass::blockclass(void)
-    // void blockclass::clear(void)
     pub fn new() -> Self {
         Self {
             r#type: super::EntityEnum::BLOCK,
@@ -37,6 +36,22 @@ impl BlockClass {
             script: String::new(),
             prompt: String::new(),
         }
+    }
+
+    // void blockclass::clear(void)
+    pub fn clear(&mut self) {
+        self.r#type = super::EntityEnum::BLOCK;
+        self.trigger = 0;
+        self.xp = 0;
+        self.yp = 0;
+        self.wp = 0;
+        self.hp = 0;
+        self.rect = sdl2::rect::Rect::new(0, 0, 0, 0);
+        self.r = 0;
+        self.g = 0;
+        self.b = 0;
+        self.script = String::new();
+        self.prompt = String::new();
     }
 
     // void blockclass::rectset(const int xi, const int yi, const int wi, const int hi)

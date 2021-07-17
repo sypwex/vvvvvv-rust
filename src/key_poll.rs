@@ -401,19 +401,23 @@ impl KeyPoll {
     }
 
     // bool KeyPoll::controllerWantsLeft(bool includeVert)
-    pub fn controllerWantsLeft(self, includeVert: bool) -> bool {
-        return self.buttonmap[&Button::DPadLeft] || self.xVel < 0 || (
-            includeVert && (
-                self.buttonmap[&Button::DPadUp] || self.yVel < 0
+    pub fn controllerWantsLeft(&mut self, includeVert: bool) -> bool {
+        return
+            *self.buttonmap.entry(Button::DPadLeft).or_default() ||
+            self.xVel < 0 || (
+                includeVert && (
+                    *self.buttonmap.entry(Button::DPadUp).or_default() || self.yVel < 0
+                )
             )
-        )
     }
 
     // bool KeyPoll::controllerWantsRight(bool includeVert)
-    pub fn controllerWantsRight(self, includeVert: bool) -> bool {
-        return self.buttonmap[&Button::DPadRight] || self.xVel > 0 || (
+    pub fn controllerWantsRight(&mut self, includeVert: bool) -> bool {
+        return
+            *self.buttonmap.entry(Button::DPadRight).or_default() ||
+            self.xVel > 0 || (
             includeVert && (
-                self.buttonmap[&Button::DPadDown] || self.yVel > 0
+                *self.buttonmap.entry(Button::DPadDown).or_default() || self.yVel > 0
             )
         )
     }

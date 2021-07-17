@@ -137,7 +137,7 @@ impl RenderFixed {
         graphics.trinketcolset = false;
         // for int i = obj.entities.size() - 1; i >= 0; i-- {
         // for (_i, entity) in obj.entities.iter_mut().enumerate() {
-        for i in (obj.entities.len() - 1)..=0 {
+        for i in (0..obj.entities.len()).rev() {
             if obj.entities[i].invis {
                 continue;
             }

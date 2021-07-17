@@ -1070,7 +1070,7 @@ impl Render {
                     graphics_util::ClearSurface(&mut self.graphics.buffers.backBuffer);
                 }
                 if map.final_colormode {
-                    self.graphics.drawfinalmap();
+                    self.graphics.drawfinalmap(map);
                 } else {
                     self.graphics.drawmap(map);
                 }
@@ -1259,9 +1259,9 @@ impl Render {
                 }
 
                 if game.deathcounts > 0 {
-                    self.graphics.bprint(56, 30,help.String(game.deathcounts), 196, 80, 80, None);
+                    self.graphics.bprint(56, 30,&help.String(game.deathcounts), 196, 80, 80, None);
                 } else {
-                    self.graphics.bprint(56, 30,help.String(game.deathcounts), 196, 196, 196, None);
+                    self.graphics.bprint(56, 30,&help.String(game.deathcounts), 196, 196, 196, None);
                 }
 
                 if game.trinkets(obj) < game.timetrialshinytarget {

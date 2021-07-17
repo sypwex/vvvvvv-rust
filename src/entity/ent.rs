@@ -1,5 +1,14 @@
 use crate::{game, screen::render::graphics, utility_class};
 
+// #define		rn( rx,  ry) ((rx) + ((ry) * 100))
+#[macro_export]
+macro_rules! rn {
+    ($rx:expr, $ry:expr) => {
+        $rx + ($ry * 100)
+    };
+}
+
+#[derive(Debug)]
 pub struct EntClass {
     //Fundamentals
     pub invis: bool,
@@ -19,7 +28,7 @@ pub struct EntClass {
     pub oldxp: i32,
     pub oldyp: i32,
     pub ax: f32,
-    ay: f32,
+    pub ay: f32,
     pub vx: f32,
     pub vy: f32,
     pub cx: i32,
@@ -27,7 +36,7 @@ pub struct EntClass {
     pub w: i32,
     pub h: i32,
     pub newxp: f32,
-    newyp: f32,
+    pub newyp: f32,
     pub isplatform: bool,
     pub x1: i32,
     pub y1: i32,
@@ -37,9 +46,9 @@ pub struct EntClass {
     //Collision Rules
     pub onentity: i32,
     pub harmful: bool,
-    onwall: i32,
-    onxwall: i32,
-    onywall: i32,
+    pub onwall: i32,
+    pub onxwall: i32,
+    pub onywall: i32,
 
     //Platforming specific
     pub gravity: bool,
@@ -188,8 +197,27 @@ impl EntClass {
     }
 
     // bool entclass::outside(void)
-    fn outside(&mut self) -> bool {
-        false
+    pub fn outside(&mut self) -> bool {
+        // Returns true if any point of the entity is outside the map.
+        // Adjusts velocity for a clean collision.
+        if self.xp < self.x1 {
+            self.xp = self.x1;
+            return true;
+        }
+        if self.yp < self.y1 {
+            self.yp = self.y1;
+            return true;
+        }
+        if self.xp + self.w > self.x2 {
+            self.xp = self.x2 - self.w;
+            return true;
+        }
+        if self.yp + self.h > self.y2 {
+            self.yp = self.y2 - self.h;
+            return true;
+        }
+
+        return false;
     }
 
     // void entclass::setenemy( int t )
@@ -198,8 +226,369 @@ impl EntClass {
     }
 
     // void entclass::setenemyroom( int rx, int ry )
-    pub fn setenemyroom(&mut self, rx: i32, ry: i32)  {
-        println!("DEADBEEF: entclass::setenemyroom() method not implemented yet");
+    pub fn setenemyroom(&mut self, rx: i32, ry: i32) {
+        let rx = rx - 100;
+        let ry = ry - 100;
+
+        //Simple function to initilise simple enemies
+        match rn!(rx, ry) {
+            //Space Station 1
+            t if t == rn!(12, 3) => {
+                //Security Drone
+                self.tile = 36;
+                self.colour = 8;
+                self.animate = 1;
+            },
+            t if t == rn!(13, 3) => {
+                //Wavelengths
+                self.tile = 32;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 32;
+            },
+            t if t == rn!(15, 3) => {
+                //Traffic
+                self.tile = 28;
+                self.colour = 6;
+                self.animate = 1;
+                self.w = 22;
+                self.h = 32;
+            },
+            t if t == rn!(12, 5) => {
+                //The Yes Men
+                self.tile = 40;
+                self.colour = 9;
+                self.animate = 1;
+                self.w = 20;
+                self.h = 20;
+            },
+            t if t == rn!(13, 6) => {
+                //Hunchbacked Guards
+                self.tile = 44;
+                self.colour = 8;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 20;
+            },
+            t if t == rn!(13, 4) => {
+                //Communication Station
+                self.harmful = false;
+                if self.xp == 256 {
+                    //transmittor
+                    self.tile = 104;
+                    self.colour = 4;
+                    self.animate = 7;
+                    self.w = 16;
+                    self.h = 16;
+                    self.xp -= 24;
+                    self.lerpoldxp -= 24;
+                    self.yp -= 16;
+                    self.lerpoldyp -= 16;
+                } else {
+                    //radar dish
+                    self.tile = 124;
+                    self.colour = 4;
+                    self.animate = 6;
+                    self.w = 32;
+                    self.h = 32;
+                    self.cx = 4;
+                    self.size = 9;
+                    self.xp -= 4;
+                    self.lerpoldxp -= 4;
+                    self.yp -= 32;
+                    self.lerpoldyp -= 32;
+                }
+            },
+            t if t == rn!(4, 0) => {
+                //The Lab
+                self.tile = 78;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(2, 0) => {
+                self.tile = 88;
+                self.colour = 11;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            //Space Station 2
+            t if t == rn!(14, 11) => {
+                //Lies
+                self.colour = 17;
+            },
+            t if t == rn!(16, 11) => {
+                //Lies
+                self.colour = 8;
+            },
+            t if t == rn!(13, 10) => {
+                //Factory
+                self.colour = 11;
+            },
+            t if t == rn!(13, 9) => {
+                //Factory
+                self.colour = 9;
+            },
+            t if t == rn!(13, 8) => {
+                //Factory
+                self.colour = 8;
+            },
+            t if t == rn!(11, 13) => {
+                //Truth
+                self.tile = 64;
+                self.colour = 7;
+                self.animate = 100;
+                self.w = 44;
+                self.h = 10;
+                self.size = 10;
+            },
+            t if t == rn!(17, 7) => {
+                //Brass sent us under the top
+                self.tile = 82;
+                self.colour = 8;
+                self.animate = 5;
+                self.w = 28;
+                self.h = 32;
+                self.cx = 4;
+            },
+            t if t == rn!(10, 7) => {
+                // (deception)
+                self.tile = 92;
+                self.colour = 6;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(14, 13) => {
+                // (chose poorly)
+                self.tile = 56;
+                self.colour = 6;
+                self.animate = 1;
+                self.w = 15;
+                self.h = 24;
+            },
+            t if t == rn!(13, 12) => {
+                // (backsliders)
+                self.tile = 164;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(14, 8) => {
+                // (wheel of fortune room)
+                self.tile = 116;
+                self.colour = 12;
+                self.animate = 1;
+                self.w = 32;
+                self.h = 32;
+            },
+            t if t == rn!(16, 9) => {
+                // (seeing dollar signs)
+                self.tile = 68;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(16, 7) => {
+                // (tomb of mad carew)
+                self.tile = 106;
+                self.colour = 7;
+                self.animate = 2;
+                self.w = 24;
+                self.h = 25;
+            },
+            //Warp Zone
+            t if t == rn!(15, 2) => {
+                // (numbers)
+                self.tile = 100;
+                self.colour = 6;
+                self.animate = 1;
+                self.w = 32;
+                self.h = 14;
+                self.yp += 1;
+                self.lerpoldyp += 1;
+            },
+            t if t == rn!(16, 2) => {
+                // (Manequins)
+                self.tile = 52;
+                self.colour = 7;
+                self.animate = 5;
+                self.w = 16;
+                self.h = 25;
+                self.yp -= 4;
+                self.lerpoldyp -= 4;
+            },
+            t if t == rn!(18, 0) => {
+                // (Obey)
+                self.tile = 51;
+                self.colour = 11;
+                self.animate = 100;
+                self.w = 30;
+                self.h = 14;
+            },
+            t if t == rn!(19, 1) => {
+                // Ascending and Descending
+                self.tile = 48;
+                self.colour = 9;
+                self.animate = 5;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(19, 2) => {
+                // Shockwave Rider
+                self.tile = 176;
+                self.colour = 6;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(18, 3) => {
+                // Mind the gap
+                self.tile = 168;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(17, 3) => {
+                // Edge Games
+                if self.yp == 96 {
+                    self.tile = 160;
+                    self.colour = 8;
+                    self.animate = 1;
+                    self.w = 16;
+                    self.h = 16;
+                } else {
+                    self.tile = 156;
+                    self.colour = 8;
+                    self.animate = 1;
+                    self.w = 16;
+                    self.h = 16;
+                }
+            },
+            t if t == rn!(16, 0) => {
+                // I love you
+                self.tile = 112;
+                self.colour = 8;
+                self.animate = 5;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(14, 2) => {
+                // That's why I have to kill you
+                self.tile = 114;
+                self.colour = 6;
+                self.animate = 5;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(18, 2) => {
+                // Thinking with Portals
+                //depends on direction
+                if self.xp == 88 {
+                    self.tile = 54+12;
+                    self.colour = 12;
+                    self.animate = 100;
+                    self.w = 60;
+                    self.h = 16;
+                    self.size = 10;
+                } else {
+                    self.tile = 54;
+                    self.colour = 12;
+                    self.animate = 100;
+                    self.w = 60;
+                    self.h = 16;
+                    self.size = 10;
+                }
+            },
+            //Final level
+            t if t == rn!(50-100, 53-100) => {
+                //The Yes Men
+                self.tile = 40;
+                self.colour = 9;
+                self.animate = 1;
+                self.w = 20;
+                self.h = 20;
+            },
+            t if t == rn!(48-100, 51-100) => {
+                //Wavelengths
+                self.tile = 32;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 32;
+            },
+            t if t == rn!(43-100, 52-100) => {
+                // Ascending and Descending
+                self.tile = 48;
+                self.colour = 9;
+                self.animate = 5;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(46-100, 51-100) => {
+                //kids his age
+                self.tile = 88;
+                self.colour = 11;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(43-100, 51-100) => {
+                // Mind the gap
+                self.tile = 168;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(44-100, 51-100) => {
+                // vertigo?
+                self.tile = 172;
+                self.colour = 7;
+                self.animate = 100;
+                self.w = 32;
+                self.h = 32;
+            },
+            t if t == rn!(44-100, 52-100) => {
+                // (backsliders)
+                self.tile = 164;
+                self.colour = 7;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(43-100, 56-100) => {
+                //Intermission 1
+                self.tile = 88;
+                self.colour = 21;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            t if t == rn!(45-100, 56-100) => {
+                //Intermission 1
+                self.tile = 88;
+                self.colour = 21;
+                self.animate = 1;
+                self.w = 16;
+                self.h = 16;
+            },
+            //The elephant
+            t if (t == rn!(11, 9)) | (t == rn!(12, 9)) | (t == rn!(11, 8)) | (t == rn!(12, 8)) => {
+                self.tile = 0;
+                self.colour = 102;
+                self.animate = 0;
+                self.w = 464;
+                self.h = 320;
+                self.size = 11;
+                self.harmful = false;
+            },
+            _ => println!("unknown room rx=({}),ry=({}) === rn!({})", rx, ry, rn!(rx, ry)),
+        };
     }
 
     // void entclass::settreadmillcolour( int rx, int ry )

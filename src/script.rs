@@ -70,7 +70,7 @@ impl ScriptClass {
     // void scriptclass::clearcustom(void)
     // void scriptclass::tokenize( const std::string& t )
     fn tokenize(&mut self, t: &str) {
-        println!("tokenizing: {:?}", t);
+        // println!("tokenizing: {:?}", t);
 
         self.j = 0;
         let mut tempword = String::new();
@@ -95,7 +95,8 @@ impl ScriptClass {
             self.words[self.j as usize] = tempword;
         }
 
-        println!("tokenize result: {:?}", self.words);
+        // println!("tokenize result: {:?}", self.words);
+        println!("tokenize result: {:?}", self.words.iter().filter(|x| x.len() > 0).collect::<Vec<_>>());
     }
 
     // void scriptclass::run(void)
@@ -306,7 +307,7 @@ impl ScriptClass {
                 }
                 if self.words[0] == "gotoroom" {
                     //USAGE: gotoroom(x,y) (manually add 100)
-                    map.gotoroom(utility_class::ss_toi(&self.words[1])+100, utility_class::ss_toi(&self.words[2])+100, game, graphics, music, obj);
+                    map.gotoroom(utility_class::ss_toi(&self.words[1])+100, utility_class::ss_toi(&self.words[2])+100, game, graphics, music, obj, help);
                 }
                 if self.words[0] == "cutscene" {
                     graphics.showcutscenebars = true;
@@ -648,7 +649,7 @@ impl ScriptClass {
                         Some(utility_class::ss_toi(&self.words[7])),
                         Some(utility_class::ss_toi(&self.words[8])),
                         Some(utility_class::ss_toi(&self.words[9])),
-                        map, game
+                        game
                     );
                     self.words[6] = word6;
                     self.words[7] = word7;
@@ -701,18 +702,18 @@ impl ScriptClass {
                             Some(utility_class::ss_toi(&self.words[4])),
                             Some(utility_class::ss_toi(&self.words[5])),
                             Some(utility_class::ss_toi(&self.words[6])),
-                            None, None, map, game
+                            None, None, game
                         );
                     } else {
                         obj.createentity(
-                        utility_class::ss_toi(&self.words[1]),
-                        utility_class::ss_toi(&self.words[2]),
-                        18,
-                        Some(self.r),
-                        Some(utility_class::ss_toi(&self.words[4])),
-                        Some(utility_class::ss_toi(&self.words[5])),
-                        None, None, None, map, game
-                    );
+                            utility_class::ss_toi(&self.words[1]),
+                            utility_class::ss_toi(&self.words[2]),
+                            18,
+                            Some(self.r),
+                            Some(utility_class::ss_toi(&self.words[4])),
+                            Some(utility_class::ss_toi(&self.words[5])),
+                            None, None, None, game
+                        );
                     }
                 } else if self.words[0] == "changemood" {
                     if self.words[1] == "player" {
@@ -997,7 +998,7 @@ impl ScriptClass {
                     graphics.textboxactive();
                 } else if self.words[0] == "gamemode" {
                     if self.words[1] == "teleporter" {
-                        game.mapmenuchange(GameState::TELEPORTERMODE);
+                        game.mapmenuchange(GameState::TELEPORTERMODE, graphics, map);
 
                         game.useteleporter = false; //good heavens don't actually use it
                     } else if self.words[1] == "game" {
@@ -1161,7 +1162,7 @@ impl ScriptClass {
                     game.creditposition = 0;
                 } else if self.words[0] == "finalmode" {
                     map.finalmode = true;
-                    map.gotoroom(utility_class::ss_toi(&self.words[1]), utility_class::ss_toi(&self.words[2]), game, graphics, music, obj);
+                    map.gotoroom(utility_class::ss_toi(&self.words[1]), utility_class::ss_toi(&self.words[2]), game, graphics, music, obj, help);
                 } else if self.words[0] == "rescued" {
                     if self.words[1] == "red" {
                         game.crewstats[3] = true;
@@ -1339,19 +1340,19 @@ impl ScriptClass {
                     //starting at 180, create the rescued crewmembers (ingoring violet, who's at 155)
                     self.i = 215;
                     if game.crewstats[2] && game.lastsaved != 2 {
-                        obj.createentity(self.i, 153, 18, Some(14), Some(0), Some(17), Some(0), None, None, map, game);
+                        obj.createentity(self.i, 153, 18, Some(14), Some(0), Some(17), Some(0), None, None, game);
                         self.i += 25;
                     }
                     if game.crewstats[3] && game.lastsaved != 3 {
-                        obj.createentity(self.i, 153, 18, Some(15), Some(0), Some(17), Some(0), None, None, map, game);
+                        obj.createentity(self.i, 153, 18, Some(15), Some(0), Some(17), Some(0), None, None, game);
                         self.i += 25;
                     }
                     if game.crewstats[4] && game.lastsaved != 4 {
-                        obj.createentity(self.i, 153, 18, Some(13), Some(0), Some(17), Some(0), None, None, map, game);
+                        obj.createentity(self.i, 153, 18, Some(13), Some(0), Some(17), Some(0), None, None, game);
                         self.i += 25;
                     }
                     if game.crewstats[5] && game.lastsaved != 5 {
-                        obj.createentity(self.i, 153, 18, Some(16), Some(0), Some(17), Some(0), None, None, map, game);
+                        obj.createentity(self.i, 153, 18, Some(16), Some(0), Some(17), Some(0), None, None, game);
                         self.i += 25;
                     }
                 } else if self.words[0] == "restoreplayercolour" {
@@ -1481,7 +1482,7 @@ impl ScriptClass {
                     game.savepoint = 0;
                     game.gravitycontrol = 0;
 
-                    map.gotoroom(46, 54, game, graphics, music, obj);
+                    map.gotoroom(46, 54, game, graphics, music, obj, help);
                 } else if self.words[0] == "telesave" {
                     if !game.intimetrial && !game.nodeathmode && !game.inintermission {
                         game.savetele();
@@ -1495,7 +1496,7 @@ impl ScriptClass {
                         _ => 19,
                     };
 
-                    obj.createentity(200, 153, 18, Some(self.r), Some(0), Some(19), Some(30), None, None, map, game);
+                    obj.createentity(200, 153, 18, Some(self.r), Some(0), Some(19), Some(30), None, None, game);
                     self.i = obj.getcrewman(game.lastsaved);
                     if INBOUNDS_VEC!(self.i, obj.entities) {
                         obj.entities[self.i as usize].dir = 1;
@@ -1872,7 +1873,7 @@ impl ScriptClass {
     }
 
     // void scriptclass::startgamemode( int t )
-    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music) {
+    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music, help: &mut utility_class::UtilityClass) {
         match t {
         0 => {
             game.gamestate = GameState::GAMEMODE;
@@ -1891,11 +1892,11 @@ impl ScriptClass {
 
             if obj.entities.is_empty() {
                 //In this game, constant, never destroyed
-                obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, map, game);
+                obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
             } else {
                 map.resetplayer(None);
             }
-            map.gotoroom(game.saverx, game.savery, game, graphics, music, obj);
+            map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
             map.initmapdata();
 
             scripts::load(self, "intro");

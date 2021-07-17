@@ -1,7 +1,8 @@
 use sdl2::keyboard::Keycode;
 
-use crate::entity;
-use crate::game::{MenuName, SLIDERMODE};
+use crate::script::scripts;
+use crate::{INBOUNDS_VEC, entity, utility_class};
+use crate::game::{GameState, MenuName, SLIDERMODE};
 use crate::screen::ScreenParams;
 use crate::screen::render::graphics;
 use crate::{game, scenes::RenderResult, screen};
@@ -26,7 +27,7 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> Option<RenderResult> {
+    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
@@ -157,32 +158,333 @@ impl Input {
                 self.fadetomodedelay -= 1;
             } else {
                 self.fadetomode = false;
-                script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music);
+                script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music, help);
             }
         }
 
         None
     }
 
-    pub fn gameinput (&mut self) -> Option<RenderResult> {
-        println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+    pub fn gameinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Option<RenderResult> {
+        //TODO mouse input
+        //game.mx = (mouseX / 2);
+        //game.my = (mouseY / 2);
+
+        if !script.running {
+            game.press_left = false;
+            game.press_right = false;
+            game.press_action = false;
+
+            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::A) || key.controllerWantsLeft(false) {
+                game.press_left = true;
+            }
+            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::D) || key.controllerWantsRight(false) {
+                game.press_right = true;
+            }
+            if key.isDownKeycode(Keycode::Z) || key.isDownKeycode(Keycode::Space) || key.isDownKeycode(Keycode::V)
+                    || key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::W) || key.isDownKeycode(Keycode::S)|| key.isDownVec(&game.controllerButton_flip) {
+                game.press_action = true;
+            };
+        }
+
+        game.press_map = false;
+        if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::KpEnter) || key.isDownVec(&game.controllerButton_map) {
+            game.press_map = true;
+        }
+
+        if game.advancetext {
+            if game.pausescript {
+                game.press_action = false;
+                if key.isDownKeycode(Keycode::Z) || key.isDownKeycode(Keycode::Space) || key.isDownKeycode(Keycode::V) || key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::W) || key.isDownKeycode(Keycode::S) || key.isDownVec(&game.controllerButton_flip) {
+                    game.press_action = true;
+                }
+            }
+
+            if game.press_action && !game.jumpheld {
+                if game.pausescript {
+                    game.pausescript = false;
+                    game.hascontrol = true;
+                    game.jumpheld = true;
+                } else {
+                    if game.glitchrunnermode || !game.glitchrunkludge {
+                        game.state += 1;
+                    }
+
+                    game.jumpheld = true;
+                    game.glitchrunkludge = true;
+                    //Bug fix! You should only be able to do this ONCE.
+                    //...Unless you're in glitchrunner mode
+                }
+            }
+        }
+
+        if !game.press_map
+        //Extra conditionals as a kludge fix so if you open the quit menu during
+        //the script command gamemode(teleporter) and close it with Esc, it won't
+        //immediately open again
+        //We really need a better input system soon...
+        && !key.isDown(27)
+        && !key.isDownVec(&game.controllerButton_esc) {
+            game.mapheld = false;
+        }
+
+        if game.intimetrial && graphics.fademode == 1 && game.quickrestartkludge {
+            //restart the time trial
+            game.quickrestartkludge = false;
+            script.startgamemode(game.timetriallevel + 3, game, graphics, map, obj, music, help);
+            game.deathseq = -1;
+            game.completestop = false;
+        }
+
+        //Returning to editor mode must always be possible
+        // #if !defined(NO_CUSTOM_LEVELS)
+        // if map.custommode && !map.custommodeforreal {
+        //     if (game.press_map || key.isDown(27)) && !game.mapheld {
+        //         //Return to level editor
+        //         if INBOUNDS_VEC!(game.activeactivity, obj.blocks) && game.press_map {
+        //             //pass, let code block below handle it
+        //         } else if game.activetele && game.readytotele > 20 && game.press_map {
+        //             //pass, let code block below handle it
+        //         } else {
+        //             game.returntoeditor();
+        //             game.mapheld = true;
+        //         }
+        //     }
+        // }
+        // #endif
+
+        //Entity type 0 is player controled
+        let mut has_control = false;
+        let enter_pressed = game.press_map && !game.mapheld;
+        let mut enter_already_processed = false;
+
+        // for (size_t ie = 0; ie < obj.entities.size(); ++ie {
+        for ie in 0..obj.entities.len() {
+            if obj.entities[ie].rule == 0 {
+                if game.hascontrol && game.deathseq == -1 && game.lifeseq <= 5 {
+                    has_control = true;
+                    if enter_pressed {
+                        game.mapheld = true;
+                    }
+
+                    if enter_pressed && !script.running {
+                        if game.activetele && game.readytotele > 20 && !game.intimetrial {
+                            enter_already_processed = true;
+                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy == 0.0 {
+                                //wait! space station 2 debug thingy
+                                if game.teleportscript != "" {
+                                    //trace(game.recordstring);
+                                    //We're teleporting! Yey!
+                                    game.activetele = false;
+                                    game.hascontrol = false;
+                                    music.fadeout(None);
+
+                                    let player = obj.getplayer() as usize;
+                                    if INBOUNDS_VEC!(player, obj.entities) {
+                                        obj.entities[player].colour = 102;
+                                    }
+
+                                    let teleporter = obj.getteleporter() as usize;
+                                    if INBOUNDS_VEC!(teleporter, obj.entities) {
+                                        obj.entities[teleporter].tile = 6;
+                                        obj.entities[teleporter].colour = 102;
+                                    }
+                                    //which teleporter script do we use? it depends on the companion!
+                                    game.state = 4000;
+                                    game.statedelay = 0;
+                                } else if game.companion == 0 {
+                                    //Alright, normal teleporting
+                                    game.mapmenuchange(GameState::TELEPORTERMODE, graphics, map);
+
+                                    game.useteleporter = true;
+                                    game.initteleportermode();
+                                } else {
+                                    //We're teleporting! Yey!
+                                    game.activetele = false;
+                                    game.hascontrol = false;
+                                    music.fadeout(None);
+
+                                    let player = obj.getplayer() as usize;
+                                    if INBOUNDS_VEC!(player, obj.entities) {
+                                        obj.entities[player].colour = 102;
+                                    }
+                                    let companion = obj.getcompanion() as usize;
+                                    if INBOUNDS_VEC!(companion, obj.entities) {
+                                        obj.entities[companion].colour = 102;
+                                    }
+
+                                    let teleporter = obj.getteleporter() as usize;
+                                    if INBOUNDS_VEC!(teleporter, obj.entities) {
+                                        obj.entities[teleporter].tile = 6;
+                                        obj.entities[teleporter].colour = 102;
+                                    }
+                                    //which teleporter script do we use? it depends on the companion!
+                                    game.state = 3000;
+                                    game.statedelay = 0;
+                                }
+                            }
+                        } else if INBOUNDS_VEC!(game.activeactivity, obj.blocks) {
+                            enter_already_processed = true;
+                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy == 0.0 {
+                                scripts::load(script, &obj.blocks[game.activeactivity as usize].script);
+                                obj.disableblock(game.activeactivity);
+                                game.activeactivity = -1;
+                            }
+                        }
+                    }
+
+                    if game.press_left {
+                        game.tapleft += 1;
+                    } else {
+                        if game.tapleft <= 4 && game.tapleft > 0 {
+                            if obj.entities[ie].vx < 0.0 {
+                                obj.entities[ie].vx = 0.0;
+                            }
+                        }
+                        game.tapleft = 0;
+                    }
+                    if game.press_right {
+                        game.tapright += 1;
+                    } else {
+                        if game.tapright <= 4 && game.tapright > 0 {
+                            if obj.entities[ie].vx > 0.0 {
+                                obj.entities[ie].vx = 0.0;
+                            }
+                        }
+                        game.tapright = 0;
+                    }
+
+                    if game.press_right {
+                        game.tapright += 1;
+                    } else {
+                        if game.tapright <= 4 && game.tapright > 0 {
+                            if obj.entities[ie].vx > 0.0 {
+                                obj.entities[ie].vx = 0.0;
+                            }
+                        }
+                        game.tapright = 0;
+                    }
+
+                    if game.press_left {
+                        obj.entities[ie].ax = -3.0;
+                        obj.entities[ie].dir = 0;
+                    } else if game.press_right {
+                        obj.entities[ie].ax = 3.0;
+                        obj.entities[ie].dir = 1;
+                    }
+
+                    if !game.press_action {
+                        game.jumppressed = 0;
+                        game.jumpheld = false;
+                    }
+
+                    if game.press_action && !game.jumpheld {
+                        game.jumppressed = 5;
+                        game.jumpheld = true;
+                    }
+
+                    if game.jumppressed > 0 {
+                        game.jumppressed -= 1;
+                        if obj.entities[ie].onground > 0 && game.gravitycontrol == 0 {
+                            game.gravitycontrol = 1;
+                            obj.entities[ie].vy = -4.0;
+                            obj.entities[ie].ay = -3.0;
+                            music.playef(0);
+                            game.jumppressed = 0;
+                            game.totalflips += 1;
+                        }
+                        if obj.entities[ie].onroof > 0 && game.gravitycontrol == 1 {
+                            game.gravitycontrol = 0;
+                            obj.entities[ie].vy = 4.0;
+                            obj.entities[ie].ay = 3.0;
+                            music.playef(1);
+                            game.jumppressed = 0;
+                            game.totalflips += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !has_control {
+            //Simple detection of keypresses outside player control, will probably scrap this (expand on
+            //advance text function)
+            if !game.press_action {
+                game.jumppressed = 0;
+                game.jumpheld = false;
+            }
+
+            if game.press_action && !game.jumpheld {
+                game.jumppressed = 5;
+                game.jumpheld = true;
+            }
+        }
+
+        // Continuation of Enter processing. The rest of the if-tree runs only if
+        // enter_pressed && !enter_already_pressed
+        if !enter_pressed || enter_already_processed {
+            // Do nothing
+        } else if game.swnmode && game.swngame == 1 {
+            //quitting the super gravitron
+            game.mapheld = true;
+            //Quit menu, same conditions as in game menu
+            game.mapmenuchange(GameState::MAPMODE, graphics, map);
+            game.gamesaved = false;
+            game.gamesavefailed = false;
+            game.menupage = 20; // The Map Page
+        } else if game.intimetrial && graphics.fademode == 0 {
+            //Quick restart of time trial
+            graphics.fademode = 2;
+            game.completestop = true;
+            music.fadeout(None);
+            game.quickrestartkludge = true;
+        } else if game.intimetrial {
+            //Do nothing if we're in a Time Trial but a fade animation is playing
+        } else {
+            //Normal map screen, do transition later
+            game.mapmenuchange(GameState::MAPMODE, graphics, map);
+            map.cursordelay = 0;
+            map.cursorstate = 0;
+            game.gamesaved = false;
+            game.gamesavefailed = false;
+            if script.running {
+                game.menupage = 3; // Only allow saving
+            } else {
+                game.menupage = 0; // The Map Page
+            }
+        }
+
+        if !game.mapheld && (key.isDown(27) || key.isDownVec(&game.controllerButton_esc)) && (!map.custommode || map.custommodeforreal) {
+            game.mapheld = true;
+            //Quit menu, same conditions as in game menu
+            game.mapmenuchange(GameState::MAPMODE, graphics, map);
+            game.gamesaved = false;
+            game.gamesavefailed = false;
+            game.menupage = 30; // Pause screen
+        }
+
+        if game.deathseq == -1 && (key.isDownKeycode(Keycode::R) || key.isDownVec(&game.controllerButton_restart)) && !game.nodeathmode {
+        // && map.custommode) //Have fun glitchrunners!
+            game.deathseq = 30;
+        }
+
         None
     }
 
     pub fn mapinput (&mut self) {
-        println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+        println!("DEADBEEF(input.rs): input::Input::mapinput is not implemented yet");
     }
 
     pub fn teleporterinput (&mut self) {
-        println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+        println!("DEADBEEF(input.rs): input::Input::teleporterinput is not implemented yet");
     }
 
     pub fn gamecompleteinput (&mut self) {
-        println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+        println!("DEADBEEF(input.rs): input::Input::gamecompleteinput is not implemented yet");
     }
 
     pub fn gamecompleteinput2 (&mut self) {
-        println!("DEADBEEF(input.rs): input::Input::toggleflipmode is not implemented yet");
+        println!("DEADBEEF(input.rs): input::Input::gamecompleteinput2 is not implemented yet");
     }
 
     // @sx: previously static methods
@@ -627,7 +929,7 @@ impl Input {
                 // #endif
                     gameplayoptionsoffset = 1;
                     if game.currentmenuoption == 0 {
-                        toggleflipmode();
+                        toggleflipmode(game, &mut screen.render.graphics, music);
                         // Fix wrong area music in Tower (Positive Force vs. ecroF evitisoP)
                         if !map.custommode {
                             let area = map.area(game.roomx, game.roomy);
@@ -1216,7 +1518,7 @@ impl Input {
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == 3 && game.unlock[18] {
                     //enable/disable flip mode
-                    toggleflipmode();
+                    toggleflipmode(game, &mut screen.render.graphics, music);
                 } else if game.currentmenuoption == 4 {
                     //back
                     music.playef(11);
@@ -1591,8 +1893,17 @@ fn updatebuttonmappings(key: &mut key_poll::KeyPoll, game: &mut game::Game, bind
 }
 
 // static void toggleflipmode(void)
-fn toggleflipmode() {
-    println!("DEADBEEF(input.rs): input::toggleflipmode is not implemented yet");
+fn toggleflipmode(game: &mut game::Game, graphics: &mut graphics::Graphics, music: &mut music::Music) {
+    graphics.setflipmode = !graphics.setflipmode;
+    game.savestatsandsettings_menu();
+
+    if graphics.setflipmode {
+        music.playef(18);
+        game.screenshake = 10;
+        game.flashlight = 5;
+    } else {
+        music.playef(11);
+    }
 }
 
 // static void initvolumeslider(const int menuoption)

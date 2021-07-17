@@ -158,9 +158,8 @@ impl UtilityClass {
     }
 
     // std::string UtilityClass::String( int _v )
-    pub fn String(&self, _v: i32) -> &str {
-        println!("DEADBEEF: UtilityClass::String not implemented yet");
-        &""
+    pub fn String(&self, _v: i32) -> String {
+        _v.to_string()
     }
 
     // int UtilityClass::Int(const char* str, int fallback /*= 0*/)
@@ -190,8 +189,8 @@ impl UtilityClass {
 
     // bool UtilityClass::intersects( SDL_Rect A, SDL_Rect B )
     pub fn intersects(&self, A: sdl2::rect::Rect, B: sdl2::rect::Rect) -> bool {
-        println!("DEADBEEF: UtilityClass::intersects() method not implemented yet");
-        false
+        // return (SDL_HasIntersection(&A, &B) == SDL_TRUE);
+        A.has_intersection(B)
     }
 
     // void UtilityClass::updateglow(void)

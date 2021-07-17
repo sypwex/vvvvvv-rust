@@ -1,6 +1,6 @@
 extern crate sdl2;
 extern crate sdl2_sys;
-use crate::sdl2u;
+use crate::{maths, sdl2u, utility_class};
 
 pub struct ColourTransform {
     pub colour: u32,
@@ -273,14 +273,13 @@ pub fn FillRect_rect_coloru32(_surface: &mut sdl2::surface::SurfaceRef, rect: sd
     FillRect(_surface, rect.x as u32, rect.y as u32, rect.w as u32, rect.h as u32, color);
 }
 
-
 /* */
 
 // void ClearSurface(SDL_Surface* surface)
 pub fn ClearSurface(surface: &mut sdl2::surface::SurfaceRef) {
     // SDL_FillRect(surface, NULL, 0x00000000);
     let rect_dst = sdl2::rect::Rect::new(0, 0, surface.width(), surface.height());
-    match surface.fill_rect(rect_dst, sdl2::pixels::Color::BLACK) {
+    match surface.fill_rect(rect_dst, sdl2::pixels::Color::RGBA(0, 0, 0, 0)) {
         Ok(_x) => (),
         Err(s) => panic!("{}", s),
     };
