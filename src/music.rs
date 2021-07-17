@@ -4,7 +4,6 @@ pub const USER_VOLUME_MAX: i32 = 256;
 /* It is advised that USER_VOLUME_MAX be divisible by this. */
 pub const USER_VOLUME_STEP: i32 = 32;
 
-
 pub struct Music {
 	safeToProcessMusic: bool,
 	m_doFadeInVol: bool,

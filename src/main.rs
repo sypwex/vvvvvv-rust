@@ -1,3 +1,13 @@
+// TODO: @sx: disable some rustc/clippy checks while this branch is
+// mirroring original c++ codebase. Refactor on port completion.
+#![allow(non_upper_case_globals)]
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
+// fix in first place
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use std::time::Duration;
 
 extern crate sdl2;
@@ -15,15 +25,14 @@ mod logic;
 mod map;
 mod maths;
 mod music;
+mod rustutil;
 mod scenes;
 use scenes::{Fns, FuncType, IndexCode, InputTrait, RenderFixedTrait, RenderTrait, RenderResult, preloader::Preloader};
 mod screen;
 use screen::render::graphics;
 mod script;
-use utility_class::UtilityClass;
 mod utility_class;
-
-mod rustutil;
+use utility_class::UtilityClass;
 
 fn print_logo() {
     println!("\t\t");

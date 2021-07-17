@@ -1,11 +1,8 @@
 use sdl2::keyboard::Keycode;
 
-use crate::maths;
-use crate::{game::{self, GameState}, key_poll};
-use crate::screen::render::graphics;
-use crate::scenes::{InputTrait, RenderFixedTrait, RenderTrait};
+use crate::{game::{self, GameState}, key_poll, maths, screen::render::graphics};
 
-use super::RenderResult;
+use super::{InputTrait, RenderFixedTrait, RenderResult, RenderTrait};
 
 pub struct Preloader {
     pre_fakepercent: i32,

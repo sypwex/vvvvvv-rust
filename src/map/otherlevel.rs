@@ -1,4 +1,4 @@
-use crate::{INBOUNDS_VEC, entity, game, map, rn};
+use crate::{INBOUNDS_VEC, entity, game, rn};
 
 pub struct otherlevelclass {
     pub roomname: String,

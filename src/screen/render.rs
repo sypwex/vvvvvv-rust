@@ -1,8 +1,6 @@
 use crate::{entity, game::{self, MenuName}, key_poll, map, music, scenes::RenderResult, utility_class};
 
 use self::graphics::graphics_util;
-
-use super::Screen;
 pub mod graphics;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

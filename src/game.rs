@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::{INBOUNDS_VEC, entity, map, music, screen::{self, render::graphics}, script, utility_class::{self, UtilityClass}};
+use crate::{INBOUNDS_VEC, entity, map, music, screen::{self, render::graphics}, script, utility_class};
 
 pub const numcrew: usize = 6;
 const numunlock: usize = 25;

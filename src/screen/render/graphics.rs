@@ -1,12 +1,13 @@
 use std::{collections::HashMap, ptr};
+
 extern crate sdl2;
 extern crate sdl2_sys;
 use sdl2::render::BlendMode;
 
-use crate::{INBOUNDS_VEC, INBOUNDS_ARR, WHINE_ONCE, entity, game::{self, SLIDERMODE}, map, maths, screen::render::graphics::graphics_util::ColourTransform, utility_class};
-use self::textbox::TextBoxClass;
-
+use crate::{INBOUNDS_VEC, WHINE_ONCE, entity, game::{self, SLIDERMODE}, map, maths, utility_class};
 use super::BackGround;
+use self::{graphics_util::ColourTransform, textbox::TextBoxClass};
+
 pub mod graphics_util;
 mod graphics_resources;
 mod textbox;

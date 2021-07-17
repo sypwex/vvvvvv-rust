@@ -1,4 +1,4 @@
-use crate::{INBOUNDS_ARR, INBOUNDS_VEC, game, map, maths, music, screen::render::graphics::{self, graphics_util}, script, utility_class::{self, UtilityClass}};
+use crate::{INBOUNDS_ARR, INBOUNDS_VEC, game, map, maths, music, screen::render::graphics, script, utility_class};
 mod ent;
 mod blockv;
 
@@ -149,7 +149,9 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::createblock( int t, int xp, int yp, int w, int h, int trig /*= 0*/, const std::string& script /*= ""*/ )
+    #[allow(unused_assignments)]
     pub fn createblock(&mut self, t: i32, xp: i32, yp: i32, w: i32, h: i32, trig: Option<i32>, script: Option<String>) {
+        // TODO: @sx: fix rustc(unused_assignments) someday
         let mut trig = trig.unwrap_or(0);
         let script = script.unwrap_or(String::new());
 
@@ -1283,7 +1285,7 @@ impl<'a> EntityClass {
                         self.entities[entity_id].w = 1;
                         self.entities[entity_id].h = meta1;
                     },
-                    53 | 53 => {
+                    53 | 54 => {
                         self.entities[entity_id].rule = 7;
                         self.entities[entity_id].size = 5;
                         self.entities[entity_id].w = meta1;

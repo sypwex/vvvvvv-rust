@@ -1,13 +1,4 @@
-use crate::INBOUNDS_VEC;
-use crate::entity;
-use crate::map;
-use crate::script;
-use crate::script::ScriptClass;
-use crate::utility_class;
-use crate::{game, maths, scenes::RenderResult};
-use crate::screen::render::graphics;
-
-use super::render::BackGround;
+use crate::{INBOUNDS_VEC, entity, game, map, maths, scenes::RenderResult, screen::render::{BackGround, graphics}, script, utility_class};
 
 pub struct RenderFixed {
     glow: i32,

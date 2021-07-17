@@ -1,7 +1,5 @@
-use crate::{INBOUNDS_VEC, entity, map, maths, music, screen, script, utility_class};
-use crate::{game, scenes::RenderResult};
-use crate::screen::render::graphics;
-use crate::screen::renderfixed;
+use crate::{INBOUNDS_VEC, entity, game, map, maths, music, scenes::RenderResult, screen::{self, render::graphics, renderfixed}, script, utility_class};
+
 
 pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Option<RenderResult> {
     //Misc

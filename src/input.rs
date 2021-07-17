@@ -1,12 +1,6 @@
 use sdl2::keyboard::Keycode;
 
-use crate::script::scripts;
-use crate::{INBOUNDS_VEC, entity, utility_class};
-use crate::game::{GameState, MenuName, SLIDERMODE};
-use crate::screen::ScreenParams;
-use crate::screen::render::graphics;
-use crate::{game, scenes::RenderResult, screen};
-use crate::{key_poll, map, music, script};
+use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics}, script::{self, scripts}, utility_class};
 
 pub struct Input {
     fadetomode: bool,

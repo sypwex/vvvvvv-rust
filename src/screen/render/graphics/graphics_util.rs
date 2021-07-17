@@ -1,6 +1,6 @@
 extern crate sdl2;
 extern crate sdl2_sys;
-use crate::{maths, sdl2u, utility_class};
+use crate::sdl2u;
 
 pub struct ColourTransform {
     pub colour: u32,

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use sdl2::{EventPump, controller::GameController, event::{Event, WindowEvent}, keyboard::Keycode, mouse::MouseButton};
-use sdl2::controller::Button;
+use sdl2::{EventPump, controller::{Button, GameController}, event::{Event, WindowEvent}, keyboard::Keycode, mouse::MouseButton};
 use sdl2_sys::SDL_bool::SDL_TRUE;
 
 use crate::{game, sdl2u::ButtonIter};
