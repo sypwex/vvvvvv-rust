@@ -1120,8 +1120,9 @@ impl Render {
 
         self.graphics.cutscenebars();
         self.graphics.drawfade();
-        self.graphics.buffers.backBuffer.blit(None, &mut self.graphics.buffers.tempBuffer, None)
-            .expect("unable to render to screen buffer");
+        if let Err(s) = self.graphics.buffers.backBuffer.blit(None, &mut self.graphics.buffers.tempBuffer, None) {
+            error!("unable to render to screen buffer: {}", s);
+        };
 
         self.graphics.drawgui(help);
         if self.graphics.flipmode {

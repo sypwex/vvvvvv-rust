@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use sdl2::{EventPump, controller::{Button, GameController}, event::{Event, WindowEvent}, keyboard::Keycode, mouse::MouseButton};
 use sdl2_sys::SDL_bool::SDL_TRUE;
 
-use crate::{game, sdl2u::ButtonIter};
+use crate::{game, helpers, music, screen, sdl2u::ButtonIter};
 
 pub struct KeyPoll {
     keymap: HashMap<Keycode, bool>,
     keybuffer: String,
-    controllers: HashMap<u32, GameController>,
+    // controllers: HashMap<u32, GameController>,
+    controllers: HashMap<u32, *mut sdl2_sys::SDL_GameController>,
     buttonmap: HashMap<Button, bool>,
     // wasFullscreen: u32,
 
@@ -20,14 +21,14 @@ pub struct KeyPoll {
     middlebutton: i32,
     mx: i32,
     my: i32,
-    resetWindow: bool,
+    pub resetWindow: bool,
     pressedbackspace: bool,
     pub linealreadyemptykludge: bool,
     pub isActive: bool,
 
     // static int mousetoggletimeout = 0;
     mousetoggletimeout: i32,
-
+    wasFullscreen: bool,
 }
 
 impl KeyPoll {
@@ -55,6 +56,7 @@ impl KeyPoll {
 
             // static int mousetoggletimeout = 0;
             mousetoggletimeout: 0,
+            wasFullscreen: false,
         }
     }
 
@@ -82,15 +84,20 @@ impl KeyPoll {
     }
 
     // void KeyPoll::toggleFullscreen(void)
-    fn toggleFullscreen(&mut self) -> bool {
-        // TODO @sx @impl
-        println!("DEADBEEF: KeyPoll::toggleFullscreen method not implemented yet");
+    fn toggleFullscreen(&mut self, game: &mut game::Game, gameScreen: &mut screen::Screen) {
+        gameScreen.toggleFullScreen();
 
-        false
+        self.keymap.clear(); /* we lost the input due to a new window. */
+        if game.glitchrunnermode {
+            game.press_left = false;
+            game.press_right = false;
+            game.press_action = true;
+            game.press_map = false;
+        }
     }
 
     // void KeyPoll::Poll(void)
-    pub fn Poll(&mut self, event_pump: &mut EventPump, game: &mut game::Game) -> Result<(), i32> {
+    pub fn Poll(&mut self, event_pump: &mut EventPump, game: &mut game::Game, music: &mut music::Music, gameScreen: &mut screen::Screen) -> Result<(), i32> {
         let mut showmouse = false;
         let mut hidemouse = false;
         let altpressed = false;
@@ -234,87 +241,81 @@ impl KeyPoll {
                         _ => (),
                     }
                 },
-                Event::ControllerDeviceAdded { .. } => {
-                    // TODO @sx @impl
-                    println!("DEADBEEF: ControllerDeviceAdded handler not implemented yet");
-
-                    // unsafe {
-                    //     let toOpen = sdl2_sys::SDL_GameControllerOpen(which);
-                    //     println!("Opened SDL_GameController ID #{:?}, {:?}", which, sdl2_sys::SDL_GameControllerName(toOpen));
-                    //     self.controllers[sdl2_sys::SDL_JoystickInstanceID(sdl2_sys::SDL_GameControllerGetJoystick(toOpen))] = toOpen;
-                    // }
+                Event::ControllerDeviceAdded { which, .. } => {
+                    unsafe {
+                        // subsystem.open(which);
+                        let toOpen = sdl2_sys::SDL_GameControllerOpen(which as i32);
+                        info!("Opened SDL_GameController ID #{:?}, {:?}", which, sdl2_sys::SDL_GameControllerName(toOpen));
+                        let jid = sdl2_sys::SDL_JoystickInstanceID(sdl2_sys::SDL_GameControllerGetJoystick(toOpen)) as u32;
+                        if self.controllers.contains_key(&jid) != true {
+                            self.controllers.insert(jid, toOpen);
+                        }
+                    }
                 },
-                Event::ControllerDeviceRemoved { .. } => {
-                    // TODO @sx @impl
-                    println!("DEADBEEF: ControllerDeviceRemoved handler not implemented yet");
-
-                    // unsafe {
-                    //     SDL_GameController *toClose = controllers[evt.cdevice.which];
-                    //     controllers.erase(evt.cdevice.which);
-                    //     printf("Closing %s\n", SDL_GameControllerName(toClose));
-                    //     SDL_GameControllerClose(toClose);
-                    // }
+                Event::ControllerDeviceRemoved { which, .. } => {
+                    unsafe {
+                        if let Some((key, toClose)) = self.controllers.remove_entry(&which) {
+                            info!("Closing {:?}", helpers::c_str_to_string(sdl2_sys::SDL_GameControllerName(toClose)));
+                            // info!("Closing {:?}", toClose.name());
+                            std::mem::drop(toClose);
+                        }
+                    }
                 },
 
                 /* Window Events */
-                Event::Window { win_event, .. } => {
+                Event::Window { win_event, window_id, ..} => {
                     match win_event {
                         WindowEvent::Close => return Err(0),
                         /* Window Resize */
                         WindowEvent::Resized(_, _) => {
-                            // TODO @sx @impl
-                            println!("DEADBEEF: Resized handler not implemented yet");
+                            unsafe {
+                                let id = sdl2_sys::SDL_GetWindowFromID(window_id);
+                                let curflags = sdl2_sys::SDL_GetWindowFlags(id);
+                                let s_d_l_window_flags = sdl2_sys::SDL_WindowFlags::SDL_WINDOW_INPUT_FOCUS as u32;
 
-                            // unsafe {
-                            //     if sdl2_sys::SDL_GetWindowFlags(sdl2_sys::SDL_GetWindowFromID(evt.window.windowID)) &
-                            //        sdl2_sys::SDL_WindowFlags::SDL_WINDOW_INPUT_FOCUS as u32 {
-                            //         self.resetWindow = true;
-                            //     }
-                            // }
+                                if curflags & s_d_l_window_flags == s_d_l_window_flags {
+                                    self.resetWindow = true;
+                                }
+                            }
                         },
 
                         /* Window Focus */
                         WindowEvent::FocusGained => {
-                            // TODO @sx @impl
-                            println!("DEADBEEF: FocusLost handler not implemented yet");
-
-                            // unsafe {
-                            //     if !game.disablepause {
-                            //         isActive = true;
-                            //         music.resume();
-                            //         music.resumeef();
-                            //     }
-                            //     if SDL_strcmp(sdl2_sys::SDL_GetCurrentVideoDriver(), "x11") == 0 {
-                            //         if wasFullscreen {
-                            //             graphics.screenbuffer->isWindowed = false;
-                            //             sdl2_sys::SDL_SetWindowFullscreen(
-                            //                 sdl2_sys::SDL_GetWindowFromID(evt.window.windowID),
-                            //                 SDL_WINDOW_FULLSCREEN_DESKTOP
-                            //             );
-                            //         }
-                            //     }
-                            //     sdl2_sys::SDL_DisableScreenSaver();
-                            // }
+                            unsafe {
+                                if !game.disablepause {
+                                    self.isActive = true;
+                                    music.resume();
+                                    music.resumeef();
+                                }
+                                if helpers::c_str_to_string(sdl2_sys::SDL_GetCurrentVideoDriver()) == "x11" {
+                                    if self.wasFullscreen {
+                                        gameScreen.isWindowed = false;
+                                        sdl2_sys::SDL_SetWindowFullscreen(
+                                            sdl2_sys::SDL_GetWindowFromID(window_id),
+                                            sdl2_sys::SDL_WindowFlags::SDL_WINDOW_FULLSCREEN_DESKTOP as u32
+                                        );
+                                    }
+                                }
+                                sdl2_sys::SDL_DisableScreenSaver();
+                            }
                         },
                         WindowEvent::FocusLost => {
-                            // TODO @sx @impl
-                            println!("DEADBEEF: FocusLost handler not implemented yet");
-                            // unsafe {
-                            //     if !game.disablepause {
-                            //         isActive = false;
-                            //         music.pause();
-                            //         music.pauseef();
-                            //     }
-                            //     if SDL_strcmp(sdl2_sys::SDL_GetCurrentVideoDriver(), "x11") == 0 {
-                            //         let wasFullscreen = !graphics.screenbuffer.isWindowed;
-                            //         graphics.screenbuffer.isWindowed = true;
-                            //         sdl2_sys::SDL_SetWindowFullscreen(
-                            //             sdl2_sys::SDL_GetWindowFromID(evt.window.windowID),
-                            //             0
-                            //         );
-                            //     }
-                            //     sdl2_sys::SDL_EnableScreenSaver();
-                            // }
+                            unsafe {
+                                if !game.disablepause {
+                                    self.isActive = false;
+                                    music.pause();
+                                    music.pauseef();
+                                }
+                                if helpers::c_str_to_string(sdl2_sys::SDL_GetCurrentVideoDriver()) == "x11" {
+                                    self.wasFullscreen = !gameScreen.isWindowed;
+                                    gameScreen.isWindowed = true;
+                                    sdl2_sys::SDL_SetWindowFullscreen(
+                                        sdl2_sys::SDL_GetWindowFromID(window_id),
+                                        0
+                                    );
+                                }
+                                sdl2_sys::SDL_EnableScreenSaver();
+                            }
                         },
 
                         /* Mouse Focus */
@@ -346,7 +347,7 @@ impl KeyPoll {
         );
 
         if fullscreenkeybind {
-            self.toggleFullscreen();
+            self.toggleFullscreen(game, gameScreen);
         }
 
         Ok(())
@@ -374,9 +375,11 @@ impl KeyPoll {
     // bool KeyPoll::isDown(std::vector<SDL_GameControllerButton> buttons)
     pub fn isDownVec(&mut self, buttons: &Vec<Button>) -> bool {
         for button in buttons {
-            if self.buttonmap.contains_key(&button) {
-                return true
-            }
+            if let Some(v) = self.buttonmap.get(&button) {
+                if *v == true {
+                    return true
+                }
+            };
         }
 
         false
@@ -384,39 +387,38 @@ impl KeyPoll {
 
     // bool KeyPoll::isDown(SDL_GameControllerButton button)
     pub fn isDownSDLButton(&mut self, button: Button) -> bool {
-        self.buttonmap.contains_key(&button)
+        if let Some(v) = self.buttonmap.get(&button) {
+            return *v
+        }
+
+        false
     }
 
     // bool KeyPoll::controllerButtonDown(void)
     pub fn controllerButtonDown(&mut self) -> bool {
-        for button in Button::iterator() {
-            if self.isDownSDLButton(*button) {
+        for (_, v) in &self.buttonmap {
+            if *v == true {
                 return true
             }
-        }
+        };
+
         false
     }
 
     // bool KeyPoll::controllerWantsLeft(bool includeVert)
     pub fn controllerWantsLeft(&mut self, includeVert: bool) -> bool {
-        return
-            *self.buttonmap.entry(Button::DPadLeft).or_default() ||
-            self.xVel < 0 || (
-                includeVert && (
-                    *self.buttonmap.entry(Button::DPadUp).or_default() || self.yVel < 0
-                )
-            )
+        let pad_left = *self.buttonmap.entry(Button::DPadLeft).or_default();
+        let pad_up = *self.buttonmap.entry(Button::DPadUp).or_default();
+
+        return pad_left || self.xVel < 0 || (includeVert && (pad_up || self.yVel < 0))
     }
 
     // bool KeyPoll::controllerWantsRight(bool includeVert)
     pub fn controllerWantsRight(&mut self, includeVert: bool) -> bool {
-        return
-            *self.buttonmap.entry(Button::DPadRight).or_default() ||
-            self.xVel > 0 || (
-            includeVert && (
-                *self.buttonmap.entry(Button::DPadDown).or_default() || self.yVel > 0
-            )
-        )
+        let pad_right = *self.buttonmap.entry(Button::DPadRight).or_default();
+        let pad_down = *self.buttonmap.entry(Button::DPadDown).or_default();
+
+        return pad_right || self.xVel > 0 || (includeVert && (pad_down || self.yVel > 0))
     }
 
 }

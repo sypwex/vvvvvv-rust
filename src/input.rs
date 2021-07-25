@@ -32,26 +32,18 @@ impl Input {
         game.press_map = false;
 
         if screen.render.graphics.flipmode {
-            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::A) ||  key.isDownKeycode(Keycode::S)
-            //    || key.controllerWantsRight(true)
-            {
+            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::A) ||  key.isDownKeycode(Keycode::S) || key.controllerWantsRight(true) {
                 game.press_left = true;
             }
 
-            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::Up)  || key.isDownKeycode(Keycode::D) ||  key.isDownKeycode(Keycode::W)
-                // || key.controllerWantsLeft(true)
-            {
+            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::Up)  || key.isDownKeycode(Keycode::D) ||  key.isDownKeycode(Keycode::W) || key.controllerWantsLeft(true) {
                 game.press_right = true;
             }
         } else {
-            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::A) ||  key.isDownKeycode(Keycode::W)
-                // || key.controllerWantsLeft(true)
-            {
+            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::A) ||  key.isDownKeycode(Keycode::W) || key.controllerWantsLeft(true) {
                 game.press_left = true;
             }
-            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::Down)  || key.isDownKeycode(Keycode::D) ||  key.isDownKeycode(Keycode::S)
-                // || key.controllerWantsRight(true)
-            {
+            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::Down)  || key.isDownKeycode(Keycode::D) ||  key.isDownKeycode(Keycode::S) || key.controllerWantsRight(true) {
                 game.press_right = true;
             }
         }
@@ -184,7 +176,7 @@ impl Input {
         }
 
         game.press_map = false;
-        if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::KpEnter) || key.isDownVec(&game.controllerButton_map) {
+        if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_map) {
             game.press_map = true;
         }
 
@@ -219,7 +211,7 @@ impl Input {
         //the script command gamemode(teleporter) and close it with Esc, it won't
         //immediately open again
         //We really need a better input system soon...
-        && !key.isDown(27)
+        && !key.isDownKeycode(Keycode::Escape)
         && !key.isDownVec(&game.controllerButton_esc) {
             game.mapheld = false;
         }
@@ -235,7 +227,7 @@ impl Input {
         //Returning to editor mode must always be possible
         // #if !defined(NO_CUSTOM_LEVELS)
         // if map.custommode && !map.custommodeforreal {
-        //     if (game.press_map || key.isDown(27)) && !game.mapheld {
+        //     if (game.press_map || key.isDownKeycode(Keycode::Escape)) && !game.mapheld {
         //         //Return to level editor
         //         if INBOUNDS_VEC!(game.activeactivity, obj.blocks) && game.press_map {
         //             //pass, let code block below handle it
@@ -450,7 +442,7 @@ impl Input {
             }
         }
 
-        if !game.mapheld && (key.isDown(27) || key.isDownVec(&game.controllerButton_esc)) && (!map.custommode || map.custommodeforreal) {
+        if !game.mapheld && (key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_esc)) && (!map.custommode || map.custommodeforreal) {
             game.mapheld = true;
             //Quit menu, same conditions as in game menu
             game.mapmenuchange(GameState::MAPMODE, graphics, map);
@@ -545,7 +537,7 @@ impl Input {
                     game.press_map = true;
                 }
 
-                if key.isDown(27) && !game.mapheld {
+                if key.isDownKeycode(Keycode::Escape) && !game.mapheld {
                     game.mapheld = true;
                     if game.menupage < 9 {
                         game.menupage = 30;
@@ -557,7 +549,7 @@ impl Input {
                     music.playef(11);
                 }
             } else {
-                if key.isDownKeycode(Keycode::KpEnter) || key.isDown(27) || key.isDownVec(&game.controllerButton_map) {
+                if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_map) {
                     game.press_map = true;
                 }
             }
@@ -566,7 +558,7 @@ impl Input {
             if !game.press_action && !game.press_left && !game.press_right {
                 game.jumpheld = false;
             }
-            if !game.press_map && !key.isDown(27) {
+            if !game.press_map && !key.isDownKeycode(Keycode::Escape) {
                 game.mapheld = false;
             }
         } else {

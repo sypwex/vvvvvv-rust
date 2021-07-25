@@ -1677,12 +1677,38 @@ impl Game {
     }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
+    fn deserializesettings(&mut self) {
+        println!("DEADBEEF: Game::deserializesettings not fully implemented yet");
+
+        // Don't duplicate controller buttons!
+        self.controllerButton_flip.clear();
+        self.controllerButton_map.clear();
+        self.controllerButton_esc.clear();
+        self.controllerButton_restart.clear();
+
+        // TODO:
+
+        if self.controllerButton_flip.len() < 1 {
+            self.controllerButton_flip.push(Button::A);
+        }
+        if self.controllerButton_map.len() < 1 {
+            self.controllerButton_map.push(Button::Y);
+        }
+        if self.controllerButton_esc.len() < 1 {
+            self.controllerButton_esc.push(Button::B);
+        }
+        if self.controllerButton_restart.len() < 1 {
+            self.controllerButton_restart.push(Button::RightShoulder);
+        }
+    }
 
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
 
     // void Game::loadsettings(ScreenSettings* screen_settings);
     pub fn loadsettings(&mut self, screen_settings: &mut screen::ScreenSettings) {
         println!("DEADBEEF: Game::loadsettings not implemented yet");
+
+        self.deserializesettings();
     }
 
     // bool Game::savesettings(const ScreenSettings* screen_settings);

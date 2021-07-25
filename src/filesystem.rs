@@ -256,19 +256,3 @@ fn PLATFORM_migrateSaveData(output: &str) {
 fn PLATFORM_copyFile(oldLocation: &str, newLocation: &str) {
     println!("DEADBEEF: PLATFORM_copyFile is not implemented yet");
 }
-
-/// Convert C string `c_str` to a String. Return an empty string if
-/// `c_str` is NULL.
-fn c_str_to_string(c_str: *const libc::c_char) -> String {
-    if c_str.is_null() {
-        String::new()
-    } else {
-        let bytes = unsafe { std::ffi::CStr::from_ptr(c_str as *const _).to_bytes() };
-
-        String::from_utf8_lossy(bytes).to_string()
-    }
-}
-
-fn string_to_c_str(s: &str) -> *const libc::c_char {
-    s.to_string().as_ptr() as *const libc::c_char
-}

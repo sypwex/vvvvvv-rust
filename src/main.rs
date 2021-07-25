@@ -528,7 +528,7 @@ fn main() {
 fn loop_begin(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, gameScreen: &mut screen::Screen, key: &mut key_poll::KeyPoll, input: &mut input::Input, event_pump: &mut EventPump, scenes: &mut scenes::Scenes, preloader: &mut scenes::preloader::Preloader, help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, obj: &mut entity::EntityClass) -> LoopCode {
     // println!("loop_begin");
     if game.inputdelay {
-        if let Err(exit_code) = key.Poll(event_pump, game) {
+        if let Err(exit_code) = key.Poll(event_pump, game, music, gameScreen) {
             return LoopCode::BreakTheMain(exit_code)
         }
     }
@@ -570,7 +570,7 @@ fn loop_run_active_funcs(music: &mut music::Music, map: &mut map::Map, game: &mu
         // println!("loop_run_active_funcs: {:?} received", implfunc.fnname);
 
         if implfunc.fntype == FuncType::FuncInput && !game.inputdelay {
-            if let Err(exit_code) = key.Poll(event_pump, game) {
+            if let Err(exit_code) = key.Poll(event_pump, game, music, gameScreen) {
                 return LoopCode::BreakTheMain(exit_code)
             }
         }

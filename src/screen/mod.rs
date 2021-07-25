@@ -142,7 +142,7 @@ impl Screen {
             sdl2_sys::SDL_CreateWindowAndRenderer(
                 640,
                 480,
-                SDL_WindowFlags::SDL_WINDOW_HIDDEN as u32 | SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32,
+                SDL_WindowFlags::SDL_WINDOW_HIDDEN as u32 | SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32 | SDL_WindowFlags::SDL_WINDOW_ALLOW_HIGHDPI as u32,
                 as_mut_ptr!(self.m_window),
                 as_mut_ptr!(self.m_renderer),
             );
@@ -194,7 +194,9 @@ impl Screen {
     }
 
     // void Screen::ResizeScreen(int x, int y)
-    fn ResizeScreen(&mut self, x: i32, y: i32) {
+    pub fn ResizeScreen(&mut self, x: i32, y: i32) {
+        trace!("ResizeScreen({}, {})", x, y);
+
         let (resX, resY) = match x != -1 && y != -1 {
             true => (x, y), //This is a user resize!
             false => (320, 240),
@@ -216,6 +218,7 @@ impl Screen {
                     sdl2_sys::SDL_SetWindowPosition(self.m_window, sdl2_sys::SDL_WINDOWPOS_CENTERED_MASK as i32, sdl2_sys::SDL_WINDOWPOS_CENTERED_MASK as i32);
                 }
             }
+
             if self.stretchMode == 1 {
                 let mut winX: libc::c_int = 0;
                 let mut winY: libc::c_int = 0;
@@ -266,12 +269,13 @@ impl Screen {
         // }
 
         // FillRect(m_screen, 0x000);
-        let rect_dst = sdl2::rect::Rect::new(0, 0, self.m_screen.width(), self.m_screen.height());
         graphics_util::ClearSurface(&mut self.m_screen);
 
         // BlitSurfaceStandard(buffer, NULL, m_screen, rect);
-        buffer.blit(rect, &mut self.m_screen, rect_dst)
-            .expect("unable to render to screen buffer");
+        let rect_dst = sdl2::rect::Rect::new(0, 0, self.m_screen.width(), self.m_screen.height());
+        if let Err(s) = buffer.blit(rect, &mut self.m_screen, rect_dst) {
+            error!("unable to render to screen buffer: {}", s);
+        };
 
         if self.badSignalEffect {
             // SDL_FreeSurface(buffer);
@@ -311,7 +315,11 @@ impl Screen {
                 self.m_screen.pitch() as i32
             );
             // let texture = sdl2_sys::SDL_CreateTextureFromSurface(self.m_renderer, self.m_screen.raw());
-            sdl2_sys::SDL_RenderCopy(self.m_renderer, self.m_screenTexture, std::ptr::null(), std::ptr::null());
+            if self.isFiltered {
+                sdl2_sys::SDL_RenderCopy(self.m_renderer, self.m_screenTexture, self.filterSubrect.raw(), std::ptr::null());
+            } else {
+                sdl2_sys::SDL_RenderCopy(self.m_renderer, self.m_screenTexture, std::ptr::null(), std::ptr::null());
+            }
 
             // SDL_RenderPresent(m_renderer);
             // SDL_RenderClear(m_renderer);
