@@ -2116,4 +2116,11 @@ impl ScriptClass {
         }
     }
 
+    // @sx: see TerminalScripts.cpp
+    pub fn loadother(t: &str) -> Vec<&str> {
+        println!("DEADBEEF: scriptclass::loadother not implemented yet");
+
+        vec![]
+    }
+
 }
