@@ -176,7 +176,7 @@ impl Input {
         }
 
         game.press_map = false;
-        if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_map) {
+        if key.isDownKeycode(Keycode::KpEnter) || key.isDownKeycode(Keycode::Return) || key.isDownVec(&game.controllerButton_map) {
             game.press_map = true;
         }
 
