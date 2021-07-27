@@ -2,6 +2,7 @@ use sdl2::keyboard::Keycode;
 
 use crate::{INBOUNDS_ARR, INBOUNDS_VEC, entity, game::{self, GameState}, key_poll, map, music, scenes::RenderResult, screen::render::graphics, utility_class};
 pub mod scripts;
+pub mod terminal_scripts;
 
 pub struct ScriptClass {
     //Script contents
@@ -2114,13 +2115,6 @@ impl ScriptClass {
         for line in lines {
             self.commands.push(line.to_string());
         }
-    }
-
-    // @sx: see TerminalScripts.cpp
-    pub fn loadother(t: &str) -> Vec<&str> {
-        println!("DEADBEEF: scriptclass::loadother not implemented yet");
-
-        vec![]
     }
 
 }

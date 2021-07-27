@@ -246,7 +246,6 @@ impl Input {
         let enter_pressed = game.press_map && !game.mapheld;
         let mut enter_already_processed = false;
 
-        // for (size_t ie = 0; ie < obj.entities.size(); ++ie {
         for ie in 0..obj.entities.len() {
             if obj.entities[ie].rule == 0 {
                 if game.hascontrol && game.deathseq == -1 && game.lifeseq <= 5 {
@@ -258,7 +257,7 @@ impl Input {
                     if enter_pressed && !script.running {
                         if game.activetele && game.readytotele > 20 && !game.intimetrial {
                             enter_already_processed = true;
-                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy == 0.0 {
+                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy as i32 == 0 {
                                 //wait! space station 2 debug thingy
                                 if game.teleportscript != "" {
                                     //trace(game.recordstring);
@@ -313,9 +312,9 @@ impl Input {
                             }
                         } else if INBOUNDS_VEC!(game.activeactivity, obj.blocks) {
                             enter_already_processed = true;
-                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy == 0.0 {
+                            if (obj.entities[ie].vx).abs() <= 1.0 && obj.entities[ie].vy as i32 == 0 {
                                 scripts::load(script, &obj.blocks[game.activeactivity as usize].script);
-                                obj.disableblock(game.activeactivity);
+                                obj.disableblock(game.activeactivity as usize);
                                 game.activeactivity = -1;
                             }
                         }

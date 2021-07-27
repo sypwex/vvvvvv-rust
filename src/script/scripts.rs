@@ -6093,7 +6093,7 @@ pub fn load(script: &mut super::ScriptClass, name: &str) {
             "untilbars()",
         ],
 
-        _ => super::ScriptClass::loadother(name),
+        _ => super::terminal_scripts::loadother(name),
     };
 
     script.filllines(lines);

@@ -55,8 +55,10 @@ impl TextBoxClass {
     }
 
     // void centerx(void);
-    fn centerx(&mut self) {
-        println!("DEADBEEF: TextBox::centerx() method not implemented yet");
+    pub fn centerx(&mut self) {
+        self.resize();
+        self.xp = 160 - (self.w / 2);
+        self.resize();
     }
 
     // void centery(void);

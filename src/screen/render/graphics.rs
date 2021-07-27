@@ -2677,7 +2677,12 @@ impl Graphics {
 
     // void Graphics::textboxcenterx(void)
     pub fn textboxcenterx(&mut self) {
-        println!("DEADBEEF: textboxcenterx method not implemented yet");
+        if !INBOUNDS_VEC!(self.m, self.textbox) {
+            warn!("textboxcenterx() out-of-bounds!");
+            return;
+        }
+
+        self.textbox[self.m].centerx();
     }
 
     // int Graphics::textboxwidth(void)
