@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 
-pub fn dump_surface (surface: &sdl2::surface::SurfaceRef, name: &str, suffix: &str) {
+pub fn dump_surface(surface: &sdl2::surface::SurfaceRef, name: &str, suffix: &str) {
     let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_micros();
 
     // let surface = sdl2::surface::Surface::from_ll(_surface);
@@ -10,8 +10,7 @@ pub fn dump_surface (surface: &sdl2::surface::SurfaceRef, name: &str, suffix: &s
     };
 }
 
-// pub fn print_surface_pixels (text: &str, surface: &sdl2::surface::SurfaceRef) {
-pub fn dump_surface_pixels (text: &str, surface: &sdl2::surface::SurfaceRef) {
+pub fn dump_surface_pixels(surface: &sdl2::surface::SurfaceRef, text: &str) {
     unsafe {
         let raw_surface = *surface.raw();
         // let raw_surface = *surface;
@@ -26,7 +25,15 @@ pub fn dump_surface_pixels (text: &str, surface: &sdl2::surface::SurfaceRef) {
     }
 }
 
-pub fn print_surface_pixels (text: &str, surface: &sdl2::surface::SurfaceRef) {
+pub fn dump_surface_pixels_slice(s: &sdl2::surface::SurfaceRef, w: usize, h: usize, line_size: usize) {
+    unsafe {
+        let data = (*s.raw()).pixels as *const u8;
+        let slice = std::slice::from_raw_parts(data, h * w);
+        println!("surface raw: {:?}", slice[0..line_size].to_vec());
+    }
+}
+
+pub fn print_surface_pixels(surface: &sdl2::surface::SurfaceRef, text: &str) {
     unsafe {
         let raw_surface = *surface.raw();
         // let raw_surface = *surface;

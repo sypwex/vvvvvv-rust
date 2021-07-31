@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use sdl2::{EventPump, controller::{Button, GameController}, event::{Event, WindowEvent}, keyboard::Keycode, mouse::MouseButton};
+use sdl2::{EventPump, controller::Button, event::{Event, WindowEvent}, keyboard::Keycode, mouse::MouseButton};
 use sdl2_sys::SDL_bool::SDL_TRUE;
 
-use crate::{game, helpers, music, screen, sdl2u::ButtonIter};
+use crate::{game, helpers, music, screen};
 
 pub struct KeyPoll {
     keymap: HashMap<Keycode, bool>,

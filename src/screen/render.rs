@@ -27,7 +27,7 @@ pub struct Render {
 }
 
 impl Render {
-    pub fn new (pf: sdl2::pixels::PixelFormatEnum) -> Render {
+    pub fn new(pf: sdl2::pixels::PixelFormatEnum) -> Render {
         let graphics = graphics::Graphics::new(pf);
 
         Render {
@@ -1147,16 +1147,16 @@ impl Render {
         if game.swnmode {
             if game.swngame == 0 {
                 let tempstring = help.timestring(game.swntimer);
-                self.graphics.bigbprint(-1, 20, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 2);
+                self.graphics.bigbprint(-1, 20, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 2);
             } else if game.swngame == 1 {
                 if game.swnmessage == 0 {
                     let tempstring = help.timestring(game.swntimer);
                     self.graphics.bprint( 10, 10, "Current Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                    self.graphics.bigbprint( 25, 24, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
+                    self.graphics.bigbprint( 25, 24, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
 
                     let tempstring = help.timestring(game.swnrecord);
                     self.graphics.bprint( 240, 10, "Best Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                    self.graphics.bigbrprint( 300, 24, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2f32);
+                    self.graphics.bigbrprint( 300, 24, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2f32);
 
                     match game.swnbestrank {
                         0 => {
@@ -1185,12 +1185,12 @@ impl Render {
                 } else if game.swnmessage == 1 {
                     let tempstring = help.timestring(game.swntimer);
                     self.graphics.bprint( 10, 10, "Current Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                    self.graphics.bigbprint( 25, 24, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
+                    self.graphics.bigbprint( 25, 24, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
 
                     let tempstring = help.timestring(game.swnrecord);
                     if (game.deathseq / 5) % 2 == 1 {
                         self.graphics.bprint( 240, 10, "Best Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                        self.graphics.bigbrprint( 300, 24, tempstring, 128 - help.glow, 220 - help.glow, 128 - (help.glow / 2), false, 2f32);
+                        self.graphics.bigbrprint( 300, 24, &tempstring, 128 - help.glow, 220 - help.glow, 128 - (help.glow / 2), false, 2f32);
 
                         self.graphics.bigbprint(-1, 200, "New Record!", 128 - help.glow, 220 - help.glow, 128 - (help.glow / 2), true, 2);
                     }
@@ -1199,11 +1199,11 @@ impl Render {
                     if game.swnmessage == 2 { game.swnmessage = 0; }
                     let tempstring = help.timestring(game.swntimer);
                     self.graphics.bprint( 10, 10, "Current Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                    self.graphics.bigbprint( 25, 24, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
+                    self.graphics.bigbprint( 25, 24, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2);
 
                     let tempstring = help.timestring(game.swnrecord);
                     self.graphics.bprint( 240, 10, "Best Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(false));
-                    self.graphics.bigbrprint( 300, 24, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2f32);
+                    self.graphics.bigbrprint( 300, 24, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), false, 2f32);
 
                     if (game.swnmessage / 5) % 2 == 1 {
                         self.graphics.bigbprint(-1, 200, "New Trophy!", 220 - help.glow, 128 - help.glow, 128 - (help.glow / 2), true, 2);
@@ -1231,7 +1231,7 @@ impl Render {
 
                     let tempstring = help.timestring(game.swnrecord);
                     self.graphics.bprint(240, 190, "Best Time", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), Some(true));
-                    self.graphics.bigbrprint(300, 205, tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 2f32);
+                    self.graphics.bigbrprint(300, 205, &tempstring, 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 2f32);
                 } else if (game.swndelay / 10) % 2 == 1 {
                     self.graphics.bigbprint(-1, 20, "SUPER GRAVITRON", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 2);
                     self.graphics.bigbprint(-1, 200, "GO!", 220 - help.glow, 220 - help.glow, 255 - (help.glow / 2), true, 3);
@@ -1336,7 +1336,7 @@ impl Render {
 
             macro_rules! TAB {
                 ($opt:expr, $text:expr) => {
-                    self.graphics.map_tab($opt, $text, Some(game.menupage == $opt))
+                    self.graphics.map_tab($opt, $text, Some(game.menupage == $opt), help)
                 }
             }
 
@@ -1568,7 +1568,7 @@ impl Render {
 
                         let tempstring = help.timestring(game.swnrecord);
                         self.graphics.print( 240, 124, "Best Time", 196, 196, 255 - help.glow, Some(true));
-                        self.graphics.bigrprint( 300, 94, tempstring, 196, 196, 255 - help.glow, true, 2.0);
+                        self.graphics.bigrprint( 300, 94, &tempstring, 196, 196, 255 - help.glow, true, 2.0);
 
                         match game.swnbestrank {
                             0 => {
@@ -1599,7 +1599,7 @@ impl Render {
 
                         let tempstring = help.timestring(game.swnrecord);
                         self.graphics.print( 240, 90, "Best Time", 196, 196, 255 - help.glow, Some(true));
-                        self.graphics.bigrprint( 300, 104, tempstring, 196, 196, 255 - help.glow, true, 2.0);
+                        self.graphics.bigrprint( 300, 104, &tempstring, 196, 196, 255 - help.glow, true, 2.0);
 
                         match game.swnbestrank {
                             0 => {
@@ -1927,4 +1927,109 @@ impl Render {
     }
 
     // void teleporterrender(void)
+    pub fn teleporterrender(&mut self, game: &mut game::Game, map: &mut map::Map, help: &mut utility_class::UtilityClass, obj: &mut entity::EntityClass) -> Result<Option<RenderResult>, i32> {
+        graphics_util::ClearSurface(&mut self.graphics.buffers.backBuffer);
+
+        //draw screen alliteration
+        //Roomname:
+        let temp = map.area(game.roomx, game.roomy);
+        if temp < 2 && !map.custommode && self.graphics.fademode == 0 {
+            self.graphics.print(5, 2, &map.hiddenname, 196, 196, 255 - help.glow, Some(true));
+        } else {
+            self.graphics.print(5, 2, &map.roomname, 196, 196, 255 - help.glow, Some(true));
+        }
+
+        //Background color
+        graphics_util::FillRect_xywh_rgb(&mut self.graphics.buffers.backBuffer, 0, 12, 320, 240, 10, 24, 26);
+
+        //draw the map image
+        self.graphics.drawpixeltextbox(35, 16, 250, 190, 32,24, 65, 185, 207,4,0);
+        self.graphics.drawimage(1, 40, 21, Some(false));
+        //black out areas we can't see yet
+        for j in 0..20 {
+            for i in 0..20 {
+                if !map.isexplored(i, j) {
+                    self.graphics.drawimage(2, 40 + (i * 12), 21 + (j * 9), Some(false));
+                }
+            }
+        }
+
+        //draw the coordinates //current
+        if game.roomx == 109 {
+            //tower!instead of room y, scale map.ypos
+            self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2, 21  + 2, 12 - 4, 180 - 4, 16, 245 - (help.glow * 2), 245 - (help.glow * 2));
+        } else {
+            self.graphics.drawrect(40 + ((game.roomx - 100) * 12) + 2, 21 + ((game.roomy - 100) * 9) + 2, 12 - 4, 9 - 4, 16, 245 - (help.glow * 2), 245 - (help.glow * 2));
+        }
+
+        if game.useteleporter {
+            //Draw the chosen destination coordinate!
+            //TODO
+            //draw the coordinates //destination
+            let tempx_ = map.teleporters[game.teleport_to_teleporter as usize].x;
+            let tempy_ = map.teleporters[game.teleport_to_teleporter as usize].y;
+            self.graphics.drawrect(40 + (tempx_ * 12) + 1, 21 + (tempy_ * 9) + 1, 12 - 2, 9 - 2, 245 - (help.glow * 2), 16, 16);
+            self.graphics.drawrect(40 + (tempx_ * 12) + 3, 21 + (tempy_ * 9) + 3, 12 - 6, 9 - 6, 245 - (help.glow * 2), 16, 16);
+        }
+
+        //draw legend details
+        // for (size_t i = 0; i < map.teleporters.size(); i++)
+        for i in 0..map.teleporters.len() {
+            if map.showteleporters && map.isexplored(map.teleporters[i].x, map.teleporters[i].y) {
+                let mut temp = 1126 + if map.isexplored(map.teleporters[i].x, map.teleporters[i].y) { 1 } else { 0 };
+                if self.graphics.flipmode { temp += 3; }
+                self.graphics.drawtile(40 + 3 + (map.teleporters[i].x * 12), 22 + (map.teleporters[i].y * 9), temp);
+            } else if map.showtargets && !map.isexplored(map.teleporters[i].x, map.teleporters[i].y) {
+                let mut temp = 1126 + if map.isexplored(map.teleporters[i].x, map.teleporters[i].y) { 1 } else { 0 };
+                if self.graphics.flipmode { temp += 3; }
+                self.graphics.drawtile(40 + 3 + (map.teleporters[i].x * 12), 22 + (map.teleporters[i].y * 9), temp);
+            }
+        }
+
+        if map.showtrinkets {
+            for i in 0..map.shinytrinkets.len() {
+                if !obj.collect[i] {
+                    let mut temp = 1086;
+                    if self.graphics.flipmode { temp += 3; }
+                    self.graphics.drawtile(40 + 3 + (map.shinytrinkets[i].x * 12), 22 + (map.shinytrinkets[i].y * 9),	temp);
+                }
+            }
+        }
+
+        let tempx = map.teleporters[game.teleport_to_teleporter as usize].x;
+        let tempy = map.teleporters[game.teleport_to_teleporter as usize].y;
+        if game.useteleporter && (help.slowsine % 16 > 8) {
+            //colour in the legend
+            let mut temp = 1128;
+            if self.graphics.flipmode { temp += 3; }
+            self.graphics.drawtile(40 + 3 + (tempx * 12), 22 + (tempy * 9), temp);
+        }
+
+        self.graphics.cutscenebars();
+
+        if game.useteleporter {
+            //Instructions!
+            self.graphics.print(5, 210, "Press Left/Right to choose a Teleporter", 220 - (help.glow), 220 - (help.glow), 255 - (help.glow / 2), Some(true));
+            self.graphics.print(5, 225, "Press ENTER to Teleport", 220 - (help.glow), 220 - (help.glow), 255 - (help.glow / 2), Some(true));
+        }
+
+        self.graphics.drawgui(help);
+
+        if self.graphics.flipmode {
+            if game.advancetext {
+                self.graphics.print(5, 228, "- Press ACTION to advance text -", 220 - (help.glow), 220 - (help.glow), 255 - (help.glow / 2), Some(true));
+            }
+        } else {
+            if game.advancetext {
+                self.graphics.print(5, 5, "- Press ACTION to advance text -", 220 - (help.glow), 220 - (help.glow), 255 - (help.glow / 2), Some(true));
+            }
+        }
+
+        Ok(Some(if self.graphics.resumegamemode || self.graphics.menuoffset > 0 || self.graphics.oldmenuoffset > 0 {
+            RenderResult::MenuOffRender
+        } else {
+            // self.graphics.render();
+            RenderResult::Plain
+        }))
+    }
 }

@@ -1,8 +1,10 @@
 use crate::{INBOUNDS_ARR, INBOUNDS_VEC, game, map, maths, music, screen::render::graphics, script, utility_class};
+
+use self::blockv::BlockClass;
 mod ent;
 mod blockv;
 
-#[derive(PartialEq)]
+#[derive(Debug,PartialEq)]
 pub enum EntityEnum {
     BLOCK = 0,
     TRIGGER = 1,
@@ -159,7 +161,6 @@ impl<'a> EntityClass {
         let blockptr = self.get_blockptr();
         match t {
             t if t == EntityEnum::BLOCK as i32 => {
-                //Block
                 self.blocks[blockptr].r#type = EntityEnum::BLOCK;
                 self.blocks[blockptr].xp = xp;
                 self.blocks[blockptr].yp = yp;
@@ -168,37 +169,37 @@ impl<'a> EntityClass {
                 self.blocks[blockptr].rectset(xp, yp, w, h);
             },
             t if t == EntityEnum::TRIGGER as i32 => {
-                //Trigger
                 self.blocks[blockptr].r#type = EntityEnum::TRIGGER;
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
                 self.blocks[blockptr].trigger = trig;
                 self.blocks[blockptr].script = script;
+                info!("new trigger: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::DAMAGE as i32 => {
-                //Damage
                 self.blocks[blockptr].r#type = EntityEnum::DAMAGE;
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
+                // info!("new damage: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::DIRECTIONAL as i32 => {
-                //Directional
                 self.blocks[blockptr].r#type = EntityEnum::DIRECTIONAL;
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
                 self.blocks[blockptr].trigger = trig;
+                info!("new directional: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::SAFE as i32 => {
-                //Safe block
                 self.blocks[blockptr].r#type = EntityEnum::SAFE;
                 self.blocks[blockptr].xp = xp;
                 self.blocks[blockptr].yp = yp;
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
+                info!("new safe: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::ACTIVITY as i32 => {
                 //Activity Zone
@@ -429,6 +430,8 @@ impl<'a> EntityClass {
                     },
                     _ => println!("{}", 0),
                 };
+
+                info!("new activity: {:?}", self.blocks[blockptr]);
             },
             _ => println!("TODO: refactor to enum... unmatched type: {}", t),
         }
@@ -451,8 +454,21 @@ impl<'a> EntityClass {
 
     // bool entityclass::disableentity(int t)
     pub fn disableentity(&mut self, t: usize) -> bool {
-        println!("DEADBEEF: entityclass::disableentity() method not implemented yet");
-        false
+        if !INBOUNDS_VEC!(t, self.entities) {
+            warn!("disableentity() out-of-bounds!");
+            return true;
+        }
+        if self.entities[t].rule == 0 && t == self.getplayer() as usize {
+            /* Don't disable the player entity! */
+            return false
+        }
+
+        self.entities[t].invis = true;
+        self.entities[t].size = -1;
+        self.entities[t].r#type = -1;
+        self.entities[t].rule = -1;
+
+        true
     }
 
     // void entityclass::removeallblocks(void)
@@ -461,8 +477,7 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::disableblock( int t )
-    pub fn disableblock(&mut self, t: i32) {
-        let t = t as usize;
+    pub fn disableblock(&mut self, t: usize) {
         if !INBOUNDS_VEC!(t, self.blocks) {
             println!("disableblock() out-of-bounds!");
             return;
@@ -477,20 +492,37 @@ impl<'a> EntityClass {
 
     // void entityclass::moveblockto(int x1, int y1, int x2, int y2, int w, int h)
     pub fn moveblockto(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, w: i32, h: i32) {
-        println!("DEADBEEF: entityclass::moveblockto() method not implemented yet");
+        // for size_t i = 0; i < blocks.size(); i++ {
+        for i in 0..self.blocks.len() {
+            if self.blocks[i].xp == x1 && self.blocks[i].yp == y1 {
+                self.blocks[i].xp = x2;
+                self.blocks[i].yp = y2;
+
+                self.blocks[i].wp = w;
+                self.blocks[i].hp = h;
+
+                match self.blocks[i] {
+                    blockv::BlockClass { xp, yp, wp, hp, .. } => self.blocks[i].rectset(xp, yp, wp, hp),
+                };
+                break;
+            }
+        }
     }
 
     // void entityclass::disableblockat(int x, int y)
     pub fn disableblockat(&mut self, x: i32, y: i32) {
-        println!("DEADBEEF: entityclass::disableblockat() method not implemented yet");
+        for i in 0..self.blocks.len() {
+            if self.blocks[i].xp == x && self.blocks[i].yp == y {
+                self.disableblock(i);
+            }
+        }
     }
 
     // void entityclass::removetrigger( int t )
     pub fn removetrigger(&mut self, t: i32) {
-        // for size_t i=0; i<blocks.size(); i++ {
         for i in 0..self.blocks.len() {
             if self.blocks[i].r#type == EntityEnum::TRIGGER && self.blocks[i].trigger == t {
-                self.disableblock(i as i32);
+                self.disableblock(i);
             }
         }
     }
@@ -503,8 +535,7 @@ impl<'a> EntityClass {
         }
 
         //Copy entity t into the first free linecrosskludge entity
-        println!("copylinecross TBI");
-        // self.linecrosskludge.push(self.entities[t]);
+        self.linecrosskludge.push(self.entities[t]);
     }
 
     // void entityclass::revertlinecross( int t, int s )
@@ -522,14 +553,21 @@ impl<'a> EntityClass {
 
     // bool entityclass::gridmatch( int p1, int p2, int p3, int p4, int p11, int p21, int p31, int p41 )
     fn gridmatch(&mut self, p1: i32, p2: i32, p3: i32, p4: i32, p11: i32, p21: i32, p31: i32, p41: i32) -> bool {
-        println!("DEADBEEF: entityclass::gridmatch() method not implemented yet");
-        false
+        p1 == p11 && p2 == p21 && p3 == p31 && p4 == p41
     }
 
     // int entityclass::crewcolour( int t )
-    fn crewcolour(&mut self, t: i32) -> i32 {
-        println!("DEADBEEF: entityclass::crewcolour() method not implemented yet");
-        0
+    pub fn crewcolour(&mut self, t: i32) -> i32 {
+        //return the colour of the indexed crewmate
+        match t {
+            0 => 0,
+            1 => 20,
+            2 => 14,
+            3 => 15,
+            4 => 13,
+            5 => 16,
+            _ => 0,
+        }
     }
 
     // void entityclass::createentity(int xp, int yp, int t, int meta1, int meta2, int p1, int p2, int p3, int p4)
@@ -2973,6 +3011,16 @@ impl<'a> EntityClass {
     }
 
     // bool entityclass::checkplatform(const SDL_Rect& temprect, int* px, int* py)
+    fn checkplatform(&self, temprect: sdl2::rect::Rect, help: &mut utility_class::UtilityClass) -> Option<(i32, i32)> {
+        //Return true if rectset intersects a moving platform, setups px & py to the platform x & y
+        for i in 0..self.blocks.len() {
+            if self.blocks[i].r#type == EntityEnum::BLOCK && help.intersects(self.blocks[i].rect, temprect) {
+                return Some((self.blocks[i].xp, self.blocks[i].yp))
+            }
+        }
+
+        None
+    }
 
     // bool entityclass::checkblocks(const SDL_Rect& temprect, const float dx, const float dy, const float dr, const bool skipdirblocks)
     fn checkblocks(&self, temprect: sdl2::rect::Rect, dx: f32, dy: f32, dr: f32, skipdirblocks: bool, help: &mut utility_class::UtilityClass) -> bool {
@@ -3053,8 +3101,22 @@ impl<'a> EntityClass {
 
     // float entityclass::hplatformat(const int px, const int py)
     fn hplatformat(&self, px: i32, py: i32) -> f32 {
-        println!("DEADBEEF: testwallsx::hplatformat() method not implemented yet");
-        0.0
+        //Returns first entity of horizontal platform at (px, py), -1000 otherwise.
+        for i in 0..self.entities.len() {
+            if self.entities[i].rule == 2 && self.entities[i].behave >= 2 && self.entities[i].xp == px && self.entities[i].yp == py {
+                return if self.entities[i].behave == 8 {
+                    //threadmill!
+                    self.entities[i].para
+                } else if self.entities[i].behave == 9 {
+                    //threadmill!
+                    -self.entities[i].para
+                } else {
+                    self.entities[i].vx
+                };
+            }
+        }
+
+        return -1000.0
     }
 
     // int entityclass::yline( int a, int b )
@@ -3088,15 +3150,35 @@ impl<'a> EntityClass {
     }
 
     // float entityclass::entitycollideplatformroof( int t )
-    pub fn entitycollideplatformroof(&self, t: i32) -> f32 {
-        println!("DEADBEEF: testwallsx::entitycollideplatformroof() method not implemented yet");
-        0.0
+    pub fn entitycollideplatformroof(&self, t: usize, help: &mut utility_class::UtilityClass) -> f32 {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            warn!("entitycollideplatformroof() out-of-bounds!");
+            return -1000.0;
+        }
+
+        let temprect = sdl2::rect::Rect::new(self.entities[t].xp + self.entities[t].cx, self.entities[t].yp + self.entities[t].cy - 1, self.entities[t].w as u32, self.entities[t].h as u32);
+
+        return match self.checkplatform(temprect, help) {
+            //px and py now contain an x y coordinate for a platform, find it
+            Some((px, py)) => self.hplatformat(px, py),
+            _ => -1000.0,
+        }
     }
 
     // float entityclass::entitycollideplatformfloor( int t )
-    pub fn entitycollideplatformfloor(&self, t: i32) -> f32 {
-        println!("DEADBEEF: testwallsx::entitycollideplatformfloor() method not implemented yet");
-        0.0
+    pub fn entitycollideplatformfloor(&self, t: usize, help: &mut utility_class::UtilityClass) -> f32 {
+        if !INBOUNDS_VEC!(t, self.entities) {
+            warn!("entitycollideplatformfloor() out-of-bounds!");
+            return -1000.0;
+        }
+
+        let temprect = sdl2::rect::Rect::new(self.entities[t].xp + self.entities[t].cx, self.entities[t].yp + self.entities[t].cy + 1, self.entities[t].w as u32, self.entities[t].h as u32);
+
+        return match self.checkplatform(temprect, help) {
+            //px and py now contain an x y coordinate for a platform, find it
+            Some((px, py)) => self.hplatformat(px, py),
+            _ => -1000.0,
+        }
     }
 
     // bool entityclass::entitycollidefloor( int t )
@@ -3288,8 +3370,37 @@ impl<'a> EntityClass {
     }
 
     // void entityclass::movingplatformfix( int t, int j )
-    pub fn movingplatformfix(&self, t: i32, j: i32) {
-        println!("DEADBEEF: entityclass::movingplatformfix() method not implemented yet");
+    pub fn movingplatformfix(&mut self, t: usize, j: usize, help: &mut utility_class::UtilityClass, map: &mut map::Map) {
+        if !INBOUNDS_VEC!(t, self.entities) || !INBOUNDS_VEC!(j, self.entities) {
+            warn!("movingplatformfix() out-of-bounds!");
+            return;
+        }
+
+        //If this intersects the entity, then we move them along it
+        if self.entitycollide(t, j, help) {
+            //ok, bollox, let's make sure
+            self.entities[j].yp = self.entities[j].yp + self.entities[j].vy as i32;
+            if self.entitycollide(t, j, help) {
+                self.entities[j].yp = self.entities[j].yp - self.entities[j].vy as i32;
+                self.entities[j].vy = self.entities[t].vy;
+                self.entities[j].newyp = self.entities[j].yp as f32 + self.entities[j].vy;
+                if self.testwallsy(j, self.entities[j].xp as f32, self.entities[j].newyp, map, help) {
+                    if self.entities[t].vy > 0.0 {
+                        self.entities[j].yp = self.entities[t].yp + self.entities[t].h;
+                        self.entities[j].vy = 0.0;
+                        self.entities[j].onroof = 2;
+                        self.entities[j].visualonroof = self.entities[j].onroof;
+                    } else {
+                        self.entities[j].yp = self.entities[t].yp - self.entities[j].h-self.entities[j].cy;
+                        self.entities[j].vy = 0.0;
+                        self.entities[j].onground = 2;
+                        self.entities[j].visualonground = self.entities[j].onground;
+                    }
+                } else {
+                    self.entities[t].state = self.entities[t].onwall;
+                }
+            }
+        }
     }
 
     // void entityclass::customwarplinecheck(int i) {

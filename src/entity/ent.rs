@@ -8,10 +8,9 @@ macro_rules! rn {
     };
 }
 
-#[derive(Debug)]
+#[derive(Copy,Clone)]
 pub struct EntClass {
     //Fundamentals
-    pub invis: bool,
     pub r#type: i32,
     pub size: i32,
     pub tile: i32,
@@ -23,6 +22,7 @@ pub struct EntClass {
     pub para: f32,
     pub life: i32,
     pub colour: i32,
+    pub invis: bool,
 
     //Position and velocity
     pub oldxp: i32,
@@ -69,6 +69,140 @@ pub struct EntClass {
     pub realcol: u32,
     pub lerpoldxp: i32,
     pub lerpoldyp: i32,
+}
+
+impl std::fmt::Debug for EntClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.debug_struct("EntClass")
+            // Fundamentals
+            .field("type", match &self.r#type {
+                // see entityclass::updateentities() for brief description
+                0 => &"Player",
+                1 => &"A moving platform",
+                2 => &"Disappearing platforms",
+                3 => &"Breakable blocks",
+                4 => &"Gravity Tokens",
+                5 => &"Decorative particles",
+                6 => &"Small collectibles/pickups",
+                7 => &"Something Shiny (true or fake trinket ar smthn else?)",
+                8 => &"Savepoint",
+                9 => &"Horizontal Gravity Line",
+                10 => &"Vertical Gravity Line",
+                11 => &"Warp token",
+                12 => &"A special case! (e.g. Crew member)",
+                13 => &"Terminal",
+                14 => &"A special case! (e.g. super crew member)",
+                15 => &"Trophies",
+                23 => &"SWN Enemies",
+                51..=54 => &"Warp lines",
+                55 => &"crew member (custom, collectable)",
+                100 => &"Teleporter",
+                _ => &self.r#type,
+
+                // input t argument from entityclass::createentity()
+                // 0 => &"Player",
+                // 1 => &"Simple enemy, bouncing off the walls",
+                // 2 => &"A moving platform",
+                // 3 => &"Disappearing platforms",
+                // 4 => &"Breakable blocks",
+                // 5 => &"Gravity Tokens",
+                // 6 | 7 => &"Decorative particles",
+                // 8 => &"Small collectibles",
+                // 9 => &"Something Shiny",
+                // 10 => &"Savepoint",
+                // 11 => &"Horizontal Gravity Line",
+                // 12 => &"Vertical Gravity Line",
+                // 13 => &"Warp token",
+                // 14 => &"Teleporter",
+                // 15 => &"Crew Member (warp zone)",
+                // 16 => &"Crew Member, upside down (space station)",
+                // 17 => &"Crew Member (Lab)",
+                // 18 => &"Crew Member (Ship)",
+                // 19 => &"Crew Member (Ship) More tests!",
+                // 20 => &"Terminal",
+                // 21 => &"as above, except doesn't highlight",
+                // 22 => &"Fake trinkets, only appear if you've collected them",
+                // 23 => &"SWN Enemies",
+                // 24 => &"Super Crew Member",
+                // 25 => &"Trophies",
+                // 26 => &"Epilogue super warp token",
+                // 51 => &"Vertical",
+                // 52 => &"Vertical",
+                // 53 => &"Horizontal",
+                // 54 => &"Horizontal",
+                // 55 => &"Crew Member (custom, collectable)",
+                // 56 => &"Custom enemy",
+            })
+            .field("size", match &self.size {
+                0 => &"sprite",
+                1 => &"tile",
+                2 => &"moving platform of width 4 (32)",
+                3 => &"apparently a \"bug chunky pixel\"",
+                4 => &"coin/small pickup",
+                5 => &"horizontal line",
+                6 => &"is vertical",
+                7 => &"teleporter",
+                2 => &"moving platform of width 8",
+                9 => &"really big sprite 2x2",
+                10 => &"2x1 sprite",
+                11 => &"the fucking elephant",
+                12 => &"Regular sprites that don't wrap",
+                13 => &"epilogue huge hero",
+                _ => &self.size,
+            })
+            .field("tile", &self.tile)
+            .field("rule", &self.rule)
+            .field("state", &self.state)
+            .field("statedelay", &self.statedelay)
+            .field("behave", &self.behave)
+            .field("animate", &self.animate)
+            .field("para", &self.para)
+            .field("life", &self.life)
+            .field("colour", &self.colour)
+            .field("invis", &self.invis)
+
+            .field("oldxp", &self.oldxp)
+            .field("oldyp", &self.oldyp)
+            .field("ax", &self.ax)
+            .field("ay", &self.ay)
+            .field("vx", &self.vx)
+            .field("vy", &self.vy)
+            .field("cx", &self.cx)
+            .field("cy", &self.cy)
+            .field("w", &self.w)
+            .field("h", &self.h)
+            .field("newxp", &self.newxp)
+            .field("newyp", &self.newyp)
+            .field("isplatform", &self.isplatform)
+            .field("x1", &self.x1)
+            .field("y1", &self.y1)
+            .field("x2", &self.x2)
+            .field("y2", &self.y2)
+
+            .field("onentity", &self.onentity)
+            .field("harmful", &self.harmful)
+            .field("onwall", &self.onwall)
+            .field("onxwall", &self.onxwall)
+            .field("onywall", &self.onywall)
+
+            .field("gravity", &self.gravity)
+            .field("onground", &self.onground)
+            .field("onroof", &self.onroof)
+
+            .field("framedelay", &self.framedelay)
+            .field("drawframe", &self.drawframe)
+            .field("walkingframe", &self.walkingframe)
+            .field("dir", &self.dir)
+            .field("actionframe", &self.actionframe)
+            .field("visualonground", &self.visualonground)
+            .field("visualonroof", &self.visualonroof)
+            .field("yp", &self.yp)
+            .field("xp", &self.xp)
+            .field("realcol", &self.realcol)
+            .field("lerpoldxp", &self.lerpoldxp)
+            .field("lerpoldyp", &self.lerpoldyp)
+            .finish()
+    }
 }
 
 impl EntClass {
@@ -593,7 +727,40 @@ impl EntClass {
 
     // void entclass::settreadmillcolour( int rx, int ry )
     pub fn settreadmillcolour(&mut self, rx: i32, ry: i32) {
-        println!("DEADBEEF: entclass::settreadmillcolour() method not implemented yet");
+        let rx = ry - 100;
+        let ry = rx - 100;
+        let rx = ry + 50 - 12;
+        let ry = rx + 50 - 14;   //Space Station
+
+        self.tile = match rn!(rx, ry) {
+            t if t == rn!(52, 48) => 791, //Cyan
+
+            t if t == rn!(49, 47) => 24, //Yellow
+            t if t == rn!(56, 44) => 24, //Yellow
+            t if t == rn!(54, 49) => 24, //Yellow
+
+            t if t == rn!(49, 49) => 36, //Green
+            t if t == rn!(55, 44) => 36, //Green
+            t if t == rn!(54, 43) => 36, //Green
+            t if t == rn!(53, 49) => 36, //Green
+            t if t == rn!(54, 45) => 711, //Green (special)
+            t if t == rn!(51, 48) => 711, //Green (special)
+
+            t if t == rn!(50, 49) => 28, //Purple
+            t if t == rn!(54, 44) => 28, //Purple
+            t if t == rn!(49, 42) => 28, //Purple
+            t if t == rn!(55, 43) => 28, //Purple
+            t if t == rn!(54, 47) => 28, //Purple
+            t if t == rn!(53, 48) => 28, //Purple
+
+            t if t == rn!(51, 47) => 32, //Red
+            t if t == rn!(52, 49) => 32, //Red
+            t if t == rn!(48, 43) => 32, //Red
+            t if t == rn!(55, 47) => 32, //Red
+            t if t == rn!(54, 48) => 32, //Red
+
+            _ => 20, //default as blue
+        };
     }
 
     // void entclass::updatecolour(void)

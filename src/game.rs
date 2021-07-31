@@ -1,13 +1,11 @@
 use sdl2::controller::Button;
-use crate::{INBOUNDS_VEC, entity, map, music, screen::{self, render::graphics}, script, utility_class};
+use crate::{INBOUNDS_VEC, entity, filesystem, map, maths, music, screen::{self, render::graphics}, script, utility_class};
 
 pub const numcrew: usize = 6;
 const numunlock: usize = 25;
 const numtrials: usize = 6;
 
 pub struct Game {
-    // saveFilePath: String,
-
     pub door_left: i32,
     pub door_right: i32,
     pub door_up: i32,
@@ -255,7 +253,7 @@ pub struct Game {
     pub quickrestartkludge: bool,
 
     // Custom stuff
-    // customscript: String[50],
+    customscript: Vec<String>, // String[50]
     customcol: i32,
     pub levelpage: i32,
     playcustomlevel: i32,
@@ -308,7 +306,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) -> Game {
+    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map, fs: &mut filesystem::FileSystem) -> Game {
         let mut game = Game {
             door_left: 0,
             door_right: 0,
@@ -360,7 +358,7 @@ impl Game {
             quickrestartkludge: false,
 
             // Custom stuff
-            // customscript: String[50],
+            customscript: vec![String::new(); 50],
             customcol: 0,
             levelpage: 0,
             playcustomlevel: 0,
@@ -550,8 +548,6 @@ impl Game {
 
             // clearcustomlevelstats(),
 
-            // saveFilePath: FILESYSTEM_getUserSaveDirectory(),
-
             // tinyxml2::XMLDocument doc;
             // if !FILESYSTEM_loadTiXml2Document("saves/qsave.vvv", doc))
             // {
@@ -719,15 +715,33 @@ impl Game {
     }
 
     // int Game::crewrescued(void);
-    pub fn crewrescued(&mut self) -> i32 {
-        println!("DEADBEEF: Game::crewrescued() method not implemented yet");
-        0
+    pub fn crewrescued(&self) -> usize {
+        self.crewstats.iter().filter(|x| **x == true).collect::<Vec<_>>().len()
     }
 
     // std::string Game::unrescued(void);
     pub fn unrescued(&mut self) -> &str {
-        println!("DEADBEEF: Game::unrescued() method not implemented yet");
-        &""
+        //Randomly return the name of an unrescued crewmate
+        if maths::fRandom() * 100.0 > 50.0 {
+            if !self.crewstats[5] { return "Victoria"; }
+            if !self.crewstats[2] { return "Vitellary"; }
+            if !self.crewstats[4] { return "Verdigris"; }
+            if !self.crewstats[3] { return "Vermilion"; }
+        } else {
+            if maths::fRandom() * 100.0 > 50.0 {
+                if !self.crewstats[2] { return "Vitellary"; }
+                if !self.crewstats[4] { return "Verdigris"; }
+                if !self.crewstats[3] { return "Vermilion"; }
+                if !self.crewstats[5] { return "Victoria"; }
+            } else {
+                if !self.crewstats[4] { return "Verdigris"; }
+                if !self.crewstats[3] { return "Vermilion"; }
+                if !self.crewstats[5] { return "Victoria"; }
+                if !self.crewstats[2] { return "Vitellary"; }
+            }
+        }
+
+        return "you";
     }
 
     // void Game::resetgameclock(void);
@@ -1128,8 +1142,7 @@ impl Game {
                     if temp == 1 {
                         self.createmenu(MenuName::unlocktimetrial, Some(true), graphics, music, screen_params, map);
                         self.savestatsandsettings();
-                    }
-                    else if temp > 1 {
+                    } else  if temp > 1 {
                         self.createmenu(MenuName::unlocktimetrials, Some(true), graphics, music, screen_params, map);
                         self.savestatsandsettings();
                     }
@@ -1371,41 +1384,98 @@ impl Game {
     }
 
     // void Game::gethardestroom(void);
-    pub fn gethardestroom(&mut self) {
-        println!("DEADBEEF: Game::gethardestroom() not implemented yet");
+    pub fn gethardestroom(&mut self, map: &mut map::Map) {
+        if self.currentroomdeaths > self.hardestroomdeaths {
+            self.hardestroomdeaths = self.currentroomdeaths;
+            self.hardestroom = map.roomname.to_owned();
+            if map.roomname == "glitch" {
+                if self.roomx == 42 && self.roomy == 51 {
+                    self.hardestroom = "Rear Vindow".to_string();
+                } else if self.roomx == 48 && self.roomy == 51 {
+                    self.hardestroom = "On the Vaterfront".to_string();
+                } else if self.roomx == 49 && self.roomy == 51 {
+                    self.hardestroom = "The Untouchavles".to_string();
+                }
+            } else if map.roomname == "change" {
+                if self.roomx == 45 && self.roomy == 51 { self.hardestroom = map.specialnames[3].to_string(); }
+                if self.roomx == 46 && self.roomy == 51 { self.hardestroom = map.specialnames[4].to_string(); }
+                if self.roomx == 47 && self.roomy == 51 { self.hardestroom = map.specialnames[5].to_string(); }
+                if self.roomx == 50 && self.roomy == 53 { self.hardestroom = map.specialnames[6].to_string(); }
+                if self.roomx == 50 && self.roomy == 54 { self.hardestroom = map.specialnames[7].to_string(); }
+            } else if map.roomname == "" {
+                self.hardestroom = "Dimension VVVVVV".to_string();
+            }
+        }
     }
 
     // void Game::levelcomplete_textbox(void);
-    pub fn levelcomplete_textbox(&mut self) {
-        println!("DEADBEEF: Game::levelcomplete_textbox() not implemented yet");
+    pub fn levelcomplete_textbox(&mut self, graphics: &mut graphics::Graphics) {
+        graphics.createtextboxflipme("", -1, 12, 165, 165, 255);
+        graphics.addline("                                   ");
+        graphics.addline("");
+        graphics.addline("");
+        graphics.textboxcenterx();
     }
 
     // void Game::crewmate_textbox(const int r, const int g, const int b);
-    pub fn crewmate_textbox(&mut self, r: i32, g: i32, b: i32) {
-        println!("DEADBEEF: Game::crewmate_textbox() not implemented yet");
+    pub fn crewmate_textbox(&mut self, r: i32, g: i32, b: i32, graphics: &mut graphics::Graphics) {
+        graphics.createtextboxflipme("", -1, 64 + 8 + 16, r, g, b);
+        graphics.addline("     You have rescued  ");
+        graphics.addline("      a crew member!   ");
+        graphics.addline("");
+        graphics.textboxcenterx();
     }
 
     // void Game::remaining_textbox(void);
-    pub fn remaining_textbox(&mut self) {
-        println!("DEADBEEF: Game::remaining_textbox() not implemented yet");
+    pub fn remaining_textbox(&mut self, graphics: &mut graphics::Graphics) {
+        let remaining = 6 - self.crewrescued();
+
+        let string = if remaining == 1 {
+            "  One remains  ".to_string()
+        } else if remaining > 0 {
+            format!("  {} remain  ", remaining)
+        } else {
+            "  All Crew Members Rescued!  ".to_string()
+        };
+
+        graphics.createtextboxflipme(&string, -1, 128 + 16, 174, 174, 174);
+        graphics.textboxcenterx();
     }
 
     // void Game::actionprompt_textbox(void);
-    pub fn actionprompt_textbox(&mut self) {
-        println!("DEADBEEF: Game::actionprompt_textbox() not implemented yet");
+    pub fn actionprompt_textbox(&mut self, graphics: &mut graphics::Graphics) {
+        graphics.createtextboxflipme(" Press ACTION to continue ", -1, 196, 164, 164, 255);
+        graphics.textboxcenterx();
     }
 
     // void Game::savetele_textbox(void);
-    pub fn savetele_textbox(&mut self) {
-        println!("DEADBEEF: Game::savetele_textbox() not implemented yet");
+    pub fn savetele_textbox(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, fs: &mut filesystem::FileSystem) {
+        if self.inspecial() || map.custommode {
+            return;
+        }
+
+        match self.savetele(map, fs) {
+            true => {
+                graphics.createtextboxflipme("    Game Saved    ", -1, 12, 174, 174, 174);
+                graphics.textboxtimer(25);
+            },
+            false => {
+                graphics.createtextboxflipme("  ERROR: Could not save game!  ", -1, 12, 255, 60, 60);
+                graphics.textboxtimer(50);
+            },
+        }
     }
 
     // void Game::updatestate(void);
-    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, music: &mut music::Music) {
+    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, music: &mut music::Music, map: &mut map::Map, screen_params: screen::ScreenParams, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) {
         self.statedelay -= 1;
         if self.statedelay <= 0 {
             self.statedelay = 0;
             self.glitchrunkludge = false;
+        }
+
+        if self.state > 1 {
+            trace!("updatestate {}", self.state);
         }
 
         if self.statedelay <= 0 {
@@ -1647,10 +1717,2434 @@ impl Game {
                     self.state = 0;
                 },
 
+                31 => {
+                    //state = 55;  statedelay = 50;
+                    self.state = 0;
+                    self.statedelay = 0;
+                    if !obj.flags[6] {
+                        obj.flags[6] = true;
 
-                /* ... */
+                        obj.flags[5] = true;
+                        self.startscript = true;
+                        self.newscript = "communicationstation".to_string();
+                        self.state = 0;
+                        self.statedelay = 0;
+                    }
+                    obj.removetrigger(31);
+                },
+                32 => {
+                    //Generic "run script"
+                    if !obj.flags[7] {
+                        obj.flags[7] = true;
+                        self.startscript = true;
+                        self.newscript = "teleporterback".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(32);
+                    self.state = 0;
+                },
+                33 => {
+                    //Generic "run script"
+                    if !obj.flags[9] {
+                        obj.flags[9] = true;
+                        self.startscript = true;
+                        self.newscript = "rescueblue".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(33);
+                    self.state = 0;
+                },
+                34 => {
+                    //Generic "run script"
+                    if !obj.flags[10] {
+                        obj.flags[10] = true;
+                        self.startscript = true;
+                        self.newscript = "rescueyellow".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(34);
+                    self.state = 0;
+                },
+                35 => {
+                    //Generic "run script"
+                    if !obj.flags[11] {
+                        obj.flags[11] = true;
+                        self.startscript = true;
+                        self.newscript = "rescuegreen".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(35);
+                    self.state = 0;
+                },
+                36 => {
+                    //Generic "run script"
+                    if !obj.flags[8] {
+                        obj.flags[8] = true;
+                        self.startscript = true;
+                        self.newscript = "rescuered".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(36);
+                    self.state = 0;
+                },
 
-                _ => println!("DEADBEEF: Game::updatestate(): state {} not implemented yer", self.state),
+                37 => {
+                    //Generic "run script"
+                    if self.companion == 0 {
+                        self.startscript = true;
+                        self.newscript = "int2_yellow".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(37);
+                    self.state = 0;
+                },
+                38 => {
+                    //Generic "run script"
+                    if self.companion == 0 {
+                        self.startscript = true;
+                        self.newscript = "int2_red".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(38);
+                    self.state = 0;
+                },
+                39 => {
+                    //Generic "run script"
+                    if self.companion == 0 {
+                        self.startscript = true;
+                        self.newscript = "int2_green".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(39);
+                    self.state = 0;
+                },
+                40 => {
+                    //Generic "run script"
+                    if self.companion == 0 {
+                        self.startscript = true;
+                        self.newscript = "int2_blue".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(40);
+                    self.state = 0;
+                },
+
+                41 => {
+                    //Generic "run script"
+                    if !obj.flags[60] {
+                        obj.flags[60] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_2".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_2".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_2".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_2".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(41);
+                    self.state = 0;
+                },
+                42 => {
+                    //Generic "run script"
+                    if !obj.flags[62] {
+                        obj.flags[62] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_3".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_3".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_3".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_3".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(42);
+                    self.state = 0;
+                },
+                43 => {
+                    //Generic "run script"
+                    if !obj.flags[63] {
+                        obj.flags[63] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_4".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_4".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_4".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_4".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(43);
+                    self.state = 0;
+                },
+                44 => {
+                    //Generic "run script"
+                    if !obj.flags[64] {
+                        obj.flags[64] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_5".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_5".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_5".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_5".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(44);
+                    self.state = 0;
+                },
+                45 => {
+                    //Generic "run script"
+                    if !obj.flags[65] {
+                        obj.flags[65] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_6".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_6".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_6".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_6".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(45);
+                    self.state = 0;
+                },
+                46 => {
+                    //Generic "run script"
+                    if !obj.flags[66] {
+                        obj.flags[66] = true;
+                        self.startscript = true;
+                        if self.lastsaved == 2 {
+                            self.newscript = "int1yellow_7".to_string();
+                        } else if self.lastsaved == 3 {
+                            self.newscript = "int1red_7".to_string();
+                        } else if self.lastsaved == 4 {
+                            self.newscript = "int1green_7".to_string();
+                        } else if self.lastsaved == 5 {
+                            self.newscript = "int1blue_7".to_string();
+                        }
+                        self.state = 0;
+                    }
+                    obj.removetrigger(46);
+                    self.state = 0;
+                },
+
+                47 => {
+                    //Generic "run script"
+                    if !obj.flags[69] {
+                        obj.flags[69] = true;
+                        self.startscript = true;
+                        self.newscript = "trenchwarfare".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(47);
+                    self.state = 0;
+                },
+                48 => {
+                    //Generic "run script"
+                    if !obj.flags[70] {
+                        obj.flags[70] = true;
+                        self.startscript = true;
+                        self.newscript = "trinketcollector".to_string();
+                        self.state = 0;
+                    }
+                    obj.removetrigger(48);
+                    self.state = 0;
+                },
+                49 => {
+                    //Start final level music
+                    if !obj.flags[71] {
+                        obj.flags[71] = true;
+                        music.niceplay(15, self);  //Final level remix
+                        self.state = 0;
+                    }
+                    obj.removetrigger(49);
+                    self.state = 0;
+                },
+
+                50 => {
+                    music.playef(15);
+                    graphics.createtextbox("Help! Can anyone hear", 35, 15, 255, 134, 255);
+                    graphics.addline("this message?");
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                51 => {
+                    music.playef(15);
+                    graphics.createtextbox("Verdigris? Are you out", 30, 12, 255, 134, 255);
+                    graphics.addline("there? Are you ok?");
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                52 => {
+                    music.playef(15);
+                    graphics.createtextbox("Please help us! We've crashed", 5, 22, 255, 134, 255);
+                    graphics.addline("and need assistance!");
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                53 => {
+                    music.playef(15);
+                    graphics.createtextbox("Hello? Anyone out there?", 40, 15, 255, 134, 255);
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                54 => {
+                    music.playef(15);
+                    graphics.createtextbox("This is Doctor Violet from the", 5, 8, 255, 134, 255);
+                    graphics.addline("D.S.S. Souleye! Please respond!");
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                55 => {
+                    music.playef(15);
+                    graphics.createtextbox("Please... Anyone...", 45, 14, 255, 134, 255);
+                    graphics.textboxtimer(60);
+                    self.state += 1;
+                    self.statedelay = 100;
+                },
+                56 => {
+                    music.playef(15);
+                    graphics.createtextbox("Please be alright, everyone...", 25, 18, 255, 134, 255);
+                    graphics.textboxtimer(60);
+                    self.state=50;
+                    self.statedelay = 100;
+                },
+
+
+                80 => {
+                    //Used to return to menu from the game
+                    if graphics.fademode == 1 {
+                        self.state += 1;
+                    }
+                },
+                81 => {
+                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    music.play(6, map, self); //should be after quittomenu()
+                    self.state = 0;
+                },
+
+                82 => {
+                    //Time Trial Complete!
+                    obj.removetrigger(82);
+                    self.hascontrol = false;
+
+                    self.timetrialresulttime = self.seconds + (self.minutes * 60) + (self.hours * 60 * 60);
+                    self.timetrialresultframes = self.frames;
+                    self.timetrialresulttrinkets = self.trinkets(obj);
+                    self.timetrialresultshinytarget = self.timetrialshinytarget;
+                    self.timetrialresultpar = self.timetrialpar;
+                    self.timetrialresultdeaths = self.deathcounts;
+
+                    self.timetrialrank = 0;
+                    if self.timetrialresulttime <= self.timetrialpar { self.timetrialrank += 1; }
+                    if self.trinkets(obj) >= self.timetrialshinytarget { self.timetrialrank += 1; }
+                    if self.deathcounts == 0 { self.timetrialrank += 1; }
+
+                    if self.timetrialresulttime < self.besttimes[self.timetriallevel as usize] || (
+                        self.timetrialresulttime == self.besttimes[self.timetriallevel as usize] && self.timetrialresultframes < self.bestframes[self.timetriallevel as usize]
+                    ) || self.besttimes[self.timetriallevel as usize] == -1 {
+                        self.besttimes[self.timetriallevel as usize] = self.timetrialresulttime;
+                        self.bestframes[self.timetriallevel as usize] = self.timetrialresultframes;
+                    }
+                    if self.timetrialresulttrinkets > self.besttrinkets[self.timetriallevel as usize] || self.besttrinkets[self.timetriallevel as usize] == -1 {
+                        self.besttrinkets[self.timetriallevel as usize] = self.trinkets(obj);
+                    }
+                    if self.deathcounts < self.bestlives[self.timetriallevel as usize] || self.bestlives[self.timetriallevel as usize] == -1 {
+                        self.bestlives[self.timetriallevel as usize] = self.deathcounts;
+                    }
+                    if self.timetrialrank > self.bestrank[self.timetriallevel as usize] || self.bestrank[self.timetriallevel as usize] == -1 {
+                        self.bestrank[self.timetriallevel as usize] = self.timetrialrank;
+                        if self.timetrialrank >= 3 {
+                            match self.timetriallevel {
+                                0 => self.unlockAchievement("vvvvvvtimetrial_station1_fixed"),
+                                1 => self.unlockAchievement("vvvvvvtimetrial_lab_fixed"),
+                                2 => self.unlockAchievement("vvvvvvtimetrial_tower_fixed"),
+                                3 => self.unlockAchievement("vvvvvvtimetrial_station2_fixed"),
+                                4 => self.unlockAchievement("vvvvvvtimetrial_warp_fixed"),
+                                5 => self.unlockAchievement("vvvvvvtimetrial_final_fixed"),
+                                _ => (),
+                            };
+                        }
+                    }
+
+                    self.savestatsandsettings();
+
+                    graphics.fademode = 2;
+                    music.fadeout(None, self);
+                    self.state += 1;
+                },
+                83 => {
+                    self.frames -= 1;
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                84 => {
+                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    self.createmenu(MenuName::timetrialcomplete, None, graphics, music, screen_params, map);
+                    self.state = 0;
+                },
+
+
+                85 => {
+                    //Cutscene skip version of final level change
+                    obj.removetrigger(85);
+                    //Init final stretch
+                    self.state += 1;
+                    music.playef(9);
+                    music.play(2, map, self);
+                    obj.flags[72] = true;
+
+                    self.screenshake = 10;
+                    self.flashlight = 5;
+                    map.finalstretch = true;
+                    map.warpx = false;
+                    map.warpy = false;
+                    map.background = 6;
+
+                    map.final_colormode = true;
+                    map.final_colorframe = 1;
+
+                    self.state = 0;
+                },
+
+                //From 90-100 are run scripts for the eurogamer expo only, remove later
+                90 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_station1".to_string();
+                    obj.removetrigger(90);
+                    self.state = 0;
+                },
+                91 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_lab".to_string();
+                    obj.removetrigger(91);
+                    self.state = 0;
+                },
+                92 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_warp".to_string();
+                    obj.removetrigger(92);
+                    self.state = 0;
+                },
+                93 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_tower".to_string();
+                    obj.removetrigger(93);
+                    self.state = 0;
+                },
+                94 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_station2".to_string();
+                    obj.removetrigger(94);
+                    self.state = 0;
+                },
+                95 => {
+                    //Generic "run script"
+                    self.startscript = true;
+                    self.newscript = "startexpolevel_final".to_string();
+                    obj.removetrigger(95);
+                    self.state = 0;
+                },
+
+                96 => {
+                    //Used to return to gravitron to game
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                97 => {
+                    self.returntolab(graphics, map, music, obj, help);
+                    self.state = 0;
+                },
+
+                100 => {
+                    //
+                    //                       Meeting crewmate in the warpzone
+                    //
+                    obj.removetrigger(100);
+                    if !obj.flags[4] {
+                        obj.flags[4] = true;
+                        self.state += 1;
+                    }
+                },
+                101 => {
+                    let i = obj.getplayer() as usize;
+                    self.hascontrol = false;
+                    if INBOUNDS_VEC!(i, obj.entities) && obj.entities[i].onroof > 0 && self.gravitycontrol == 1 {
+                        self.gravitycontrol = 0;
+                        music.playef(1);
+                    }
+                    if INBOUNDS_VEC!(i, obj.entities) && obj.entities[i].onground > 0 {
+                        self.state += 1;
+                    }
+                },
+                102 => {
+                    self.companion = 6;
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 0;
+                        obj.entities[i].state = 1;
+                    }
+
+                    self.advancetext = true;
+                    self.hascontrol = false;
+
+                    graphics.createtextbox("Captain! I've been so worried!", 60, 90, 164, 255, 164);
+                    self.state += 1;
+                    music.playef(12);
+                },
+                104 => {
+                    graphics.createtextbox("I'm glad you're ok!", 135, 152, 164, 164, 255);
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                106 => {
+                    graphics.createtextbox("I've been trying to find a", 74, 70, 164, 255, 164);
+                    graphics.addline("way out, but I keep going");
+                    graphics.addline("around in circles...");
+                    self.state += 1;
+                    music.playef(2);
+                    graphics.textboxactive();
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 54;
+                        obj.entities[i].state = 0;
+                    }
+                },
+                108 => {
+                    graphics.createtextbox("Don't worry! I have a", 125, 152, 164, 164, 255);
+                    graphics.addline("teleporter key!");
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                110 => {
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 0;
+                        obj.entities[i].state = 1;
+                    }
+                    graphics.createtextbox("Follow me!", 185, 154, 164, 164, 255);
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                112 => {
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+
+                    self.state = 0;
+                },
+
+                115 => {
+                    //
+                    //                       Test script for space station, totally delete me!
+                    //
+                    self.hascontrol = false;
+                    self.state += 1;
+                },
+                116 => {
+                    self.advancetext = true;
+                    self.hascontrol = false;
+
+                    graphics.createtextbox("Sorry Eurogamers! Teleporting around", 60 - 20, 200, 255, 64, 64);
+                    graphics.addline("the map doesn't work in this version!");
+                    graphics.textboxcenterx();
+                    self.state += 1;
+                },
+                118 => {
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+
+                    self.state = 0;
+                },
+
+                120 => {
+                    //
+                    //                       Meeting crewmate in the space station
+                    //
+                    obj.removetrigger(120);
+                    if !obj.flags[5] {
+                        obj.flags[5] = true;
+                        self.state += 1;
+                    }
+                },
+                121 => {
+                    let i = obj.getplayer() as usize;
+                    self.hascontrol = false;
+                    if INBOUNDS_VEC!(i, obj.entities) && obj.entities[i].onground > 0 && self.gravitycontrol == 0 {
+                        self.gravitycontrol = 1;
+                        music.playef(1);
+                    }
+                    if INBOUNDS_VEC!(i, obj.entities) && obj.entities[i].onroof > 0 {
+                        self.state += 1;
+                    }
+                },
+                122 => {
+                    self.companion = 7;
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 6;
+                        obj.entities[i].state = 1;
+                    }
+
+                    self.advancetext = true;
+                    self.hascontrol = false;
+
+                    graphics.createtextbox("Captain! You're ok!", 60-10, 90-40, 255, 255, 134);
+                    self.state += 1;
+                    music.playef(14);
+                },
+                124 => {
+                    graphics.createtextbox("I've found a teleporter, but", 60-20, 90 - 40, 255, 255, 134);
+                    graphics.addline("I can't get it to go anywhere...");
+                    self.state += 1;
+                    music.playef(2);
+                    graphics.textboxactive();
+                },
+                126 => {
+                    graphics.createtextbox("I can help with that!", 125, 152-40, 164, 164, 255);
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                128 => {
+                    graphics.createtextbox("I have the teleporter", 130, 152-35, 164, 164, 255);
+                    graphics.addline("codex for our ship!");
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+
+                130 => {
+                    graphics.createtextbox("Yey! Let's go home!", 60-30, 90-35, 255, 255, 134);
+                    self.state += 1;
+                    music.playef(14);
+                    graphics.textboxactive();
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 6;
+                        obj.entities[i].state = 1;
+                    }
+                },
+                132 => {
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+
+                    self.state = 0;
+                },
+
+                200 => {
+                    //Init final stretch
+                    self.state += 1;
+                    music.playef(9);
+                    obj.flags[72] = true;
+
+                    self.screenshake = 10;
+                    self.flashlight = 5;
+                    map.finalstretch = true;
+                    map.warpx = false;
+                    map.warpy = false;
+                    map.background = 6;
+
+                    map.final_colormode = true;
+                    map.final_colorframe = 1;
+
+                    self.startscript = true;
+                    self.newscript = "finalterminal_finish".to_string();
+                    self.state = 0;
+                },
+
+                // WARNING: If updating this code, make sure to update Map.cpp mapclass::twoframedelayfix()
+                300..=336 => {
+                    self.startscript = true;
+                    self.newscript = ["custom_", &self.customscript[self.state as usize - 300]].concat();
+                    obj.removetrigger(self.state);
+                    self.state = 0;
+                },
+                1000 => {
+                    graphics.showcutscenebars = true;
+                    self.hascontrol = false;
+                    self.completestop = true;
+                    self.state += 1;
+                    self.statedelay = 15;
+                },
+                1001 => {
+                    //Found a trinket!
+                    self.advancetext = true;
+                    self.state += 1;
+                    graphics.createtextboxflipme("        Congratulations!       ", 50, 85, 174, 174, 174);
+                    graphics.addline("");
+                    graphics.addline("You have found a shiny trinket!");
+                    graphics.textboxcenterx();
+
+                    // #if !defined(NO_CUSTOM_LEVELS)
+                    // if map.custommode {
+                    //     graphics.createtextboxflipme(" " + help.number(trinkets()) + " out of " + help.number(ed.numtrinkets())+ " ", 50, 135, 174, 174, 174);
+                    //     graphics.textboxcenterx();
+                    // } else
+                    // #endif
+                    {
+                        graphics.createtextboxflipme(&format!(" {} out of Twenty ", help.number(self.trinkets(obj))), 50, 135, 174, 174, 174);
+                        graphics.textboxcenterx();
+                    }
+                },
+                1002 => {
+                    if !self.advancetext {
+                        // Prevent softlocks if we somehow don't have advancetext
+                        self.state += 1;
+                    }
+                },
+                1003 => {
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.completestop = false;
+                    self.state = 0;
+                    if !self.muted && music.currentsong > -1 { music.fadeMusicVolumeIn(3000, self); }
+                    graphics.showcutscenebars = false;
+                },
+
+                1010 => {
+                    graphics.showcutscenebars = true;
+                    self.hascontrol = false;
+                    self.completestop = true;
+                    self.state += 1;
+                    self.statedelay = 15;
+                },
+                // // #if !defined(NO_CUSTOM_LEVELS)
+                // 1011 => {
+                //     //Found a crewmate!
+                //     self.advancetext = true;
+                //     self.state += 1;
+                //     graphics.createtextboxflipme("        Congratulations!       ", 50, 85, 174, 174, 174);
+                //     graphics.addline("");
+                //     graphics.addline("You have found a lost crewmate!");
+                //     graphics.textboxcenterx();
+                //
+                //     if ed.numcrewmates() - crewmates() == 0 {
+                //         graphics.createtextboxflipme("     All crewmates rescued!    ", 50, 135, 174, 174, 174);
+                //     } else if ed.numcrewmates()-crewmates() == 1 {
+                //         graphics.createtextboxflipme("    " + help.number(ed.numcrewmates()-crewmates())+ " remains    ", 50, 135, 174, 174, 174);
+                //     } else {
+                //         graphics.createtextboxflipme("     " + help.number(ed.numcrewmates()-crewmates())+ " remain    ", 50, 135, 174, 174, 174);
+                //     }
+                //     graphics.textboxcenterx();
+                // },
+                // 1012 => {
+                //     if !self.advancetext {
+                //         // Prevent softlocks if we somehow don't have advancetext
+                //         self.state += 1;
+                //     }
+                // },
+                // 1013 => {
+                //     graphics.textboxremove();
+                //     self.hascontrol = true;
+                //     self.advancetext = false;
+                //     self.completestop = false;
+                //     self.state = 0;
+                //
+                //     if ed.numcrewmates()-crewmates() == 0 {
+                //         if map.custommodeforreal {
+                //             graphics.fademode = 2;
+                //             if !muted && ed.levmusic > 0 { music.fadeMusicVolumeIn(3000); }
+                //             if ed.levmusic > 0 { music.fadeout(); }
+                //             self.state = 1014;
+                //         } else {
+                //             returntoeditor();
+                //             if !muted && ed.levmusic > 0 { music.fadeMusicVolumeIn(3000); }
+                //             if ed.levmusic > 0 { music.fadeout(); }
+                //         }
+                //     } else {
+                //         if !muted && ed.levmusic > 0 { music.fadeMusicVolumeIn(3000); }
+                //     }
+                //     graphics.showcutscenebars = false;
+                // },
+                // // #endif
+                1014 => {
+                    self.frames -= 1;
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                1015 => {
+                    // // #if !defined(NO_CUSTOM_LEVELS)
+                    // //Update level stats
+                    // if ed.numcrewmates()-crewmates() == 0 {
+                    //     //Finished level
+                    //     if ed.numtrinkets()-trinkets() == 0 {
+                    //         //and got all the trinkets!
+                    //         updatecustomlevelstats(customlevelfilename, 3);
+                    //     } else {
+                    //         updatecustomlevelstats(customlevelfilename, 1);
+                    //     }
+                    // }
+                    // // #endif
+                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    music.play(6, map, self); //should be after quittomenu()
+                    self.state = 0;
+                },
+
+                2000 => {
+                    //Game Saved!
+                    self.savetele_textbox(graphics, map, fs);
+                    self.state = 0;
+                },
+
+                2500 => {
+                    music.play(5, map, self);
+                    //Activating a teleporter (appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                2501 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    //we're done here!
+                    music.playef(10);
+                },
+                2502 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+
+                        let j = obj.getteleporter() as usize;
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                        }
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+
+                    let i = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 1;
+                        obj.entities[i].colour = 101;
+                    }
+                },
+                2503 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                2504 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        //obj.entities[i].xp += 10;
+                    }
+                },
+                2505 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                2506 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                    }
+                },
+                2507 => {
+                    self.state += 1;
+                },
+                2508 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 2;
+                    }
+                },
+                2509 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                2510 => {
+                    self.advancetext = true;
+                    self.hascontrol = false;
+                    graphics.createtextbox("Hello?", 125+24, 152-20, 164, 164, 255);
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                2512 => {
+                    self.advancetext = true;
+                    self.hascontrol = false;
+                    graphics.createtextbox("Is anyone there?", 125+8, 152-24, 164, 164, 255);
+                    self.state += 1;
+                    music.playef(11);
+                    graphics.textboxactive();
+                },
+                2514 => {
+                    graphics.textboxremove();
+                    self.hascontrol = true;
+                    self.advancetext = false;
+
+                    self.state = 0;
+                    music.play(3, map, self);
+                },
+
+
+                3000 => {
+                    //Activating a teleporter (long version for level complete)
+                    self.state += 1;
+                    self.statedelay = 30;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                3001 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3002 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3003 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3004 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    //we're done here!
+                    music.playef(10);
+                },
+                3005 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 50;
+                    match self.companion {
+                        6 => self.state = 3006, //Warp Zone
+                        7 => self.state = 3020, //Space Station
+                        8 => self.state = 3040, //Lab
+                        9 => self.state = 3060, //Tower
+                        10 => self.state = 3080, //Intermission 2
+                        11 => self.state = 3085, //Intermission 1
+                        _ => (),
+                    }
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = true;
+                    }
+
+                    let i = obj.getcompanion() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.disableentity(i);
+                    }
+
+                    let i = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 1;
+                        obj.entities[i].colour = 100;
+                    }
+                },
+
+                3006 => {
+                    //Level complete! (warp zone)
+                    self.unlocknum(4);
+                    self.lastsaved = 4;
+                    music.play(0, map, self);
+                    self.state += 1;
+                    self.statedelay = 75;
+
+                    self.levelcomplete_textbox(graphics);
+                },
+                3007 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.crewmate_textbox(175, 174, 174, graphics);
+                },
+                3008 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.remaining_textbox(graphics);
+                },
+                3009 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3010 => {
+                    if self.jumppressed != 0 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                    }
+                },
+                3011 => {
+                    self.state = 3070;
+                    self.statedelay = 0;
+                },
+
+                3020 => {
+                    //Level complete! (Space Station 2)
+                    self.unlocknum(3);
+                    self.lastsaved = 2;
+                    music.play(0, map, self);
+                    self.state += 1;
+                    self.statedelay = 75;
+
+                    self.levelcomplete_textbox(graphics);
+                },
+                3021 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.crewmate_textbox(174, 175, 174, graphics);
+                },
+                3022 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.remaining_textbox(graphics);
+                },
+                3023 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3024 => {
+                    if self.jumppressed != 0{
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                    }
+                },
+                3025 => {
+                    self.state = 3070;
+                    self.statedelay = 0;
+                },
+
+                3040 => {
+                    //Level complete! (Lab)
+                    self.unlocknum(1);
+                    self.lastsaved = 5;
+                    music.play(0, map, self);
+                    self.state += 1;
+                    self.statedelay = 75;
+
+                    self.levelcomplete_textbox(graphics);
+                },
+                3041 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.crewmate_textbox(174, 174, 175, graphics);
+                },
+                3042 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.remaining_textbox(graphics);
+                },
+                3043 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3044 => {
+                    if self.jumppressed != 0 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                    }
+                },
+                3045 => {
+                    self.state = 3070;
+                    self.statedelay = 0;
+                },
+
+                3050 => {
+                    //Level complete! (Space Station 1)
+                    self.unlocknum(0);
+                    self.lastsaved = 1;
+                    music.play(0, map, self);
+                    self.state += 1;
+                    self.statedelay = 75;
+
+                    self.levelcomplete_textbox(graphics);
+                },
+                3051 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.crewmate_textbox(175, 175, 174, graphics);
+                },
+                3052 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.remaining_textbox(graphics);
+                },
+                3053 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3054 => {
+                    if self.jumppressed != 0 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                        self.teleportscript = "".to_string();
+                    }
+                },
+                3055 => {
+                    graphics.fademode = 2;
+                    self.state += 1;
+                    self.statedelay = 10;
+                },
+                3056 => {
+                    if graphics.fademode == 1 {
+                        self.startscript = true;
+                        self.newscript = match (self.crewrescued() == 6, self.nocutscenes) {
+                            (true, _) => "startlevel_final".to_string(),
+                            (false, true) => "bigopenworldskip".to_string(),
+                            (_, _) => "bigopenworld".to_string(),
+                        };
+                        self.state = 0;
+                    }
+                },
+
+                3060 => {
+                    //Level complete! (Tower)
+                    self.unlocknum(2);
+                    self.lastsaved = 3;
+                    music.play(0, map, self);
+                    self.state += 1;
+                    self.statedelay = 75;
+
+                    self.levelcomplete_textbox(graphics);
+                },
+                3061 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.crewmate_textbox(175, 174, 175, graphics);
+                },
+                3062 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    self.remaining_textbox(graphics);
+                },
+                3063 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3064 => {
+                    if self.jumppressed != 0 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                    }
+                },
+                3065 => {
+                    self.state = 3070;
+                    self.statedelay = 0;
+                },
+
+                3070 => {
+                    graphics.fademode = 2;
+                    self.state += 1;
+                },
+                3071 => {
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                3072 => {
+                    //Ok, we need to adjust some flags based on who've we've rescued. Some of there conversation options
+                    //change depending on when they get back to the ship.
+                    if self.lastsaved == 2 {
+                        if self.crewstats[3] { obj.flags[25] = true; }
+                        if self.crewstats[4] { obj.flags[26] = true; }
+                        if self.crewstats[5] { obj.flags[24] = true; }
+                    } else if self.lastsaved == 3 {
+                        if self.crewstats[2] { obj.flags[50] = true; }
+                        if self.crewstats[4] { obj.flags[49] = true; }
+                        if self.crewstats[5] { obj.flags[48] = true; }
+                    } else if self.lastsaved == 4 {
+                        if self.crewstats[2] { obj.flags[54] = true; }
+                        if self.crewstats[3] { obj.flags[55] = true; }
+                        if self.crewstats[5] { obj.flags[56] = true; }
+                    } else if self.lastsaved == 5 {
+                        if self.crewstats[2] { obj.flags[37] = true; }
+                        if self.crewstats[3] { obj.flags[38] = true; }
+                        if self.crewstats[4] { obj.flags[39] = true; }
+                    }
+                    //We're pitch black now, make a decision
+                    self.companion = 0;
+                    if self.crewrescued() == 6 {
+                        self.startscript = true;
+                        self.newscript = "startlevel_final".to_string();
+                        self.state = 0;
+                    } else if self.crewrescued() == 4 {
+                        self.companion = 11;
+                        self.supercrewmate = true;
+                        self.scmprogress = 0;
+
+                        self.startscript = true;
+                        self.newscript = "intermission_1".to_string();
+                        obj.flags[19] = true;
+                        if self.lastsaved == 2 { obj.flags[32] = true; }
+                        if self.lastsaved == 3 { obj.flags[35] = true; }
+                        if self.lastsaved == 4 { obj.flags[34] = true; }
+                        if self.lastsaved == 5 { obj.flags[33] = true; }
+                        self.state = 0;
+                    } else if self.crewrescued() == 5 {
+                        self.startscript = true;
+                        self.newscript = "intermission_2".to_string();
+                        obj.flags[20] = true;
+                        if self.lastsaved == 2 { obj.flags[32] = true; }
+                        if self.lastsaved == 3 { obj.flags[35] = true; }
+                        if self.lastsaved == 4 { obj.flags[34] = true; }
+                        if self.lastsaved == 5 { obj.flags[33] = true; }
+                        self.state = 0;
+                    } else {
+                        self.startscript = true;
+                        self.newscript = "regularreturn".to_string();
+                        self.state = 0;
+                    }
+                },
+
+                3080 => {
+                    //returning from an intermission, very like 3070
+                    if self.inintermission {
+                        graphics.fademode = 2;
+                        self.companion = 0;
+                        self.state=3100;
+                    } else {
+                        self.unlocknum(7);
+                        graphics.fademode = 2;
+                        self.companion = 0;
+                        self.state += 1;
+                    }
+                },
+                3081 => {
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                3082 => {
+                    map.finalmode = false;
+                    self.startscript = true;
+                    self.newscript = "regularreturn".to_string();
+                    self.state = 0;
+                },
+
+                3085 => {
+                    //returning from an intermission, very like 3070
+                    //return to menu from here
+                    if self.inintermission {
+                        self.companion = 0;
+                        self.supercrewmate = false;
+                        self.state += 1;
+                        graphics.fademode = 2;
+                        music.fadeout(None, self);
+                        self.state = 3100;
+                    } else {
+                        self.unlocknum(6);
+                        graphics.fademode = 2;
+                        self.companion = 0;
+                        self.supercrewmate = false;
+                        self.state += 1;
+                    }
+                },
+                3086 => {
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                3087 => {
+                    map.finalmode = false;
+                    self.startscript = true;
+                    self.newscript = "regularreturn".to_string();
+                    self.state = 0;
+                },
+
+                3100 => {
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                3101 => {
+                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    music.play(6, map, self); //should be after quittomenu();
+                    self.state = 0;
+                },
+
+                3500 => {
+                    music.fadeout(None, self);
+                    self.state += 1;
+                    self.statedelay = 120;
+                },
+                3501 => {
+                    //Game complete!
+                    self.unlockAchievement("vvvvvvgamecomplete");
+                    self.unlocknum(5);
+                    self.crewstats[0] = true;
+                    self.state += 1;
+                    self.statedelay = 75;
+                    music.play(7, map, self);
+
+                    graphics.createtextboxflipme("", -1, 12, 164, 165, 255);
+                    graphics.addline("                                   ");
+                    graphics.addline("");
+                    graphics.addline("");
+                    graphics.textboxcenterx();
+                },
+                3502 => {
+                    self.state += 1;
+                    self.statedelay = 45+15;
+
+                    graphics.createtextboxflipme("  All Crew Members Rescued!  ", -1, 64, 0, 0, 0);
+                    self.savetime = [self.timestring(help), ".".to_string(), help.twodigits(self.frames * 100 / 30)].concat();
+                },
+                3503 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    let tempstring = help.number(self.trinkets(obj));
+                    graphics.createtextboxflipme("Trinkets Found:", 48, 84, 0,0,0);
+                    graphics.createtextboxflipme(&tempstring, 180, 84, 0, 0, 0);
+                },
+                3504 => {
+                    self.state += 1;
+                    self.statedelay = 45+15;
+
+                    graphics.createtextboxflipme("   Game Time:", 64, 96, 0,0,0);
+                    graphics.createtextboxflipme(&self.savetime, 180, 96, 0, 0, 0);
+                },
+                3505 => {
+                    self.state += 1;
+                    self.statedelay = 45;
+
+                    graphics.createtextboxflipme(" Total Flips:", 64, 123, 0,0,0);
+                    graphics.createtextboxflipme(&self.totalflips.to_string(), 180, 123, 0, 0, 0);
+                },
+                3506 => {
+                    self.state += 1;
+                    self.statedelay = 45+15;
+
+                    graphics.createtextboxflipme("Total Deaths:", 64, 135, 0,0,0);
+                    graphics.createtextboxflipme(&self.deathcounts.to_string(), 180, 135, 0, 0, 0);
+                },
+                3507 => {
+                    self.state += 1;
+                    self.statedelay = 45+15;
+
+                    let tempstring = format!("Hardest Room (with {} deaths)", self.hardestroomdeaths);
+                    graphics.createtextboxflipme(&tempstring, -1, 158, 0,0,0);
+                    graphics.createtextboxflipme(&self.hardestroom, -1, 170, 0, 0, 0);
+                },
+                3508 => {
+                    self.state += 1;
+                    self.statedelay = 0;
+
+                    self.actionprompt_textbox(graphics);
+                },
+                3509 => {
+                    if self.jumppressed != 0 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                        graphics.textboxremove();
+                    }
+                },
+                3510 => {
+                    //Save stats and stuff here
+                    if !obj.flags[73] {
+                        //flip mode complete
+                        self.unlockAchievement("vvvvvvgamecompleteflip");
+                        self.unlocknum(19);
+                    }
+
+                    if self.bestgamedeaths == -1 {
+                        self.bestgamedeaths = self.deathcounts;
+                    } else {
+                        if self.deathcounts < self.bestgamedeaths {
+                            self.bestgamedeaths = self.deathcounts;
+                        }
+                    }
+
+                    if self.bestgamedeaths > -1 {
+                        if self.bestgamedeaths <= 500 {
+                            self.unlockAchievement("vvvvvvcomplete500");
+                        }
+                        if self.bestgamedeaths <= 250 {
+                            self.unlockAchievement("vvvvvvcomplete250");
+                        }
+                        if self.bestgamedeaths <= 100 {
+                            self.unlockAchievement("vvvvvvcomplete100");
+                        }
+                        if self.bestgamedeaths <= 50 {
+                            self.unlockAchievement("vvvvvvcomplete50");
+                        }
+                    }
+
+                    self.savestatsandsettings();
+                    if self.nodeathmode {
+                        self.unlockAchievement("vvvvvvmaster"); //bloody hell
+                        self.unlocknum(20);
+                        self.state = 3520;
+                        self.statedelay = 0;
+                    } else {
+                        self.statedelay = 120;
+                        self.state += 1;
+                    }
+                },
+                3511 => {
+                    //Activating a teleporter (long version for level complete)
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 102;
+                    }
+
+                    self.state += 1;
+                    self.statedelay = 30;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                3512 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3513 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3514 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    music.playef(9);
+                },
+                3515 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = true;
+                    }
+
+                    //we're done here!
+                    music.playef(10);
+                    self.statedelay = 60;
+                },
+                3516 => {
+                    graphics.fademode = 2;
+                    self.state += 1;
+                },
+                3517 => {
+                    if graphics.fademode == 1 {
+                        self.state += 1;
+                        self.statedelay = 30;
+                    }
+                },
+                3518 => {
+                    graphics.fademode = 4;
+                    self.state = 0;
+                    self.statedelay = 30;
+
+                    map.finalmode = false;
+                    map.final_colormode = false;
+                    map.final_mapcol = 0;
+                    map.final_colorframe = 0;
+                    map.finalstretch = false;
+
+                    graphics.setbars(320);
+
+                    self.teleport_to_new_area = true;
+                    self.teleportscript = "gamecomplete".to_string();
+                },
+
+                3520 => {
+                    //NO DEATH MODE COMPLETE JESUS
+                    self.hascontrol = false;
+                    self.crewstats[0] = true;
+
+                    graphics.fademode = 2;
+                    self.state += 1;
+                },
+                3521 => {
+                    if graphics.fademode == 1 { self.state += 1; }
+                },
+                3522 => {
+                    self.copyndmresults();
+                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    self.createmenu(MenuName::nodeathmodecomplete, None, graphics, music, screen_params, map);
+                    self.state = 0;
+                },
+
+                4000 => {
+                    //Activating a teleporter (short version)
+                    self.state += 1;
+                    self.statedelay = 10;
+                    self.flashlight = 5;
+                    self.screenshake = 10;
+                    music.playef(9);
+                },
+                4001 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    //we're done here!
+                    music.playef(10);
+                },
+                4002 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 10;
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = true;
+                    }
+
+                    let i = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 1;
+                        obj.entities[i].colour = 100;
+                    }
+                },
+                4003 => {
+                    self.state = 0;
+                    self.statedelay = 0;
+                    self.teleport_to_new_area = true;
+                },
+
+                4010 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4011 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4012 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4013 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4014 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4015 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                4016 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                    }
+                },
+                4017 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 3;
+                    }
+                },
+                4018 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                4019 => {
+                    if self.intimetrial || self.nodeathmode || self.inintermission {
+                    } else {
+                        self.savetele(map, fs);
+                    }
+                    let i = obj.getteleporter() as usize;
+                    self.activetele = true;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        self.teleblock.x = obj.entities[i].xp - 32;
+                        self.teleblock.y = obj.entities[i].yp - 32;
+                    }
+                    self.teleblock.w = 160;
+                    self.teleblock.h = 160;
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+                4020 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4021 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4022 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4023 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 12;
+                    }
+                },
+                4024 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 12;
+                    }
+                },
+                4025 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4026 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                4027 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 5;
+                    }
+                },
+                4028 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 2;
+                    }
+                },
+                4029 => {
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+                4030 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4031 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4032 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 0;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = -6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = -6.0;
+                    }
+                },
+                4033 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 12;
+                    }
+                },
+                4034 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 12;
+                    }
+                },
+                4035 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 10;
+                    }
+                },
+                4036 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 8;
+                    }
+                },
+                4037 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 5;
+                    }
+                },
+                4038 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 2;
+                    }
+                },
+                4039 => {
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+                4040 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4041 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4042 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4043 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 12;
+                        obj.entities[i].yp -= 15;
+                    }
+                },
+                4044 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 12;
+                        obj.entities[i].yp -= 10;
+                    }
+                },
+                4045 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 12;
+                        obj.entities[i].yp -= 10;
+                    }
+                },
+                4046 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4047 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4048 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 3;
+                    }
+                },
+                4049 => {
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+                4050 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4051 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4052 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4053 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 4;
+                        obj.entities[i].yp -= 15;
+                    }
+                },
+                4054 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 4;
+                        obj.entities[i].yp -= 10;
+                    }
+                },
+                4055 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 4;
+                        obj.entities[i].yp -= 10;
+                    }
+                },
+                4056 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 4;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4057 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 2;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4058 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                4059 => {
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+                4060 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4061 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4062 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 0;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = -6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = -6.0;
+                    }
+                },
+                4063 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 28;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4064 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 28;
+                        obj.entities[i].yp -= 8;
+                    }
+                },
+                4065 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 25;
+                    }
+                },
+                4066 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 25;
+                    }
+                },
+                4067 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 20;
+                    }
+                },
+                4068 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp -= 16;
+                    }
+                },
+                4069 => {
+                    self.hascontrol = true;
+                    self.advancetext = false;
+                    self.state = 0;
+                },
+
+
+                4070 => {
+                    //Activating a teleporter (special for final script, player has colour changed to match rescued crewmate)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4071 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4072 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+                        obj.entities[i].colour = obj.crewcolour(self.lastsaved);
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4073 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4074 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4075 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                4076 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                    }
+                },
+                4077 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 3;
+                    }
+                },
+                4078 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                4079 => {
+                    self.state = 0;
+                    self.startscript = true;
+                    self.newscript = "finallevel_teleporter".to_string();
+                },
+
+                4080 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4081 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4082 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4083 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4084 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4085 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                4086 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                    }
+                },
+                4087 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 3;
+                    }
+                },
+                4088 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                4089 => {
+                    self.startscript = true;
+                    self.newscript = "gamecomplete_ending".to_string();
+                    self.state = 0;
+                },
+
+                4090 => {
+                    //Activating a teleporter (default appear)
+                    self.state += 1;
+                    self.statedelay = 15;
+                    self.flashlight = 5;
+                    self.screenshake = 90;
+                    music.playef(9);
+                },
+                4091 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 0;
+                    self.flashlight = 5;
+                    self.screenshake = 0;
+                    music.playef(10);
+                },
+                4092 => {
+                    //Activating a teleporter 2
+                    self.state += 1;
+                    self.statedelay = 5;
+
+                    let i = obj.getplayer() as usize;
+                    let j = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        if INBOUNDS_VEC!(j, obj.entities) {
+                            obj.entities[i].xp = obj.entities[j].xp + 44;
+                            obj.entities[i].yp = obj.entities[j].yp + 44;
+                            obj.entities[i].lerpoldxp = obj.entities[i].xp;
+                            obj.entities[i].lerpoldyp = obj.entities[i].yp;
+                            obj.entities[j].tile = 2;
+                            obj.entities[j].colour = 101;
+                        }
+                        obj.entities[i].colour = 0;
+                        obj.entities[i].invis = false;
+                        obj.entities[i].dir = 1;
+
+                        obj.entities[i].ay = -6.0;
+                        obj.entities[i].ax = 6.0;
+                        obj.entities[i].vy = -6.0;
+                        obj.entities[i].vx = 6.0;
+                    }
+                },
+                4093 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4094 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 10;
+                    }
+                },
+                4095 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 8;
+                    }
+                },
+                4096 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 6;
+                    }
+                },
+                4097 => {
+                    self.state += 1;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 3;
+                    }
+                },
+                4098 => {
+                    self.state += 1;
+                    self.statedelay = 15;
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].xp += 1;
+                    }
+                },
+                4099 => {
+                    if self.nocutscenes {
+                        self.startscript = true;
+                        self.newscript = "levelonecompleteskip".to_string();
+                    } else {
+                        self.startscript = true;
+                        self.newscript = "levelonecomplete_ending".to_string();
+                    }
+                    self.state = 0;
+                },
+
+                _ => println!("DEADBEEF: Game::updatestate(): state {} not implemented yet", self.state),
             }
         }
     }
@@ -1735,8 +4229,28 @@ impl Game {
     }
 
     // bool Game::savetele(void);
-    pub fn savetele(&mut self) {
-        println!("DEADBEEF: Game::savetele() method not implemented yet");
+    pub fn savetele(&mut self, map: &mut map::Map, fs: &mut filesystem::FileSystem) -> bool {
+        if map.custommode || self.inspecial() {
+            //Don't trash save data!
+            return false;
+        }
+
+        println!("DEADBEEF: Game::savetele() method not fully implemented yet");
+        // tinyxml2::XMLDocument doc;
+        // let already_exists = fs.FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", doc);
+        // if !already_exists {
+        //     info!("No tsave.vvv found. Creating new file");
+        // }
+        // self.telesummary = self.writemaingamesave(doc);
+        //
+        // if !fs.FILESYSTEM_saveTiXml2Document("saves/tsave.vvv", doc) {
+        //     error!("Could Not Save game!\n");
+        //     error!("Failed: {}{}\n", self.saveFilePath, "tsave.vvv");
+        //     return false;
+        // }
+        //
+        // info!("Game saved\n");
+        return true;
     }
 
     // void Game::loadtele(void);
@@ -1927,16 +4441,18 @@ impl Game {
 
     // int Game::crewmates(void);
     pub fn crewmates(&self, obj: &entity::EntityClass) -> i32 {
-        let mut temp = 0;
-        // for (size_t i = 0; i < SDL_arraysize(obj.customcollect); i++) {
-        for ob in obj.customcollect.iter() {
-            // if (obj.collect[i])
-            // TODO @sx @impl
-            if true {
-                temp += 1;
-            }
-        }
-        temp
+        println!("DEADBEEF: Game::crewmates method not implemented yet");
+
+        // let temp = 0;
+        // // for (size_t i = 0; i < SDL_arraysize(obj.customcollect); i++)
+        // for i in 0..obj.customcollect.len() {
+        //     if obj.customcollect[i] {
+        //         temp += 1;
+        //     }
+        // }
+
+        // temp
+        0
     }
 
     // bool Game::anything_unlocked(void)

@@ -387,9 +387,15 @@ impl Graphics {
     }
 
     // void Graphics::map_tab(int opt, const std::string& text, bool selected /*= false*/)
-    pub fn map_tab(&mut self, opt: i32, text: &str, selected: Option<bool>) {
+    pub fn map_tab(&mut self, opt: i32, text: &str, selected: Option<bool>, help: &mut utility_class::UtilityClass) {
         let selected = selected.unwrap_or(false);
-        println!("DEADBEEF: Graphics::map_tab() method not implemented yet");
+
+        let x = opt * 80 + 40 - text.len() as i32 / 2;
+        if selected {
+            self.print(x-8, 220, &["[", text, "]"].concat(), 196, 196, 255 - help.glow, None);
+        } else {
+            self.print(x, 220, text, 64, 64, 64, None);
+        }
     }
 
     // void Graphics::map_option(int opt, int num_opts, const std::string& text, bool selected /*= false*/)
@@ -840,12 +846,30 @@ impl Graphics {
     }
 
     // void Graphics::drawimagecol( int t, int xp, int yp, int r = 0, int g = 0, int b = 0, bool cent/*= false*/ )
-    pub fn drawimagecol(&self, t: i32, xp: i32, yp: i32, r: Option<i32>, g: Option<i32>, b: Option<i32>, cent: Option<bool>) {
+    pub fn drawimagecol(&mut self, t: usize, xp: i32, yp: i32, r: Option<i32>, g: Option<i32>, b: Option<i32>, cent: Option<bool>) {
         let r = r.unwrap_or(0);
         let g = g.unwrap_or(0);
         let b = b.unwrap_or(0);
         let cent = cent.unwrap_or(false);
-        println!("DEADBEEF: drawimagecol not implemented yet");
+
+        if !INBOUNDS_VEC!(t, self.grphx.images.surfaces) {
+            return;
+        }
+        if r + g + b != 0 {
+            // TODO: @sx ??? unused return value
+            self.RGBf(r, g, b);
+        }
+
+        if cent {
+            let tpoint = maths::point { x: 160 - (self.grphx.images.surfaces[t].width() as i32 / 2), y: yp };
+            let trect = sdl2::rect::Rect::new(tpoint.x, tpoint.y, self.grphx.images.surfaces[t].width(), self.grphx.images.surfaces[t].height());
+            graphics_util::BlitSurfaceColoured(&self.grphx.images.surfaces[t], None, &mut self.buffers.backBuffer, trect, self.ct.colour);
+        } else {
+            let trect = sdl2::rect::Rect::new(xp, yp, self.grphx.images.surfaces[t].width(), self.grphx.images.surfaces[t].height());
+            graphics_util::BlitSurfaceColoured(&self.grphx.images.surfaces[t], None, &mut self.buffers.backBuffer, trect, self.ct.colour);
+        }
+
+        // crate::rustutil::dump_surface(&self.grphx.images.surfaces[t], "drawimagecol", &t.to_string());
     }
 
     // void Graphics::drawimage( int t, int xp, int yp, bool cent/*=false*/ )
@@ -863,6 +887,7 @@ impl Graphics {
             sdl2::rect::Rect::new(xp, yp, w, h)
         };
 
+        // crate::rustutil::dump_surface(&self.grphx.images.surfaces[t], "drawimage", &t.to_string());
         self.grphx.images.surfaces[t].blit(None, &mut self.buffers.backBuffer, trect);
     }
 
@@ -964,8 +989,28 @@ impl Graphics {
     }
 
     // void Graphics::drawpixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
-    pub fn drawpixeltextbox(&self, x: i32, y: i32, w: i32, h: i32, w2: i32, h2: i32, r: i32, g: i32, b: i32, xo: i32, yo: i32) {
-        println!("DEADBEEF: drawpixeltextbox not implemented yet");
+    pub fn drawpixeltextbox(&mut self, x: i32, y: i32, w: i32, h: i32, w2: i32, h2: i32, r: i32, g: i32, b: i32, xo: i32, yo: i32) {
+        //given these parameters, draw a textbox with a pixel width
+
+        //madrect.x = x; madrect.y = y; madrect.w = w; madrect.h = h;
+        graphics_util::FillRect_xywh_rgb(&mut self.buffers.backBuffer, x, y, w, h, r/6, g/6, b/6);
+
+        // for (int k = 0; k < w2-2; k++)
+        for k in 0..w2-2 {
+            self.drawcoloredtile(x + 8-xo + (k * 8), y, 41, r, g, b);
+            self.drawcoloredtile(x + 8-xo + (k * 8), y + (h) - 8, 46, r, g, b);
+        }
+
+        // for (int k = 0; k < h2-2; k++)
+        for k in 0..h2-2 {
+            self.drawcoloredtile(x, y + 8-yo + (k * 8), 43, r, g, b);
+            self.drawcoloredtile(x + (w) - 8, y + 8-yo + (k * 8), 44, r, g, b);
+        }
+
+        self.drawcoloredtile(x, y, 40, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y, 42, r, g, b);
+        self.drawcoloredtile(x, y + (h) - 8, 45, r, g, b);
+        self.drawcoloredtile(x + (w) - 8, y + (h) - 8, 47, r, g, b);
     }
 
     // void Graphics::drawcustompixeltextbox( int x, int y, int w, int h, int w2, int h2, int r, int g, int b, int xo, int yo )
@@ -1110,7 +1155,7 @@ impl Graphics {
 
     // void Graphics::createtextboxflipme(std::string t, int xp, int yp, int r, int g, int b)
     pub fn createtextboxflipme(&mut self, t: &str, xp: i32, yp: i32, r: i32, g: i32, b: i32) {
-        println!("DEADBEEF: Graphics::createtextboxflipme() method not implemented yet");
+        self.createtextboxreal(t, xp, yp, r, g, b, true);
     }
 
     // void Graphics::drawfade(void)
@@ -1403,6 +1448,7 @@ impl Graphics {
 
     // void Graphics::drawentities(void)
     pub fn drawentities(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map) {
+        trace!("=================          DRAWING ENTITIES            ==========================");
         let yoff = if map.towermode {
             self.lerp(map.oldypos as f32, map.ypos as f32) as i32
         } else {
@@ -1436,7 +1482,7 @@ impl Graphics {
         }
 
         if obj.entities[i].invis {
-            println!("{:?} - entity is invisible!", i);
+            trace!("{:?} - entity is invisible!", i);
             return;
         }
 
@@ -1468,7 +1514,7 @@ impl Graphics {
         let xp: i32 = lerp(self.alpha, obj.entities[i].lerpoldxp as f32, obj.entities[i].xp as f32) as i32;
         let yp: i32 = lerp(self.alpha, obj.entities[i].lerpoldyp as f32, obj.entities[i].yp as f32) as i32;
 
-        // println!("{:?} - drawing {:?}", i, obj.entities[i]);
+        trace!("{:?} - drawing {:?}", i, obj.entities[i]);
         match obj.entities[i].size {
             0 => {
                 // Sprites
@@ -2013,7 +2059,7 @@ impl Graphics {
                     },
                 };
 
-                for i in 10..=0 {
+                for i in (0..10).rev() {
                     let temp = (i << 4) + self.lerp((self.backoffset - 1) as f32, self.backoffset as f32) as i32;
                     self.setwarprect(160 - temp, 120 - temp, temp * 2, temp * 2);
                     if i % 2 == self.warpskip {
@@ -2821,9 +2867,11 @@ impl Graphics {
 
     // void Graphics::drawtele(int x, int y, int t, Uint32 c)
     fn drawtele(&mut self, x: i32, y: i32, t: usize, c: u32) {
+        trace!("drawtele({},{},{},{})", x, y, t, c);
+
         self.setcolreal(self.getRGB(16, 16, 16));
 
-        let telerect = sdl2::rect::Rect::new(x , y, self.tele_rect.w as u32, self.tele_rect.h as u32);
+        let telerect = sdl2::rect::Rect::new(x, y, self.tele_rect.w as u32, self.tele_rect.h as u32);
         if INBOUNDS_VEC!(0, self.grphx.teleporter.surfaces) {
             graphics_util::BlitSurfaceColoured(&self.grphx.teleporter.surfaces[0], None, &mut self.buffers.backBuffer, telerect, self.ct.colour);
         }
@@ -2899,11 +2947,12 @@ impl Graphics {
 
     // Uint32 Graphics::RGBf(int r, int g, int b)
     fn RGBf (&self, r: i32, g: i32, b: i32) -> u32 {
-        let r = ( (r+128) /  3) as u8;
-        let g = ( (g+128) /  3) as u8;
-        let b = ( (b+128) /  3) as u8;
+        let r = ( (r+128) / 3) as u8;
+        let g = ( (g+128) / 3) as u8;
+        let b = ( (b+128) / 3) as u8;
 
         unsafe {
+            // TODO: @sx does this work?
             sdl2_sys::SDL_MapRGB(self.buffers.backBuffer.pixel_format().raw(), r, g, b)
         }
     }

@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct BlockClass {
     //Fundamentals
     pub rect: sdl2::rect::Rect,

@@ -152,7 +152,12 @@ impl FileSystem {
     // static void PLATFORM_copyFile(const char *oldLocation, const char *newLocation);
     // static void* bridged_malloc(PHYSFS_uint64 size)
     // static void* bridged_realloc(void* ptr, PHYSFS_uint64 size)
+
     // char *FILESYSTEM_getUserSaveDirectory(void)
+    pub fn FILESYSTEM_getUserSaveDirectory(&self) -> Option<&PathBuf> {
+        self.saveDir.as_ref()
+    }
+
     // char *FILESYSTEM_getUserLevelDirectory(void)
     // bool FILESYSTEM_isFile(const char* filename)
     // bool FILESYSTEM_isMounted(const char* filename)

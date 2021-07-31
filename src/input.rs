@@ -605,8 +605,126 @@ impl Input {
         Ok(None)
     }
 
-    pub fn teleporterinput (&mut self) -> Result<Option<RenderResult>, i32> {
-        println!("DEADBEEF(input.rs): input::Input::teleporterinput is not implemented yet");
+    pub fn teleporterinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass) -> Result<Option<RenderResult>, i32> {
+        //Todo Mouseinput!
+        //game.mx = (mouseX / 2);
+        //game.my = (mouseY / 2);
+
+        game.press_left = false;
+        game.press_right = false;
+        game.press_action = false;
+        game.press_map = false;
+
+        if graphics.menuoffset == 0 {
+            if key.isDownKeycode(Keycode::Left) || key.isDownKeycode(Keycode::A) || key.controllerWantsLeft(false) {
+                game.press_left = true;
+            }
+            if key.isDownKeycode(Keycode::Right) || key.isDownKeycode(Keycode::D) || key.controllerWantsRight(false) {
+                game.press_right = true;
+            }
+            if key.isDownKeycode(Keycode::Z) || key.isDownKeycode(Keycode::Space) || key.isDownKeycode(Keycode::V) ||
+               key.isDownKeycode(Keycode::Up) || key.isDownKeycode(Keycode::Down) || key.isDownKeycode(Keycode::W) ||
+               key.isDownKeycode(Keycode::S) || key.isDownVec(&game.controllerButton_flip) {
+                game.press_action = true;
+            }
+            if key.isDownKeycode(Keycode::KpEnter) || key.isDownVec(&game.controllerButton_map) {
+                game.press_map = true;
+            }
+
+            //In the menu system, all keypresses are single taps rather than holds. Therefore this test has to be done for all presses
+            if !game.press_action && !game.press_left && !game.press_right {
+                game.jumpheld = false
+            };
+            if !game.press_map { game.mapheld = false };
+
+            if key.isDown(27) {
+                if !map.custommode || map.custommodeforreal {
+                    // Go to pause menu
+                    game.mapheld = true;
+                    game.menupage = 30;
+                    game.gamestate = GameState::MAPMODE;
+                } else {
+                    // Close teleporter menu
+                    graphics.resumegamemode = true;
+                }
+            }
+        } else {
+            game.mapheld = true;
+            game.jumpheld = true;
+        }
+
+        if !game.jumpheld {
+            if game.press_action || game.press_left || game.press_right || game.press_map {
+                game.jumpheld = true;
+            }
+
+            let mut any_tele_unlocked = false;
+            if game.press_left || game.press_right {
+                for i in 0..map.teleporters.len() {
+                    let tele = &map.teleporters[i];
+
+                    if map.isexplored(tele.x, tele.y) {
+                        any_tele_unlocked = true;
+                        break;
+                    }
+                }
+            }
+
+            if game.press_left && any_tele_unlocked {
+                loop {
+                    game.teleport_to_teleporter -= 1;
+                    if game.teleport_to_teleporter < 0 {
+                        game.teleport_to_teleporter = map.teleporters.len() as i32 - 1;
+                    }
+                    let tempx = map.teleporters[game.teleport_to_teleporter as usize].x;
+                    let tempy = map.teleporters[game.teleport_to_teleporter as usize].y;
+                    if !map.isexplored(tempx, tempy) { break }
+                }
+            } else if game.press_right && any_tele_unlocked {
+                loop {
+                    game.teleport_to_teleporter += 1;
+                    if game.teleport_to_teleporter >= map.teleporters.len() as i32 {
+                        game.teleport_to_teleporter = 0;
+                    }
+                    let tempx = map.teleporters[game.teleport_to_teleporter as usize].x;
+                    let tempy = map.teleporters[game.teleport_to_teleporter as usize].y;
+                    if !map.isexplored(tempx, tempy) { break }
+                }
+            }
+
+            if game.press_map {
+                let tempx = map.teleporters[game.teleport_to_teleporter as usize].x;
+                let tempy = map.teleporters[game.teleport_to_teleporter as usize].y;
+                if game.roomx == tempx + 100 && game.roomy == tempy + 100 {
+                    //cancel!
+                    graphics.resumegamemode = true;
+                } else {
+                    //teleport
+                    graphics.resumegamemode = true;
+                    game.teleport_to_x = tempx;
+                    game.teleport_to_y = tempy;
+
+                    //trace(game.recordstring);
+                    //We're teleporting! Yey!
+                    game.activetele = false;
+                    game.hascontrol = false;
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].colour = 102;
+                    }
+
+                    let i = obj.getteleporter() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        obj.entities[i].tile = 6;
+                        obj.entities[i].colour = 102;
+                    }
+                    //which teleporter script do we use? it depends on the companion!
+                    game.state = 4000;
+                    game.statedelay = 0;
+                }
+            }
+        }
 
         Ok(None)
     }

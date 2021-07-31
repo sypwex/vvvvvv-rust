@@ -51,11 +51,13 @@ impl Scenes {
             SceneFunc { state: GameState::MAPMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
 
             // GameState::TELEPORTERMODE => {
-            //     // {Func_fixed, maprenderfixed},
-            //     // {Func_delta, teleporterrender},
-            //     // {Func_input, teleportermodeinput},
-            //     // {Func_fixed, maplogic},
-            // },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_begin },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncFixed, fnname: Fns::maprenderfixed },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncDelta, fnname: Fns::teleporterrender },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncInput, fnname: Fns::teleportermodeinput },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncFixed, fnname: Fns::maplogic },
+            SceneFunc { state: GameState::TELEPORTERMODE, fntype: FuncType::FuncFixed, fnname: Fns::focused_end },
+
             // GameState::GAMECOMPLETE => {
             //     // {Func_fixed, gamecompleterenderfixed},
             //     // {Func_delta, gamecompleterender},
@@ -121,10 +123,18 @@ impl Scenes {
             .cloned()
             .collect();
         self.num_gamestate_funcs = self.gamestate_funcs.len() as u8;
+
+        if self.num_gamestate_funcs == 0 {
+            panic!("incorrect gamestate {:?}. no gamestate funcs", game_state);
+        }
     }
 
     pub fn get_current_gamestate_func(&mut self) -> SceneFunc {
-        self.gamestate_funcs[self.gamestate_func_index as usize]
+        // self.gamestate_funcs[self.gamestate_func_index as usize]
+        match self.gamestate_funcs.get(self.gamestate_func_index as usize) {
+            Some(scenefunc) => *scenefunc,
+            None => panic!("incorrect gamestate func index {} in {:?}", self.gamestate_func_index, self.gamestate_funcs),
+        }
     }
 }
 
@@ -185,6 +195,10 @@ pub enum Fns {
     maprender,
     mapinput,
     maplogic,
+
+    // GameState::TELEPORTERMODE
+    teleporterrender,
+    teleportermodeinput,
 }
 
 pub trait InputTrait {

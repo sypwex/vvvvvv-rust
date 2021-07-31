@@ -69,7 +69,7 @@ pub struct Map {
     pub resumedelay: i32,
     pub minitowermode: bool,
 
-    specialnames: [&'static str;8], // size of 8
+    pub specialnames: [&'static str;8], // size of 8
     glitchmode: i32,
     glitchdelay: i32,
     pub glitchname: String,
@@ -612,7 +612,10 @@ impl Map {
 
     // void mapclass::settile(int xp, int yp, int t)
     pub fn settile(&mut self, xp: i32, yp: i32, t: i32) {
-        println!("DEADBEEF: mapclass::settile() method not implemented yet");
+        if xp >= 0 && xp < 40 && yp >= 0 && yp < 29 + self.extrarow {
+            // TODO: @sx check i16 conversion bounds
+            self.contents[xp as usize + self.vmult[yp as usize] as usize] = t as i16;
+        }
     }
 
     // int mapclass::area(int _rx, int _ry)
@@ -666,7 +669,13 @@ impl Map {
 
     // void mapclass::showship(void)
     pub fn showship(&mut self) {
-        println!("DEADBEEF: mapclass::showship() method not implemented yet");
+        //show the ship in the explored areas
+        self.setexplored(2, 10, true);
+        self.setexplored(3, 10, true);
+        self.setexplored(4, 10, true);
+        self.setexplored(2, 11, true);
+        self.setexplored(3, 11, true);
+        self.setexplored(4, 11, true);
     }
 
     // void mapclass::resetplayer(void)
@@ -690,7 +699,6 @@ impl Map {
 
         //Ok, let's save the position of all lines on the screen
         obj.linecrosskludge.clear();
-        // for size_t i = 0; i < obj.entities.size(); i++ {
         for i in 0..obj.entities.len() {
             if obj.entities[i].r#type == 9 {
                 //It's a horizontal line
@@ -704,19 +712,15 @@ impl Map {
         /* Disable all entities in the room, and deallocate any unnecessary entity slots. */
         /* However don't disable player entities, but do preserve holes between them (if any). */
         let mut player_found = false;
-        // for let i = obj.entities.size() - 1; i >= 0; --i {
-        for i in obj.entities.len()..=0 {
+        for i in (0..obj.entities.len()).rev() {
             /* Iterate in reverse order to prevent unnecessary indice shifting */
             if obj.entities[i].rule == 0 {
-                player_found = true;
+                // player_found = true;
+                obj.disableentity(i);
                 continue;
             }
 
-            if !player_found {
-                obj.entities.remove(i);
-            } else {
-                obj.disableentity(i);
-            }
+            obj.entities.remove(i);
         }
 
         game.door_up = rx + ((ry - 1) * 100);
@@ -864,13 +868,11 @@ impl Map {
             obj.entities[temp].lerpoldyp = obj.entities[temp].yp - obj.entities[temp].vy as i32;
         }
 
-        // for size_t i = 0; i < obj.entities.size(); i++ {
         for i in 0..obj.entities.len() {
             if obj.entities[i].r#type == 9 {
                 //It's a horizontal line
                 if obj.entities[i].xp <= 0 || obj.entities[i].xp + obj.entities[i].w >= 312 {
                     //it's on a screen edge
-                    // for size_t j = 0; j < obj.linecrosskludge.size(); j++ {
                     for j in 0..obj.linecrosskludge.len() {
                         if obj.entities[i].yp == obj.linecrosskludge[j].yp {
                             //y's match, how about x's?

@@ -1,6 +1,6 @@
 use sdl2::keyboard::Keycode;
 
-use crate::{INBOUNDS_ARR, INBOUNDS_VEC, entity, game::{self, GameState}, key_poll, map, music, scenes::RenderResult, screen::render::graphics, utility_class};
+use crate::{INBOUNDS_ARR, INBOUNDS_VEC, entity, filesystem, game::{self, GameState}, key_poll, map, music, scenes::RenderResult, screen::render::graphics, utility_class};
 pub mod scripts;
 pub mod terminal_scripts;
 
@@ -10,8 +10,8 @@ pub struct ScriptClass {
     words: Vec<String>,
     txt: Vec<String>,
     scriptname: String,
-    position: usize,
-    looppoint: usize,
+    position: i32,
+    looppoint: i32,
     loopcount: i32,
 
     scriptdelay: i32,
@@ -98,7 +98,7 @@ impl ScriptClass {
     }
 
     // void scriptclass::run(void)
-    pub fn run(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map, graphics: &mut graphics::Graphics, help: &mut utility_class::UtilityClass, music: &mut music::Music, key: &mut key_poll::KeyPoll) -> Result<Option<RenderResult>, i32> {
+    pub fn run(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map, graphics: &mut graphics::Graphics, help: &mut utility_class::UtilityClass, music: &mut music::Music, key: &mut key_poll::KeyPoll, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
         if !self.running {
             return Ok(None);
         }
@@ -108,7 +108,7 @@ impl ScriptClass {
         while self.running && self.scriptdelay <= 0 && !game.pausescript {
             if INBOUNDS_VEC!(self.position, self.commands) {
                 //Let's split or command in an array of words
-                let command: &str = &self.commands[self.position].to_owned();
+                let command: &str = &self.commands[self.position as usize].to_owned();
                 self.tokenize(command);
 
                 //For script assisted input
@@ -381,11 +381,10 @@ impl ScriptClass {
 
                     //Number of lines for the textbox!
                     self.txt.clear();
-                    // for (int self.i = 0; self.i < utility_class::ss_toi(&self.words[4]); self.i++ {
                     for i in 0..utility_class::ss_toi(&self.words[4]) {
                         self.position += 1;
                         if INBOUNDS_VEC!(self.position, self.commands) {
-                            let command = self.commands[self.position].to_owned();
+                            let command = self.commands[self.position as usize].to_owned();
                             self.txt.push(command);
                         }
                     }
@@ -507,7 +506,7 @@ impl ScriptClass {
                         self.texty = -500;
                     }
 
-                    if self.i==0 && self.words[1] != "player" && self.words[1] != "cyan" {
+                    if self.i == 0 && self.words[1] != "player" && self.words[1] != "cyan" {
                         //Requested crewmate is not actually on screen
                         self.words[2] = "donothing".to_string();
                         self.j = -1;
@@ -550,8 +549,8 @@ impl ScriptClass {
                     graphics.createtextboxreal(&self.txt[0], self.textx, self.texty, self.r, self.g, self.b, self.textflipme);
                     self.textflipme = false;
                     if self.txt.len() > 1 {
-                        // for (self.i = 1; self.i < (int) self.txt.len(); self.i++ {
                         for i in 1..self.txt.len() {
+                            self.i = i as i32;
                             graphics.addline(&self.txt[self.i as usize]);
                         }
                     }
@@ -1227,88 +1226,88 @@ impl ScriptClass {
                         obj.entities[self.i as usize].dir = 0;
                     }
                 } else if self.words[0] == "jukebox" {
-                    // for (j = 0; j < (int) obj.entities.size(); j++ {
                     for j in 0..obj.entities.len() {
+                        self.j = j as i32;
                         if obj.entities[j].r#type == 13 {
                             obj.entities[j].colour = 4;
                         }
                     }
                     if utility_class::ss_toi(&self.words[1]) == 1 {
                         obj.createblock(5, 88 - 4, 80, 20, 16, Some(25), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 88 && obj.entities[j].yp == 80 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 2 {
                         obj.createblock(5, 128 - 4, 80, 20, 16, Some(26), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 128 && obj.entities[j].yp == 80 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 3 {
                         obj.createblock(5, 176 - 4, 80, 20, 16, Some(27), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 176 && obj.entities[j].yp == 80 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 4 {
                         obj.createblock(5, 216 - 4, 80, 20, 16, Some(28), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 216 && obj.entities[j].yp == 80 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 5 {
                         obj.createblock(5, 88 - 4, 128, 20, 16, Some(29), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 88 && obj.entities[j].yp == 128 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 6 {
                         obj.createblock(5, 176 - 4, 128, 20, 16, Some(30), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 176 && obj.entities[j].yp == 128 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 7 {
                         obj.createblock(5, 40 - 4, 40, 20, 16, Some(31), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 40 && obj.entities[j].yp == 40 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 8 {
                         obj.createblock(5, 216 - 4, 128, 20, 16, Some(32), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 216 && obj.entities[j].yp == 128 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 9 {
                         obj.createblock(5, 128 - 4, 128, 20, 16, Some(33), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 128 && obj.entities[j].yp == 128 {
                                 obj.entities[j].colour = 5;
                             }
                         }
                     } else if utility_class::ss_toi(&self.words[1]) == 10 {
                         obj.createblock(5, 264 - 4, 40, 20, 16, Some(34), None);
-                        // for (j = 0; j < (int) obj.entities.size(); j++ {
                         for j in 0..obj.entities.len() {
+                            self.j = j as i32;
                             if obj.entities[j].xp == 264 && obj.entities[j].yp == 40 {
                                 obj.entities[j].colour = 5;
                             }
@@ -1462,8 +1461,8 @@ impl ScriptClass {
                     }
                     game.backgroundtext = false;
                 } else if self.words[0] == "everybodysad" {
-                    // for (self.i = 0; self.i < (int) obj.entities.size(); self.i++ {
                     for i in 0..obj.entities.len() {
+                        self.i = i as i32;
                         if (obj.entities[self.i as usize].rule == 6) | (obj.entities[self.i as usize].rule == 0) {
                             obj.entities[self.i as usize].tile = 144;
                         }
@@ -1483,7 +1482,7 @@ impl ScriptClass {
                     map.gotoroom(46, 54, game, graphics, music, obj, help);
                 } else if self.words[0] == "telesave" {
                     if !game.intimetrial && !game.nodeathmode && !game.inintermission {
-                        game.savetele();
+                        game.savetele(map, fs);
                     }
                 } else if self.words[0] == "createlastrescued" {
                     self.r = match game.lastsaved {
@@ -1909,8 +1908,76 @@ impl ScriptClass {
     }
 
     // void scriptclass::teleport(void)
-    pub fn teleport(&self) {
-        println!("DEADBEEF: scriptclass::teleport() method not implemented yet");
+    pub fn teleport(&mut self, game: &mut game::Game, obj: &mut entity::EntityClass, map: &mut map::Map, graphics: &mut graphics::Graphics, music: &mut music::Music, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) {
+        //er, ok! Teleport to a new area, so!
+        //A general rule of thumb: if you teleport with a companion, get rid of them!
+        game.companion = 0;
+
+        //less likely to have a serious collision error if the player is centered
+        self.i = obj.getplayer();
+        if INBOUNDS_VEC!(self.i, obj.entities) {
+            obj.entities[self.i as usize].xp = 150;
+            obj.entities[self.i as usize].yp = 110;
+            if game.teleport_to_x == 17 && game.teleport_to_y == 17 { obj.entities[self.i as usize].xp = 88; } //prevent falling!
+            obj.entities[self.i as usize].lerpoldxp = obj.entities[self.i as usize].xp;
+            obj.entities[self.i as usize].lerpoldyp = obj.entities[self.i as usize].yp;
+        }
+
+        if game.teleportscript == "levelonecomplete" {
+            game.teleport_to_x = 2;
+            game.teleport_to_y = 11;
+        } else if game.teleportscript == "gamecomplete" {
+            game.teleport_to_x = 2;
+            game.teleport_to_y = 11;
+        }
+
+        game.gravitycontrol = 0;
+        map.gotoroom(100 + game.teleport_to_x, 100 + game.teleport_to_y, game, graphics, music, obj, help);
+        let j = obj.getteleporter() as usize;
+        if INBOUNDS_VEC!(j, obj.entities) {
+            obj.entities[j].state = 2;
+        }
+        game.teleport_to_new_area = false;
+
+        if INBOUNDS_VEC!(j, obj.entities) {
+            game.savepoint = obj.entities[j].para as i32;
+            game.savex = obj.entities[j].xp + 44;
+            game.savey = obj.entities[j].yp + 44;
+        }
+        game.savegc = 0;
+
+        game.saverx = game.roomx;
+        game.savery = game.roomy;
+        let player = obj.getplayer() as usize;
+        if INBOUNDS_VEC!(player, obj.entities) {
+            game.savedir = obj.entities[player].dir;
+        }
+
+        game.state = match (game.teleport_to_x, game.teleport_to_y) {
+            (0, 0) => 4020,
+            (0, 16) => 4030,
+            (7, 9) => 4040,
+            (8, 11) => 4050,
+            (14, 19) => 4030,
+            (17, 12) => 4020,
+            (17, 17) => 4020,
+            (18, 7) => 4060,
+            _ => 4010,
+        };
+
+        if game.teleportscript != "" {
+            game.state = 0;
+            scripts::load(self, &game.teleportscript);
+            game.teleportscript = "".to_string();
+        } else {
+            //change music based on location
+            if graphics.setflipmode && game.teleport_to_x == 11 && game.teleport_to_y == 4 {
+                music.niceplay(9, game);
+            } else {
+                music.changemusicarea(game.teleport_to_x, game.teleport_to_y);
+            }
+            game.savetele_textbox(graphics, map, fs);
+        }
     }
 
     // void scriptclass::hardreset(void)

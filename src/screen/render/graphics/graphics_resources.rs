@@ -1,4 +1,5 @@
 use std::fs::File;
+
 extern crate png;
 extern crate sdl2_sys;
 
@@ -15,7 +16,7 @@ pub struct GraphicsResources {
 }
 
 impl GraphicsResources {
-    pub fn new () -> GraphicsResources {
+    pub fn new() -> GraphicsResources {
         GraphicsResources {
             tiles: Image {
                 name: "tiles".to_string(),
@@ -54,31 +55,50 @@ impl GraphicsResources {
             },
             teleporter: Image {
                 name: "teleporter".to_string(),
-                surfaces: Image::LoadImage("teleporter", true, false, 8, 8),
-                rect: sdl2::rect::Rect::new(0, 0, 8, 8),
+                surfaces: Image::LoadImage("teleporter", true, false, 96, 96),
+                rect: sdl2::rect::Rect::new(0, 0, 96, 96),
             },
             images: Image {
                 name: "images".to_string(),
                 surfaces: vec![
-                    Image::LoadOneImage("levelcomplete", false, false, 320, 48),
-                    Image::LoadOneImage("minimap", true, true, 240, 180),
-                    Image::LoadOneImage("covered", true, true, 12, 9),
-                    Image::LoadOneImage("elephant", true, false, 464, 320),
-                    Image::LoadOneImage("gamecomplete", false, false, 320, 48),
+                    Image::LoadOneImage("levelcomplete",     false, false, 320, 48),
+                    Image::LoadOneImage("minimap",           true,  true,  240, 180),
+                    Image::LoadOneImage("covered",           true,  true,  12, 9),
+                    Image::LoadOneImage("elephant",          true,  false, 464, 320),
+                    Image::LoadOneImage("gamecomplete",      false, false, 320, 48),
                     Image::LoadOneImage("fliplevelcomplete", false, false, 320, 48),
-                    Image::LoadOneImage("flipgamecomplete", false, false, 320, 48),
-                    Image::LoadOneImage("site", false, true, 121, 5),
-                    Image::LoadOneImage("site2", true, false, 64, 5),
-                    Image::LoadOneImage("site3", true, false, 81, 5),
-                    Image::LoadOneImage("ending", true, false, 320, 240),
-                    Image::LoadOneImage("site4", true, false, 121, 5),
-                    Image::LoadOneImage("minimap", true, false, 64, 5),
+                    Image::LoadOneImage("flipgamecomplete",  false, false, 320, 48),
+                    Image::LoadOneImage("site",              false, false, 121, 5),
+                    Image::LoadOneImage("site2",             true,  false, 64, 5),
+                    Image::LoadOneImage("site3",             true,  false, 81, 5),
+                    Image::LoadOneImage("ending",            true,  false, 320, 240),
+                    Image::LoadOneImage("site4",             true,  false, 121, 5),
+                    Image::LoadOneImage("minimap",           true,  false, 240, 180),
                 ],
                 rect: sdl2::rect::Rect::new(0, 0, 0, 0),
             },
         }
     }
+}
 
+// @sx currently used for tests only
+impl IntoIterator for GraphicsResources {
+    type Item = Image;
+    type IntoIter = std::array::IntoIter<Image, 9>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        std::array::IntoIter::new([
+            self.tiles,
+            self.tiles2,
+            self.tiles3,
+            self.entcolours,
+            self.flipsprites,
+            self.sprites,
+            self.bfont,
+            self.teleporter,
+            self.images,
+        ])
+    }
 }
 
 pub struct Image {
@@ -107,76 +127,76 @@ impl Image {
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).unwrap();
 
-        let pf = match no_alpha {
-            true => sdl2::pixels::PixelFormatEnum::RGBA8888,
-            // false => sdl2::pixels::PixelFormatEnum::RGBX8888,
-            false => sdl2::pixels::PixelFormatEnum::ABGR8888,
-        };
-        let surface: sdl2::surface::Surface = match sdl2::surface::Surface::from_data(data.as_mut_slice(), info.width, info.height, info.width*4, pf) {
-            Ok(x) => x,
-            Err(e) => panic!("{}", e),
-        };
-
+        let mut surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, info.line_size as u32, sdl2::pixels::PixelMasks {
+            bpp: if no_alpha { 24 } else { 32 },
+            rmask: 0x000000FF,
+            gmask: 0x0000FF00,
+            bmask: 0x00FF0000,
+            amask: if no_alpha { 0x00000000 } else { 0xFF000000 },
+        }).unwrap();
+        let mut surface = surface.convert_format(sdl2::pixels::PixelFormatEnum::ABGR8888).unwrap();
+        if no_blend {
+            surface.set_blend_mode(sdl2::render::BlendMode::Blend);
+        }
+        let pf = surface.pixel_format_enum();
         let mut surfaces = vec![];
-        let mut i = 0;
-        while i*h < info.width {
-            let mut j = 0;
-            while j*w < info.height {
-                let mut src_destt = sdl2::surface::Surface::new(w, h, pf).unwrap();
-                let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
-                surface.blit(src_rect, &mut src_destt, None).unwrap();
-                surfaces.push(src_destt);
 
-                j += 1;
-            }
+        match file {
+            // TODO: @sx: incorrect loading process, need rewrite
+            "teleporter" => {
+                let mut i = 0;
+                while i*w < info.width {
+                    let mut j = 0;
+                    while j*h < info.height {
+                        let mut s = sdl2::surface::Surface::new(w, h, pf).unwrap();
+                        let src_rect = sdl2::rect::Rect::new((i * w) as i32, (j * h) as i32, w, w);
+                        surface.blit(src_rect, &mut s, None).unwrap();
+                        // println!("teleporter blit from ({}:{}) {}x{}", j*h, i*w, w, w);
+                        if no_blend {
+                            s.set_blend_mode(sdl2::render::BlendMode::Blend);
+                        }
 
-            i += 1;
+                        // // crate::rustutil::dump_surface_pixels(&s, "image");
+                        // crate::rustutil::dump_surface_pixels_slice(&s, info.width as usize, info.height as usize, info.line_size);
+                        // crate::rustutil::dump_surface(&s, "image", file);
+
+                        surfaces.push(s);
+                        j += 1;
+                    }
+
+                    i += 1;
+                }
+            },
+            _ => {
+                let mut i = 0;
+                while i*h < info.width {
+                    let mut j = 0;
+                    while j*w < info.height {
+                        let mut s = sdl2::surface::Surface::new(w, h, pf).unwrap();
+                        let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
+                        surface.blit(src_rect, &mut s, None).unwrap();
+                        // println!("teleporter blit from ({}:{}) {}x{}", j*h, i*w, w, w);
+                        if no_blend {
+                            s.set_blend_mode(sdl2::render::BlendMode::Blend);
+                        }
+
+                        // // crate::rustutil::dump_surface_pixels(&s, "image");
+                        // crate::rustutil::dump_surface_pixels_slice(&s, info.width as usize, info.height as usize, info.line_size);
+                        // crate::rustutil::dump_surface(&s, "image", file);
+
+                        surfaces.push(s);
+                        j += 1;
+                    }
+
+                    i += 1;
+                }
+            },
         }
 
-        // //Temporary storage for the image that's loaded
-        // SDL_Surface* loadedImage = NULL;
-        // //The optimized image that will be used
-        // SDL_Surface* optimizedImage = NULL;
-
-        // unsigned char *data;
-        // unsigned int width, height;
-
-        // unsigned char *fileIn = NULL;
-        // size_t length = 0;
-        // FILESYSTEM_loadFileToMemory(filename, &fileIn, &length);
-        // lodepng_decode32(&data, &width, &height, fileIn, length);
-
-        // FILESYSTEM_freeMemory(&fileIn);
-
-        // loadedImage = SDL_CreateRGBSurfaceFrom(
-        // 	data,
-        // 	width,
-        // 	height,
-        // 	noAlpha ? 24 : 32,
-        // 	width * (noAlpha ? 3 : 4),
-        // 	0x000000FF,
-        // 	0x0000FF00,
-        // 	0x00FF0000,
-        // 	noAlpha ? 0x00000000 : 0xFF000000
-        // );
-
-        // if (loadedImage != NULL)
-        // {
-        // 	optimizedImage = SDL_ConvertSurfaceFormat(
-        // 		loadedImage,
-        // 		SDL_PIXELFORMAT_ABGR8888, // FIXME: Format? -flibit
-        // 		0
-        // 	);
-        // 	SDL_FreeSurface( loadedImage );
-        // 	free(data);
-        // 	if (noBlend) SDL_SetSurfaceBlendMode(optimizedImage, SDL_BLENDMODE_BLEND);
-        // 	return optimizedImage;
-        // } else {
-        // 	fprintf(stderr,"Image not found: %s\n", filename);
-        // 	SDL_assert(0 && "Image not found! See stderr.");
-        // 	return NULL;
+        // if file == "teleporter" {
+        //     crate::rustutil::dump_surface(&surface, "image", file);
+        //     println!("{} --- {:?} --- {:?}", file, info, data[0..info.line_size].to_vec());
         // }
-
         surfaces
     }
 
@@ -191,19 +211,66 @@ impl Image {
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).unwrap();
 
-        let pf = match no_alpha {
-            true => sdl2::pixels::PixelFormatEnum::RGBA8888,
-            // false => sdl2::pixels::PixelFormatEnum::RGBX8888,
-            false => sdl2::pixels::PixelFormatEnum::ABGR8888,
-        };
-        let surface: sdl2::surface::Surface = match sdl2::surface::Surface::from_data(data.as_mut_slice(), info.width, info.height, info.width * 4, pf) {
-            Ok(x) => x,
-            Err(e) => panic!("{}", e),
-        };
+        let surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, info.line_size as u32, sdl2::pixels::PixelMasks {
+            bpp: if no_alpha { 24 } else { 32 },
+            rmask: 0x000000FF,
+            gmask: 0x0000FF00,
+            bmask: 0x00FF0000,
+            amask: if no_alpha { 0x00000000 } else { 0xFF000000 },
+        }).unwrap();
+        let mut surface = surface.convert_format(sdl2::pixels::PixelFormatEnum::ABGR8888).unwrap();
+        if no_blend {
+            surface.set_blend_mode(sdl2::render::BlendMode::Blend);
+        }
 
-        let mut src_destt = sdl2::surface::Surface::new(0, 0, pf).unwrap();
-        surface.blit(None, &mut src_destt, None).unwrap();
+        // println!("{} --- {:?} --- {:?}", file, info, data[0..20].to_vec());
+        // crate::rustutil::dump_surface(&surface, "image", file);
+        return surface
+    }
+}
 
-        return src_destt
+#[cfg(test)]
+mod tests {
+    use crate::screen::render::graphics::graphics_util;
+
+    use super::*;
+
+    #[test]
+    fn surfaces_are_created() {
+        for image in GraphicsResources::new() {
+            assert_ne!(image.surfaces.len(), 0);
+            println!("{}", image.name);
+        }
+    }
+
+    #[test]
+    fn surfaces_have_not_zero_size() {
+        for image in GraphicsResources::new() {
+            for (i, surface) in image.surfaces.iter().enumerate() {
+                println!("{}[{}]: (w:h) - {}:{}", image.name, i, surface.width(), surface.height());
+                assert_ne!(surface.width(), 0);
+                assert_ne!(surface.height(), 0);
+            }
+        }
+    }
+
+    // @sx not implemented yet
+    #[test]
+    fn surfaces_should_not_be_empty() {
+        let mut empty = true;
+        for image in GraphicsResources::new() {
+            for (i, surface) in image.surfaces.iter().enumerate() {
+                println!("checking image: {} @ surface {}", image.name, i);
+                for x in 0..surface.width() as i32 {
+                    for y in 0..surface.height() as i32 {
+                        let pixel = graphics_util::ReadPixel(surface, x, y);
+                        if pixel != 0 { empty = false; }
+                    }
+                }
+
+                assert_eq!(empty, true);
+            }
+        }
+
     }
 }

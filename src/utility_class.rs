@@ -143,17 +143,25 @@ pub fn next_split_s() {
 
 pub struct UtilityClass {
     pub glow: i32,
-    slowsine: i32,
+    pub slowsine: i32,
     glowdir: i32,
+    splitseconds: [i32;30],
 }
 
 impl UtilityClass {
     // UtilityClass::UtilityClass(void)
     pub fn new() -> UtilityClass {
+        let mut splitseconds: [i32;30] = Default::default();
+        // for (size_t i = 0; i < SDL_arraysize(splitseconds); i++)
+        for i in 0..30 {
+            splitseconds[i] = (i as i32 * 100) / 30;
+        }
+
         UtilityClass {
             glow: 0,
             slowsine: 0,
             glowdir: 0,
+            splitseconds,
         }
     }
 
@@ -170,15 +178,28 @@ impl UtilityClass {
     }
 
     // std::string UtilityClass::twodigits( int t )
-    pub fn twodigits(&self, _t: i32) -> &str {
-        println!("DEADBEEF: UtilityClass::twodigits() method not implemented yet");
-        &""
+    pub fn twodigits(&self, t: i32) -> String {
+        match t {
+            t if t < 10 => ["0", &t.to_string()].concat(),
+            t if t >= 100 => "??".to_string(),
+            _ => t.to_string(),
+        }
     }
 
     // std::string UtilityClass::timestring( int t )
-    pub fn timestring(&self, _t: i32) -> &str {
-        println!("DEADBEEF: UtilityClass::timestring() method not implemented yet");
-        &""
+    pub fn timestring(&self, t: i32) -> String {
+        //given a time t in frames, return a time in seconds
+        let temp = (t - (t % 30)) / 30;
+        if temp < 60 {
+            //less than one minute
+            let t = t as usize % 30;
+            [temp.to_string(), ":".to_string(), self.twodigits(self.splitseconds[t])].concat()
+        } else {
+            let temp2 = (temp - (temp % 60)) / 60;
+            let temp = temp % 60;
+            let t = t as usize % 30;
+            [temp2.to_string(), ":".to_string(), self.twodigits(temp), ":".to_string(), self.twodigits(self.splitseconds[t])].concat()
+        }
     }
 
     // std::string UtilityClass::number( int _t )

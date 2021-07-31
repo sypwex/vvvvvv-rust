@@ -1,4 +1,4 @@
-use crate::{INBOUNDS_VEC, entity, game, map, maths, music, scenes::RenderResult, screen::{self, render::graphics, renderfixed}, script, utility_class};
+use crate::{INBOUNDS_VEC, entity, filesystem, game, map, maths, music, scenes::RenderResult, screen::{self, render::graphics, renderfixed}, script, utility_class};
 
 
 pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Result<Option<RenderResult>, i32> {
@@ -43,7 +43,7 @@ pub fn gamecompletelogic2() -> Result<Option<RenderResult>, i32> {
     Ok(None)
 }
 
-pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass) -> Result<Option<RenderResult>, i32> {
+pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, screen_params: screen::ScreenParams, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
     /* Update old lerp positions of entities */
     for i in 0..obj.entities.len() {
         obj.entities[i].lerpoldxp = obj.entities[i].xp;
@@ -307,7 +307,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
         if game.deathseq <= 0 {
             if game.nodeathmode {
                 game.deathseq = 1;
-                game.gethardestroom();
+                game.gethardestroom(map);
                 //start depressing sequence here...
                 if game.gameoverdelay <= -10 && graphics.fademode == 0 {
                     graphics.fademode = 2;
@@ -326,7 +326,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     }
                 }
 
-                game.gethardestroom();
+                game.gethardestroom(map);
                 game.hascontrol = true;
 
                 game.gravitycontrol = game.savegc;
@@ -356,7 +356,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             }
         }
         //State machine for game logic
-        game.updatestate(graphics, script, obj, music);
+        game.updatestate(graphics, script, obj, music, map, screen_params, help, fs);
         if game.startscript {
             script::scripts::load(script, &game.newscript);
             game.startscript = false;
@@ -582,11 +582,11 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     obj.entitymapcollision(i, map, help);
 
                     obj.moveblockto(prevx, prevy, obj.entities[i].xp, obj.entities[i].yp, obj.entities[i].w, obj.entities[i].h);
-                    let player = obj.getplayer();
-                    obj.movingplatformfix(i as i32, player);
+                    let player = obj.getplayer() as usize;
+                    obj.movingplatformfix(i, player, help, map);
                     if game.supercrewmate {
-                        let scm = obj.getscm();
-                        obj.movingplatformfix(i as i32, scm);
+                        let scm = obj.getscm() as usize;
+                        obj.movingplatformfix(i, scm, help, map);
                     }
                 }
             }
@@ -614,12 +614,12 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                 }
                 //is the player standing on a moving platform?
                 let i = obj.getplayer() as usize;
-                let mut j = obj.entitycollideplatformfloor(i as i32);
+                let mut j = obj.entitycollideplatformfloor(i, help);
                 if INBOUNDS_VEC!(i, obj.entities) && j > -1000.0 {
                     obj.entities[i].newxp = obj.entities[i].xp as f32 + j;
                     obj.entitymapcollision(i, map, help);
                 } else {
-                    j = obj.entitycollideplatformroof(i as i32);
+                    j = obj.entitycollideplatformroof(i, help);
                     if INBOUNDS_VEC!(i, obj.entities) && j > -1000.0 {
                         obj.entities[i].newxp = obj.entities[i].xp as f32 + j;
                         obj.entitymapcollision(i, map, help);
@@ -1230,7 +1230,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
     }
 
     if game.teleport_to_new_area {
-        script.teleport();
+        script.teleport(game, obj, map, graphics, music, help, fs);
     }
 
     Ok(None)
