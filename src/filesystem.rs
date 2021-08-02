@@ -1,5 +1,7 @@
 use std::{fs::create_dir_all, path::{Path, PathBuf}};
 
+use quick_xml::Error;
+
 use crate::sdl2u;
 extern crate physfs;
 extern crate sdl2_sys;
@@ -191,7 +193,17 @@ impl FileSystem {
     // void FILESYSTEM_freeMemory(unsigned char **mem)
 
     // bool FILESYSTEM_saveTiXml2Document(const char *name, tinyxml2::XMLDocument& doc)
+    pub fn FILESYSTEM_saveTiXml2Document(&mut self, name: &str) -> bool {
+       warn!("DEADBEEF: FILESYSTEM_saveTiXml2Document method not implemented yet");
+
+       true
+    }
+
     // bool FILESYSTEM_loadTiXml2Document(const char *name, tinyxml2::XMLDocument& doc)
+    pub fn FILESYSTEM_loadTiXml2Document(&mut self, name: &str) -> Result<quick_xml::Reader<std::io::BufReader<std::fs::File>>, Error> {
+        quick_xml::Reader::from_file(name)
+    }
+
     // static PHYSFS_EnumerateCallbackResult enumerateCallback(void* data, const char* origdir, const char* filename)
     // void FILESYSTEM_enumerateLevelDirFileNames(void (*callback)(const char* filename))
     // bool FILESYSTEM_openDirectoryEnabled(void)

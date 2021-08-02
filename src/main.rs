@@ -147,8 +147,8 @@ impl Main {
         };
         // NETWORK_init();
 
-        let mut screen_settings = screen::ScreenSettings::new();
         let mut gameScreen = screen::Screen::new(&sdl_context);
+        let screen_settings = gameScreen.screen_settings;
         let mut map = map::Map::new(&mut gameScreen.render.graphics);
         let mut music = music::Music::new();
         let screen_params = gameScreen.get_screen_params();
@@ -174,9 +174,9 @@ impl Main {
 
         // Prioritize unlock.vvv first (2.2 and below),
         // but settings have been migrated to settings.vvv (2.3 and up)
-        game.loadstats(&mut screen_settings);
-        game.loadsettings(&mut screen_settings);
-        gameScreen.init(&mut screen_settings);
+        game.loadstats(screen_settings, &mut fs);
+        game.loadsettings(screen_settings);
+        gameScreen.init(screen_settings);
 
         // graphics.create_buffers(gameScreen.GetFormat());
 
