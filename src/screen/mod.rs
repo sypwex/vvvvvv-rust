@@ -10,7 +10,6 @@ pub mod renderfixed;
 const SCREEN_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
 const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
 
-#[derive(Debug, Clone, Copy)]
 pub struct ScreenSettings {
     pub windowWidth: i32,
     pub windowHeight: i32,
@@ -37,7 +36,6 @@ impl ScreenSettings {
 
 // class that known as screenbuffer in graphics.cpp
 pub struct Screen {
-    pub screen_settings: ScreenSettings,
     pub render: Box<render::Render>,
     pub renderfixed: Box<renderfixed::RenderFixed>,
     // canvas: Box<sdl2::render::Canvas<sdl2::video::Window>>,
@@ -88,7 +86,6 @@ impl Screen {
         let m_screenTexture = unsafe { sdl2_sys::SDL_CreateTextureFromSurface(m_renderer, m_screen.raw()) };
 
         Screen {
-            screen_settings: ScreenSettings::new(),
             render: Box::new(render::Render::new(SCREEN_PIXEL_FORMAT)),
             renderfixed: Box::new(renderfixed::RenderFixed::new()),
             // canvas: Box::new(canvas),
@@ -121,7 +118,7 @@ impl Screen {
     }
 
     // void Screen::init(const ScreenSettings& settings)
-    pub fn init (&mut self, settings: ScreenSettings) {
+    pub fn init (&mut self, settings: &ScreenSettings) {
         self.isWindowed = !settings.fullscreen;
         self.stretchMode = settings.stretch;
         self.isFiltered = settings.linearFilter;
@@ -169,7 +166,6 @@ impl Screen {
 
     // void Screen::destroy(void)
     // void Screen::GetSettings(ScreenSettings* settings)
-
     // void Screen::LoadIcon(void)
     fn LoadIcon(&mut self) {
         // #ifndef __APPLE__

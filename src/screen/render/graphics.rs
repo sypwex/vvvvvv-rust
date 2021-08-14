@@ -339,7 +339,7 @@ impl Graphics {
 
     // void Graphics::Makebfont(void)
     fn make_bfont(&mut self) {
-        warn!("DEADBEEF: Graphics::Makebfont not implemented yet");
+        println!("DEADBEEF: Graphics::Makebfont not implemented yet");
 
         // PROCESS_TILESHEET(self.grphx.bfont, 8, {
         //     SDL_Surface* TempFlipped = FlipSurfaceVerticle(temp);
@@ -3043,7 +3043,8 @@ impl Graphics {
 
     // void Graphics::reloadresources(void)
     pub fn reload_resources(&mut self, music: &mut music::Music, fs: &mut filesystem::FileSystem) {
-        warn!("DEADBEEF: Graphics::reloadresources not fully implemented yet");
+        // TODO @sx @impl
+        println!("DEADBEEF: Graphics::reloadresources not fully implemented yet");
 
         // grphx.destroy();
         // grphx.init();
@@ -3056,6 +3057,21 @@ impl Graphics {
         self.make_bfont();
 
         // images.clear();
+
+        // images.push_back(grphx.im_image0);
+        // images.push_back(grphx.im_image1);
+        // images.push_back(grphx.im_image2);
+        // images.push_back(grphx.im_image3);
+        // images.push_back(grphx.im_image4);
+        // images.push_back(grphx.im_image5);
+        // images.push_back(grphx.im_image6);
+
+        // images.push_back(grphx.im_image7);
+        // images.push_back(grphx.im_image8);
+        // images.push_back(grphx.im_image9);
+        // images.push_back(grphx.im_image10);
+        // images.push_back(grphx.im_image11);
+        // images.push_back(grphx.im_image12);
 
         // if screenbuffer != NULL {
         //     screenbuffer.LoadIcon();

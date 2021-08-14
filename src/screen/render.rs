@@ -50,54 +50,8 @@ impl Render {
     }
 
     // static void volumesliderrender(void)
-    fn volumesliderrender(&self, game: &game::Game, music: &music::Music) {
-        println!("DEADBEEF: volumesliderrender method not implemented yet");
-        // char buffer[40 + 1];
-
-        // char slider[20 + 1];
-        // int slider_length;
-
-        // const char symbol[] = "[]";
-        // int symbol_length;
-
-        // int num_positions;
-
-        // const int* volume_ptr;
-
-        // match game.currentmenuoption {
-        //     0 => {
-        //         volume_ptr = &music.user_music_volume;
-        //     1 => {
-        //         volume_ptr = &music.user_sound_volume;
-        //     _ => {
-        //         error!("Unhandled volume slider menu option!");
-        //         return;
-        //     }
-        // }
-
-        // VVV_fillstring(slider, sizeof(slider), '.');
-        // slider_length = sizeof(slider) - 1;
-
-        // symbol_length = sizeof(symbol) - 1;
-
-        // num_positions = slider_length - symbol_length + 1;
-
-        // let offset = num_positions * (*volume_ptr) / USER_VOLUME_MAX;
-        // let offset = clamp(offset, 0, slider_length - symbol_length);
-
-        // /* SDL_strlcpy null-terminates, which would end the string in the middle of
-        // * it, which we don't want!
-        // */
-        // SDL_memcpy(&slider[offset], symbol, symbol_length);
-
-        // if game.slidermode == slidermode::SLIDER_NONE {
-        //     SDL_strlcpy(buffer, slider, sizeof(buffer));
-        // } else {
-        //     /* Draw selection brackets. */
-        //     SDL_snprintf(buffer, sizeof(buffer), "[ %s ]", slider);
-        // }
-
-        // self.graphics.print(-1, 85, buffer, tr, tg, tb, Some(true));
+    fn volumesliderrender(&self) {
+        println!("DEADBEEF(render.rs): volumesliderrender not implemented yet");
     }
 
     // static void menurender(void)
@@ -280,12 +234,12 @@ impl Render {
                     0 => {
                         self.graphics.bigprint(-1, 30, "Music Volume", tr, tg, tb, Some(true), None);
                         self.graphics.print(-1, 65, "Change the volume of the music.", tr, tg, tb, Some(true));
-                        self.volumesliderrender(game, music);
+                        self.volumesliderrender();
                     },
                     1 => {
                         self.graphics.bigprint(-1, 30, "Sound Volume", tr, tg, tb, Some(true), None);
                         self.graphics.print(-1, 65, "Change the volume of sound effects.", tr, tg, tb, Some(true));
-                        self.volumesliderrender(game, music);
+                        self.volumesliderrender();
                     },
                     // 2 => {
                     //     if music.mmmmmm {

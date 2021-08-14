@@ -1,5 +1,6 @@
 use crate::{INBOUNDS_ARR, INBOUNDS_VEC, game, map, maths, music, screen::render::graphics, script, utility_class};
 
+use self::blockv::BlockClass;
 mod ent;
 mod blockv;
 
