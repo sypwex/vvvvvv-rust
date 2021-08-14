@@ -754,13 +754,13 @@ impl Game {
 
     // bool Game::customsavequick(std::string savfile);
     pub fn customsavequick(&mut self, savfile: &str) -> bool {
-        println!("DEADBEEF: Game::customsavequick() method not implemented yet");
+        warn!("DEADBEEF: Game::customsavequick() method not implemented yet");
         false
     }
 
     // bool Game::savequick(void);
     pub fn savequick(&mut self) -> bool {
-        println!("DEADBEEF: Game::savequick() method not implemented yet");
+        warn!("DEADBEEF: Game::savequick() method not implemented yet");
         false
     }
 
@@ -801,7 +801,7 @@ impl Game {
 
     // std::string Game::partimestring(void);
     pub fn partimestring(&self) -> &str {
-        println!("DEADBEEF: partimestring not implemented yet");
+        warn!("DEADBEEF: partimestring not implemented yet");
 
         //given par time in seconds:
         let tempstring = "";
@@ -816,13 +816,13 @@ impl Game {
 
     // std::string Game::resulttimestring(void);
     pub fn resulttimestring(&self) -> &str {
-        println!("DEADBEEF: resulttimestring not implemented yet");
+        warn!("DEADBEEF: resulttimestring not implemented yet");
         &""
     }
 
     // std::string Game::timetstring(int t);
     pub fn timetstring(&self, t: i32) -> &str {
-        println!("DEADBEEF: timetstring not implemented yet");
+        warn!("DEADBEEF: timetstring not implemented yet");
         &""
     }
 
@@ -843,13 +843,13 @@ impl Game {
                 //     self.menustack.pop_back();
                 // }
             },
-            None => println!("Error: returning to previous menu frame on empty stack!"),
+            None => error!("Error: returning to previous menu frame on empty stack!"),
         }
     }
 
     // void Game::returntomenu(enum Menu::MenuName t);
     pub fn returntomenu(&mut self, t: MenuName) {
-        println!("DEADBEEF: Game::returntomenu not implemented yet");
+        warn!("DEADBEEF: Game::returntomenu not implemented yet");
     }
 
     // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
@@ -1317,7 +1317,7 @@ impl Game {
 
 
 
-            v => println!("DEADBEEF: Game::createmenu({:?}) is not implemented yet", v),
+            v => warn!("DEADBEEF: Game::createmenu({:?}) is not implemented yet", v),
         }
 
         // Automatically center the menu. We must check the width of the menu with the initial horizontal spacing.
@@ -4144,14 +4144,14 @@ impl Game {
                     self.state = 0;
                 },
 
-                _ => println!("DEADBEEF: Game::updatestate(): state {} not implemented yet", self.state),
+                _ => warn!("DEADBEEF: Game::updatestate(): state {} not implemented yet", self.state),
             }
         }
     }
 
     // void Game::unlocknum(int t);
     pub fn unlocknum(&mut self, t: i32) {
-        println!("DEADBEEF: Game::unlocknum() not implemented yet");
+        warn!("DEADBEEF: Game::unlocknum() not implemented yet");
     }
 
     // void Game::loadstats(ScreenSettings* screen_settings);
@@ -4161,18 +4161,18 @@ impl Game {
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
-    pub fn savestats(&mut self, screen_settings: &mut screen::ScreenSettings) {
-        println!("DEADBEEF: Game::savestats() not implemented yet");
+    pub fn savestats_settings(&mut self, screen_settings: screen::ScreenSettings) {
+       warn!("DEADBEEF: Game::savestats_settings() method not implemented yet");
     }
 
     // void Game::deletestats(void);
     pub fn deletestats(&mut self) {
-        println!("DEADBEEF: Game::deletestats() not implemented yet");
+        warn!("DEADBEEF: Game::deletestats() not implemented yet");
     }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
     fn deserializesettings(&mut self) {
-        println!("DEADBEEF: Game::deserializesettings not fully implemented yet");
+        warn!("DEADBEEF: Game::deserializesettings not fully implemented yet");
 
         // Don't duplicate controller buttons!
         self.controllerButton_flip.clear();
@@ -4199,8 +4199,8 @@ impl Game {
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
 
     // void Game::loadsettings(ScreenSettings* screen_settings);
-    pub fn loadsettings(&mut self, screen_settings: &mut screen::ScreenSettings) {
-        println!("DEADBEEF: Game::loadsettings not implemented yet");
+    pub fn loadsettings(&mut self, screen_settings: screen::ScreenSettings) {
+        warn!("DEADBEEF: Game::loadsettings not implemented yet");
 
         self.deserializesettings();
     }
@@ -4210,22 +4210,22 @@ impl Game {
 
     // bool Game::savestatsandsettings(void);
     pub fn savestatsandsettings(&mut self) {
-        println!("DEADBEEF: Game::savestatsandsettings not implemented yet");
+        warn!("DEADBEEF: Game::savestatsandsettings not implemented yet");
     }
 
     // void Game::savestatsandsettings_menu(void);
     pub fn savestatsandsettings_menu(&mut self) {
-        println!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
+        warn!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
     }
 
     // void Game::deletesettings(void);
     pub fn deletesettings(&mut self) {
-        println!("DEADBEEF: Game::deletesettings() method not implemented yet");
+        warn!("DEADBEEF: Game::deletesettings() method not implemented yet");
     }
 
     // void Game::deletequick(void);
     pub fn deletequick(&mut self) {
-        println!("DEADBEEF: Game::deletequick() method not implemented yet");
+        warn!("DEADBEEF: Game::deletequick() method not implemented yet");
     }
 
     // bool Game::savetele(void);
@@ -4235,7 +4235,7 @@ impl Game {
             return false;
         }
 
-        println!("DEADBEEF: Game::savetele() method not fully implemented yet");
+        warn!("DEADBEEF: Game::savetele() method not fully implemented yet");
         // tinyxml2::XMLDocument doc;
         // let already_exists = fs.FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", doc);
         // if !already_exists {
@@ -4255,17 +4255,17 @@ impl Game {
 
     // void Game::loadtele(void);
     pub fn loadtele(&mut self) {
-        println!("DEADBEEF: Game::loadtele() method not implemented yet");
+        warn!("DEADBEEF: Game::loadtele() method not implemented yet");
     }
 
     // void Game::deletetele(void);
     pub fn deletetele(&mut self) {
-        println!("DEADBEEF: Game::deletetele() method not implemented yet");
+        warn!("DEADBEEF: Game::deletetele() method not implemented yet");
     }
 
     // void Game::customstart(void);
     pub fn customstart(&mut self) {
-        println!("DEADBEEF: Game::customstart() method not implemented yet");
+        warn!("DEADBEEF: Game::customstart() method not implemented yet");
     }
 
     // void Game::start(void);
@@ -4292,17 +4292,17 @@ impl Game {
 
     // void Game::startspecial(int t);
     pub fn startspecial(&mut self, t: i32) {
-        println!("DEADBEEF: Game::startspecial() method not implemented yet");
+        warn!("DEADBEEF: Game::startspecial() method not implemented yet");
     }
 
     // void Game::starttrial(int t);
     pub fn starttrial(&mut self, t: i32) {
-        println!("DEADBEEF: Game::starttrial() method not implemented yet");
+        warn!("DEADBEEF: Game::starttrial() method not implemented yet");
     }
 
     // void Game::swnpenalty(void);
     pub fn swnpenalty(&mut self) {
-        println!("DEADBEEF: Game::swnpenalty() method not implemented yet");
+        warn!("DEADBEEF: Game::swnpenalty() method not implemented yet");
     }
 
     // void Game::deathsequence(void);
@@ -4365,33 +4365,33 @@ impl Game {
 
     // void Game::customloadquick(std::string savfile);
     pub fn customloadquick(&mut self, savfile: &str) {
-        println!("DEADBEEF: Game::customloadquick() method not implemented yet");
+        warn!("DEADBEEF: Game::customloadquick() method not implemented yet");
     }
 
     // void Game::loadquick(void);
     pub fn loadquick(&mut self) {
-        println!("DEADBEEF: Game::loadquick() method not implemented yet");
+        warn!("DEADBEEF: Game::loadquick() method not implemented yet");
     }
 
     // void Game::loadsummary(void);
     pub fn loadsummary(&mut self) {
-        println!("DEADBEEF: Game::loadsummary() method not implemented yet");
+        warn!("DEADBEEF: Game::loadsummary() method not implemented yet");
     }
 
     // void Game::readmaingamesave(tinyxml2::XMLDocument& doc);
     pub fn readmaingamesave(&mut self, doc: i32) {
-        println!("DEADBEEF: Game::readmaingamesave() method not implemented yet");
+        warn!("DEADBEEF: Game::readmaingamesave() method not implemented yet");
     }
 
     // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
     pub fn Game(&mut self, doc: i32) -> &'static str {
-        println!("DEADBEEF: ::string Game() method not implemented yet");
+        warn!("DEADBEEF: ::string Game() method not implemented yet");
         &""
     }
 
     // void Game::initteleportermode(void);
     pub fn initteleportermode(&mut self) {
-        println!("DEADBEEF: Game::initteleportermode() method not implemented yet");
+        warn!("DEADBEEF: Game::initteleportermode() method not implemented yet");
     }
 
     // void Game::mapmenuchange(const int newgamestate);
@@ -4423,7 +4423,7 @@ impl Game {
 
     // void Game::copyndmresults(void);
     pub fn copyndmresults(&mut self) {
-        println!("DEADBEEF: Game::copyndmresults() method not implemented yet");
+        warn!("DEADBEEF: Game::copyndmresults() method not implemented yet");
     }
 
     // int Game::trinkets(void);
@@ -4441,7 +4441,7 @@ impl Game {
 
     // int Game::crewmates(void);
     pub fn crewmates(&self, obj: &entity::EntityClass) -> i32 {
-        println!("DEADBEEF: Game::crewmates method not implemented yet");
+        warn!("DEADBEEF: Game::crewmates method not implemented yet");
 
         // let temp = 0;
         // // for (size_t i = 0; i < SDL_arraysize(obj.customcollect); i++)
@@ -4480,7 +4480,7 @@ impl Game {
     // void Game::clearcustomlevelstats(void);
     // void Game::loadcustomlevelstats(void);
     pub fn loadcustomlevelstats(&self) {
-        println!("DEADBEEF: Game::loadcustomlevelstats() method not implemented yet");
+        warn!("DEADBEEF: Game::loadcustomlevelstats() method not implemented yet");
     }
 
     // void Game::savecustomlevelstats(void);
@@ -4559,7 +4559,7 @@ impl Game {
     // void Game::returntoingame(void)
     pub fn returntoingame(&mut self, graphics: &mut graphics::Graphics) {
         // TODO @sx @impl
-        println!("DEADBEEF: Game::returntoingame is not implemented yet");
+        warn!("DEADBEEF: Game::returntoingame is not implemented yet");
 
         self.ingame_titlemode = false;
         self.mapheld = true;
@@ -4583,7 +4583,7 @@ impl Game {
 
     // void Game::unlockAchievement(const char *name);
     pub fn unlockAchievement(&mut self, name: &str) {
-        println!("DEADBEEF: Game::unlockAchievement() method not implemented yet");
+        warn!("DEADBEEF: Game::unlockAchievement() method not implemented yet");
     }
 }
 

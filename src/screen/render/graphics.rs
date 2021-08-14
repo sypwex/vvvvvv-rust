@@ -339,7 +339,7 @@ impl Graphics {
 
     // void Graphics::Makebfont(void)
     fn make_bfont(&mut self) {
-        println!("DEADBEEF: Graphics::Makebfont not implemented yet");
+        warn!("DEADBEEF: Graphics::Makebfont not implemented yet");
 
         // PROCESS_TILESHEET(self.grphx.bfont, 8, {
         //     SDL_Surface* TempFlipped = FlipSurfaceVerticle(temp);
@@ -3043,8 +3043,7 @@ impl Graphics {
 
     // void Graphics::reloadresources(void)
     pub fn reload_resources(&mut self, music: &mut music::Music, fs: &mut filesystem::FileSystem) {
-        // TODO @sx @impl
-        println!("DEADBEEF: Graphics::reloadresources not fully implemented yet");
+        warn!("DEADBEEF: Graphics::reloadresources not fully implemented yet");
 
         // grphx.destroy();
         // grphx.init();
