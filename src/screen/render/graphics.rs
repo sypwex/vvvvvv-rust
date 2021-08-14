@@ -3057,21 +3057,6 @@ impl Graphics {
 
         // images.clear();
 
-        // images.push_back(grphx.im_image0);
-        // images.push_back(grphx.im_image1);
-        // images.push_back(grphx.im_image2);
-        // images.push_back(grphx.im_image3);
-        // images.push_back(grphx.im_image4);
-        // images.push_back(grphx.im_image5);
-        // images.push_back(grphx.im_image6);
-
-        // images.push_back(grphx.im_image7);
-        // images.push_back(grphx.im_image8);
-        // images.push_back(grphx.im_image9);
-        // images.push_back(grphx.im_image10);
-        // images.push_back(grphx.im_image11);
-        // images.push_back(grphx.im_image12);
-
         // if screenbuffer != NULL {
         //     screenbuffer.LoadIcon();
         // }
