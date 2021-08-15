@@ -1,4 +1,4 @@
-use crate::{entity, game::{self, MenuName}, key_poll, map, music, scenes::RenderResult, script, utility_class};
+use crate::{entity, game::{self, MenuName}, key_poll, map, maths, music, scenes::RenderResult, script, utility_class};
 
 use self::graphics::graphics_util;
 pub mod graphics;
@@ -50,8 +50,55 @@ impl Render {
     }
 
     // static void volumesliderrender(void)
-    fn volumesliderrender(&self) {
-        println!("DEADBEEF(render.rs): volumesliderrender not implemented yet");
+    fn volumesliderrender(&mut self, game: &game::Game, music: &music::Music) {
+        let volume = match game.currentmenuoption {
+            0 => {
+                *music.user_music_volume
+            },
+            1 => {
+                *music.user_sound_volume
+            },
+            _ => {
+                error!("Unhandled volume slider menu option!");
+                return;
+            },
+        };
+
+        // char slider[20 + 1];
+        // VVV_fillstring(slider, sizeof(slider), '.');
+        // int slider_length = sizeof(slider) - 1;
+        // int symbol_length = sizeof(symbol) - 1;
+        // int num_positions = slider_length - symbol_length + 1;
+        const symbol: &str = "[]";
+        let slider_length = 21;
+        let symbol_length = 2;
+        let num_positions = slider_length - symbol_length;
+
+        let offset = num_positions * volume / music::USER_VOLUME_MAX;
+        let offset = maths::clamp(offset, 0, slider_length - symbol_length) as usize;
+        let slider = format!("{:.<1$}[]", "", offset);
+        let slider = format!("{}{:.<2$}", slider, "", slider_length as usize - offset - 2);
+
+        // char buffer[40 + 1];
+        // if game.slidermode == slidermode::SLIDER_NONE {
+        //     SDL_strlcpy(buffer, slider, sizeof(buffer));
+        // } else {
+        //     /* Draw selection brackets. */
+        //     SDL_snprintf(buffer, sizeof(buffer), "[ %s ]", slider);
+        // }
+        let buffer = match game.slidermode {
+            game::SLIDERMODE::SLIDER_NONE => {
+                // SDL_strlcpy(buffer, slider, sizeof(buffer));
+                slider
+            },
+            _ => {
+                /* Draw selection brackets. */
+                // SDL_snprintf(buffer, sizeof(buffer), "[ %s ]", slider);
+                format!("[ {} ]", slider)
+            },
+        };
+
+        self.graphics.print(-1, 85, &buffer, self.tr, self.tg, self.tb, Some(true));
     }
 
     // static void menurender(void)
@@ -234,12 +281,12 @@ impl Render {
                     0 => {
                         self.graphics.bigprint(-1, 30, "Music Volume", tr, tg, tb, Some(true), None);
                         self.graphics.print(-1, 65, "Change the volume of the music.", tr, tg, tb, Some(true));
-                        self.volumesliderrender();
+                        self.volumesliderrender(game, music);
                     },
                     1 => {
                         self.graphics.bigprint(-1, 30, "Sound Volume", tr, tg, tb, Some(true), None);
                         self.graphics.print(-1, 65, "Change the volume of sound effects.", tr, tg, tb, Some(true));
-                        self.volumesliderrender();
+                        self.volumesliderrender(game, music);
                     },
                     // 2 => {
                     //     if music.mmmmmm {
@@ -259,7 +306,7 @@ impl Render {
                     //         self.graphics.print(-1, 85, buffer, tr, tg, tb, Some(true));
                     //     }
                     // },
-                    _ => println!("menuen not implemented yet"),
+                    _ => warn!("menuen not implemented yet"),
                 }
             },
             MenuName::credits => {

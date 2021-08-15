@@ -626,45 +626,46 @@ fn loop_end(music: &mut music::Music, map: &mut map::Map, game: &mut game::Game,
     // We did editorinput, now it's safe to turn this off
     key.linealreadyemptykludge = false;
 
-    // TODO @sx
     // Mute button
-    // if key.isDown(KEYBOARD_m) && game.mutebutton<=0 && !key.textentry() {
-    //     game.mutebutton = 8;
-    //     if game.muted {
-    //         game.muted = false;
-    //     } else {
-    //         game.muted = true;
-    //     }
-    // }
-    // if game.mutebutton > 0 {
-    //     game.mutebutton -= 1;
-    // }
+    if key.isDownKeycode(sdl2::keyboard::Keycode::M) && game.mutebutton <= 0 && !key.textentry() {
+        game.mutebutton = 8;
+        if game.muted {
+            game.muted = false;
+        } else {
+            game.muted = true;
+        }
+    }
+    if game.mutebutton > 0 {
+        game.mutebutton -= 1;
+    }
 
-    // if key.isDown(KEYBOARD_n) && game.musicmutebutton <= 0 && !key.textentry() {
-    //     game.musicmutebutton = 8;
-    //     game.musicmuted = !game.musicmuted;
-    // }
-    // if game.musicmutebutton > 0 {
-    //     game.musicmutebutton -= 1;
-    // }
+    if key.isDownKeycode(sdl2::keyboard::Keycode::N) && game.musicmutebutton <= 0 && !key.textentry() {
+        game.musicmutebutton = 8;
+        game.musicmuted = !game.musicmuted;
+    }
+    if game.musicmutebutton > 0 {
+        game.musicmutebutton -= 1;
+    }
 
-    // if game.muted {
-    //     Mix_VolumeMusic(0);
-    //     Mix_Volume(-1,0);
-    // } else {
-    //     Mix_Volume(-1,MIX_MAX_VOLUME * music.user_sound_volume / USER_VOLUME_MAX);
+    unsafe {
+        if game.muted {
+            sdl2_sys::mixer::Mix_VolumeMusic(0);
+            sdl2_sys::mixer::Mix_Volume(-1, 0);
+        } else {
+            sdl2_sys::mixer::Mix_Volume(-1, sdl2_sys::mixer::MIX_MAX_VOLUME as i32 * *music.user_sound_volume / music::USER_VOLUME_MAX);
 
-    //     if game.musicmuted {
-    //         Mix_VolumeMusic(0);
-    //     } else {
-    //         Mix_VolumeMusic(music.musicVolume * music.user_music_volume / USER_VOLUME_MAX);
-    //     }
-    // }
+            if game.musicmuted {
+                sdl2_sys::mixer::Mix_VolumeMusic(0);
+            } else {
+                sdl2_sys::mixer::Mix_VolumeMusic(music.musicVolume * *music.user_music_volume / music::USER_VOLUME_MAX);
+            }
+        }
+    }
 
-    // if key.resetWindow {
-    //     key.resetWindow = false;
-    //     gameScreen.ResizeScreen(-1, -1);
-    // }
+    if key.resetWindow {
+        key.resetWindow = false;
+        gameScreen.ResizeScreen(-1, -1);
+    }
 
     LoopCode::LoopContinue
 }

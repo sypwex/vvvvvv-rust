@@ -77,7 +77,7 @@ impl KeyPoll {
     // void KeyPoll::disabletextentry(void)
 
     // bool KeyPoll::textentry(void)
-    fn textentry(&mut self) -> bool {
+    pub fn textentry(&mut self) -> bool {
         unsafe {
             sdl2_sys::SDL_IsTextInputActive() == SDL_TRUE
         }

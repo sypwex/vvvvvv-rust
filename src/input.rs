@@ -1,6 +1,6 @@
 use sdl2::keyboard::Keycode;
 
-use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics::{self, graphics_util}}, script::{self, scripts}, utility_class};
+use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, maths, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics::{self, graphics_util}}, script::{self, scripts}, utility_class};
 
 pub struct Input {
     fadetomode: bool,
@@ -79,17 +79,16 @@ impl Input {
                             /* Cancel volume change. */
                             game::SLIDERMODE::SLIDER_MUSICVOLUME | game::SLIDERMODE::SLIDER_SOUNDVOLUME => {
                                 match self.user_changing_volume {
-                                    None => {
-                                        self.user_changing_volume = Some(self.previous_volume);
-                                        deinitvolumeslider();
+                                    Some(ref mut volume) => {
+                                        *volume = self.previous_volume;
+                                        self.deinitvolumeslider(game);
                                     },
-                                    Some(v) => {
-                                        // TODO @sx
-                                        // SDL_assert(0 && "user_changing_volume is NULL!");
-                                    }
+                                    None => {
+                                        warn!("user_changing_volume is NULL!");
+                                    },
                                 }
                             },
-                            _ => {},
+                            _ => warn!("Unhandled slider mode!"),
                         }
                     } else if game.ingame_titlemode && game.currentmenuname == game::MenuName::options {
                         game.returntoingame(&mut screen.render.graphics);
@@ -108,7 +107,7 @@ impl Input {
                         game.currentmenuoption += 1;
                     }
                 } else {
-                    slidermodeinput();
+                    self.slidermodeinput(game, music);
                 }
             }
 
@@ -1271,14 +1270,12 @@ impl Input {
             },
             MenuName::audiooptions => {
                 match game.currentmenuoption {
-                    0 => {
-                    },
-                    1 => {
+                    0 | 1 => {
                         music.playef(11);
                         if game.slidermode == SLIDERMODE::SLIDER_NONE {
-                            initvolumeslider(game.currentmenuoption);
+                            self.initvolumeslider(game.currentmenuoption, game, music);
                         } else {
-                            deinitvolumeslider();
+                            self.deinitvolumeslider(game);
                         }
                     },
                     2 => {
@@ -1293,7 +1290,7 @@ impl Input {
                         }
                         game.savestatsandsettings_menu();
                     },
-                    _ => println!("unknown menu option"),
+                    _ => warn!("unknown menu option"),
                 };
 
                 if game.currentmenuoption == 2 + music.mmmmmm as i32 {
@@ -2006,6 +2003,56 @@ impl Input {
             _ => println!("{:?} menu option not implemented yet", game.currentmenuname),
         };
     }
+
+    // static void initvolumeslider(const int menuoption)
+    fn initvolumeslider(&mut self, menuoption: i32, game: &mut game::Game, music: &mut music::Music) {
+        match menuoption {
+            0 => {
+                game.slidermode = game::SLIDERMODE::SLIDER_MUSICVOLUME;
+                self.user_changing_volume = Some(*music.user_music_volume);
+                self.previous_volume = *music.user_music_volume;
+            },
+            1 => {
+                game.slidermode = game::SLIDERMODE::SLIDER_SOUNDVOLUME;
+                self.user_changing_volume = Some(*music.user_sound_volume);
+                self.previous_volume = *music.user_sound_volume;
+            },
+            _ => {
+                warn!("Unhandled volume slider option!");
+                game.slidermode = game::SLIDERMODE::SLIDER_NONE;
+                self.user_changing_volume = None;
+            }
+        }
+    }
+
+    // static void deinitvolumeslider(void)
+    fn deinitvolumeslider(&mut self, game: &mut game::Game) {
+        self.user_changing_volume = None;
+        game.savestatsandsettings_menu();
+        game.slidermode = game::SLIDERMODE::SLIDER_NONE;
+    }
+
+    // static void slidermodeinput(void)
+    fn slidermodeinput(&mut self, game: &mut game::Game, music: &mut music::Music) {
+        let volume = match game.slidermode {
+            game::SLIDERMODE::SLIDER_MUSICVOLUME => &mut music.user_music_volume,
+            game::SLIDERMODE::SLIDER_SOUNDVOLUME => &mut music.user_sound_volume,
+            _ => {
+                warn!("Unhandled volume slider option!");
+                // warn!("user_changing_volume is NULL!");
+                return
+            },
+        };
+
+        if game.press_left {
+            **volume = **volume - music::USER_VOLUME_STEP;
+        } else if game.press_right {
+            **volume = **volume + music::USER_VOLUME_STEP;
+        };
+
+        **volume = maths::clamp(**volume, 0, music::USER_VOLUME_MAX);
+        self.user_changing_volume = Some(**volume);
+    }
 }
 
 // static void updatebuttonmappings(int bind)
@@ -2158,21 +2205,6 @@ fn toggleflipmode(game: &mut game::Game, graphics: &mut graphics::Graphics, musi
     } else {
         music.playef(11);
     }
-}
-
-// static void initvolumeslider(const int menuoption)
-fn initvolumeslider(menuoption: i32) {
-    println!("DEADBEEF(input.rs): input::initvolumeslider is not implemented yet");
-}
-
-// static void deinitvolumeslider(void)
-fn deinitvolumeslider() {
-    println!("DEADBEEF(input.rs): input::deinitvolumeslider is not implemented yet");
-}
-
-// static void slidermodeinput(void)
-fn slidermodeinput() {
-    println!("DEADBEEF(input.rs): input::slidermodeinput is not implemented yet");
 }
 
 // static void mapmenuactionpress(void)

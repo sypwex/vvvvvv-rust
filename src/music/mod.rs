@@ -27,11 +27,11 @@ pub struct Music {
     safeToProcessMusic: bool,
     m_doFadeInVol: bool,
     m_doFadeOutVol: bool,
-    musicVolume: i32,
+    pub musicVolume: i32,
     FadeVolAmountPerFrame: i32,
 
-    user_music_volume: i32,
-    user_sound_volume: i32,
+    pub user_music_volume: Box<i32>,
+    pub user_sound_volume: Box<i32>,
 
     nicechange: i32,
     nicefade: bool,
@@ -64,8 +64,8 @@ impl Music {
             musicVolume: 0,
             FadeVolAmountPerFrame: 0,
 
-            user_music_volume: USER_VOLUME_MAX,
-            user_sound_volume: USER_VOLUME_MAX,
+            user_music_volume: Box::new(USER_VOLUME_MAX),
+            user_sound_volume: Box::new(USER_VOLUME_MAX),
 
             nicechange: -1,
             nicefade: false,
@@ -280,13 +280,13 @@ impl Music {
                 } else {
                     self.quick_fade = true;
                 }
-            // } else if let Err(s) = self.musicTracks.get(t as usize).unwrap().m_music.play(-1) {
             } else if let Some(track) = self.musicTracks.get(t as usize) {
-                if let Err(s) = track.play(-1) {
-                    eprintln!("Mix_PlayMusic: {}", s);
+                match track.play(-1) {
+                    Ok(_) => {
+                        self.fadeMusicVolumeIn(3000, game);
+                    },
+                    Err(s) => eprintln!("Mix_PlayMusic: {}", s),
                 }
-            } else {
-                self.fadeMusicVolumeIn(3000, game);
             }
         }
     }
