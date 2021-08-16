@@ -1,5 +1,7 @@
 use std::{fs::create_dir_all, path::{Path, PathBuf}};
 
+use quick_xml::Error;
+
 use crate::sdl2u;
 extern crate physfs;
 extern crate sdl2_sys;
@@ -78,14 +80,14 @@ impl FileSystem {
         info!("Base directory: {}", output.to_string_lossy());
 
         /* Store full save directory */
-        let saveDir = output.join("saves").join(pathSep);
+        let saveDir = output.join("saves/");
         match create_dir_all(&saveDir) {
             Ok(_) => info!("Save directory available @{}", saveDir.to_string_lossy()),
             Err(s) => error!("Unable to create save dir with message: {}", s),
         };
 
         /* Store full level directory */
-        let levelDir = output.join("levels").join(pathSep);
+        let levelDir = output.join("levels/");
         match create_dir_all(&levelDir) {
             Ok(_) => info!("Level directory available @{}", levelDir.to_string_lossy()),
             Err(s) => error!("Unable to create level dir with message: {}", s),
@@ -187,11 +189,43 @@ impl FileSystem {
     // bool FILESYSTEM_isAssetMounted(const char* filename)
     // void FILESYSTEM_freeMemory(unsigned char **mem);
     // void FILESYSTEM_loadFileToMemory(const char *name, unsigned char **mem, size_t *len, bool addnull)
+    pub fn FILESYSTEM_loadFileToMemory() {
+       warn!("DEADBEEF: FILESYSTEM_loadFileToMemory method not implemented yet");
+    }
+
     // void FILESYSTEM_loadAssetToMemory(const char* name, unsigned char** mem, size_t* len, const bool addnull)
     // void FILESYSTEM_freeMemory(unsigned char **mem)
 
     // bool FILESYSTEM_saveTiXml2Document(const char *name, tinyxml2::XMLDocument& doc)
+    pub fn FILESYSTEM_saveTiXml2Document(&mut self, name: &str, xml: Vec<u8>) -> bool {
+        let saveDir = self.saveDir.clone().unwrap().clone().to_str().unwrap().to_owned();
+        let path = saveDir + name;
+        info!("FILESYSTEM_saveTiXml2Document: writing {} bytes into {}", xml.len(), path);
+        std::fs::write(path, xml).expect("error while writing save");
+
+        true
+    }
+
     // bool FILESYSTEM_loadTiXml2Document(const char *name, tinyxml2::XMLDocument& doc)
+    pub fn FILESYSTEM_loadTiXml2Document(&mut self, name: &str) -> Result<quick_xml::Reader<std::io::BufReader<std::fs::File>>, Error> {
+        // TODO: @sx WTF, needs refactor...
+        let saveDir = self.saveDir.clone().unwrap().clone().to_str().unwrap().to_owned();
+        let path = saveDir + name;
+        info!("loading save file from {:?}", path);
+        quick_xml::Reader::from_file(path)
+    }
+    pub fn savefile_exists(&mut self, name: &str) -> bool {
+        let saveDir = self.saveDir.clone().unwrap().clone().to_str().unwrap().to_owned();
+        let path = saveDir + name;
+        Path::new(&path).exists()
+    }
+
+    // pub fn get_savefile_writer(&mut self, name: &str) -> quick_xml::Writer<std::io::BufWriter<std::fs::File>> {
+    //     let saveDir = self.saveDir.clone().unwrap().clone().to_str().unwrap().to_owned();
+    //     let path = saveDir + name;
+    //     quick_xml::Writer::new(std::io::Cursor::new(Vec::new()));
+    // }
+
     // static PHYSFS_EnumerateCallbackResult enumerateCallback(void* data, const char* origdir, const char* filename)
     // void FILESYSTEM_enumerateLevelDirFileNames(void (*callback)(const char* filename))
     // bool FILESYSTEM_openDirectoryEnabled(void)

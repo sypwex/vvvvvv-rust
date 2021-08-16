@@ -1,7 +1,7 @@
 use crate::{INBOUNDS_VEC, entity, filesystem, game, map, maths, music, scenes::RenderResult, screen::{self, render::graphics, renderfixed}, script, utility_class};
 
 
-pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams) -> Result<Option<RenderResult>, i32> {
+pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game::Game, renderfixed: &mut renderfixed::RenderFixed, graphics: &mut graphics::Graphics, screen_params: screen::ScreenParams, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
     //Misc
     //map.updatetowerglow(&mut graphics.buffers.titlebg);
     renderfixed.update_glow();
@@ -21,7 +21,7 @@ pub fn titlelogic(map: &mut map::Map, music: &mut music::Music, game: &mut game:
                 music.playef(3);
             }
 
-            game.createmenu(game.menudest, Some(true), graphics, music, screen_params, map);
+            game.createmenu(game.menudest, Some(true), graphics, music, screen_params, map, screen_settings, fs);
         }
     }
 
@@ -43,7 +43,7 @@ pub fn gamecompletelogic2() -> Result<Option<RenderResult>, i32> {
     Ok(None)
 }
 
-pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, screen_params: screen::ScreenParams, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
+pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass , help: &mut utility_class::UtilityClass, script: &mut script::ScriptClass, screen_params: screen::ScreenParams, fs: &mut filesystem::FileSystem, screen_settings: screen::ScreenSettings) -> Result<Option<RenderResult>, i32> {
     /* Update old lerp positions of entities */
     for i in 0..obj.entities.len() {
         obj.entities[i].lerpoldxp = obj.entities[i].xp;
@@ -295,7 +295,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     game.swnrecord = game.swntimer;
                     if game.swnmessage == 0 {
                         music.playef(25);
-                        game.savestatsandsettings();
+                        game.savestatsandsettings(screen_settings, fs, music);
                     }
                     game.swnmessage = 1;
                 }
@@ -356,7 +356,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
             }
         }
         //State machine for game logic
-        game.updatestate(graphics, script, obj, music, map, screen_params, help, fs);
+        game.updatestate(graphics, script, obj, music, map, screen_params, help, fs, screen_settings);
         if game.startscript {
             script::scripts::load(script, &game.newscript);
             game.startscript = false;

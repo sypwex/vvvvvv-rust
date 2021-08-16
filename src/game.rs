@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::{INBOUNDS_VEC, entity, filesystem, map, maths, music, screen::{self, render::graphics}, script, utility_class};
+use crate::{INBOUNDS_VEC, entity, filesystem, map, maths, music, screen::{self, render::graphics}, script, utility_class, xml};
 
 pub const numcrew: usize = 6;
 const numunlock: usize = 25;
@@ -306,7 +306,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map, fs: &mut filesystem::FileSystem) -> Game {
+    pub fn new(graphics: &mut graphics::Graphics, music: &mut music::Music, screen_params: screen::ScreenParams, map: &mut map::Map, fs: &mut filesystem::FileSystem, screen_settings: screen::ScreenSettings) -> Game {
         let mut game = Game {
             door_left: 0,
             door_right: 0,
@@ -659,7 +659,7 @@ impl Game {
             inputdelay: false,
         };
 
-        game.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map);
+        game.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map, screen_settings, fs);
 
         game
     }
@@ -827,13 +827,13 @@ impl Game {
     }
 
     // void Game::returnmenu(void);
-    pub fn returnmenu(&mut self, graphics: &mut graphics::Graphics, music: &mut music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) {
+    pub fn returnmenu(&mut self, graphics: &mut graphics::Graphics, music: &mut music::Music, screen_params: screen::ScreenParams, map: &mut map::Map, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem) {
         match self.menustack.pop() {
             Some(frame) => {
                 // Store this in case createmenu() removes the stack frame
                 let previousoption = frame.option;
 
-                self.createmenu(frame.name, Some(true), graphics, music, screen_params, map);
+                self.createmenu(frame.name, Some(true), graphics, music, screen_params, map, screen_settings, fs);
                 self.currentmenuoption = previousoption;
 
                 // @sx: looks like don't need it
@@ -853,7 +853,7 @@ impl Game {
     }
 
     // void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
-    pub fn createmenu(&mut self, t: MenuName, samemenu: Option<bool>, graphics: &mut graphics::Graphics, music: &music::Music, screen_params: screen::ScreenParams, map: &mut map::Map) {
+    pub fn createmenu(&mut self, t: MenuName, samemenu: Option<bool>, graphics: &mut graphics::Graphics, music: &mut music::Music, screen_params: screen::ScreenParams, map: &mut map::Map, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem) {
         let samemenu = samemenu.unwrap_or(false);
         if t == MenuName::mainmenu {
             //Either we've just booted up the game or returned from gamemode
@@ -1140,15 +1140,13 @@ impl Game {
                     }
 
                     if temp == 1 {
-                        self.createmenu(MenuName::unlocktimetrial, Some(true), graphics, music, screen_params, map);
-                        self.savestatsandsettings();
-                    } else  if temp > 1 {
-                        self.createmenu(MenuName::unlocktimetrials, Some(true), graphics, music, screen_params, map);
-                        self.savestatsandsettings();
+                        self.createmenu(MenuName::unlocktimetrial, Some(true), graphics, music, screen_params, map, screen_settings, fs);
+                        self.savestatsandsettings(screen_settings, fs, music);
+                    } else if temp > 1 {
+                        self.createmenu(MenuName::unlocktimetrials, Some(true), graphics, music, screen_params, map, screen_settings, fs);
+                        self.savestatsandsettings(screen_settings, fs, music);
                     }
-                }
-                else
-                {
+                } else {
                     //Alright, we haven't self.unlocked any time trials. How about no death mode?
                     temp = 0;
                     if self.bestrank[0] >= 2 { temp += 1 }
@@ -1161,22 +1159,22 @@ impl Game {
                         //Unlock No Death Mode
                         self.unlocknotify[17] = true;
                         self.unlock[17] = true;
-                        self.createmenu(MenuName::unlocknodeathmode, Some(true), graphics, music, screen_params, map);
-                        self.savestatsandsettings();
+                        self.createmenu(MenuName::unlocknodeathmode, Some(true), graphics, music, screen_params, map, screen_settings, fs);
+                        self.savestatsandsettings(screen_settings, fs, music);
                     }
                     //Alright then! Flip mode?
                     else if self.unlock[5] && !self.unlocknotify[18] {
                         self.unlock[18] = true;
                         self.unlocknotify[18] = true;
-                        self.createmenu(MenuName::unlockflipmode, Some(true), graphics, music, screen_params, map);
-                        self.savestatsandsettings();
+                        self.createmenu(MenuName::unlockflipmode, Some(true), graphics, music, screen_params, map, screen_settings, fs);
+                        self.savestatsandsettings(screen_settings, fs, music);
                     }
                     //What about the intermission levels?
                     else if self.unlock[7] && !self.unlocknotify[16] {
                         self.unlock[16] = true;
                         self.unlocknotify[16] = true;
-                        self.createmenu(MenuName::unlockintermission, Some(true), graphics, music, screen_params, map);
-                        self.savestatsandsettings();
+                        self.createmenu(MenuName::unlockintermission, Some(true), graphics, music, screen_params, map, screen_settings, fs);
+                        self.savestatsandsettings(screen_settings, fs, music);
                     } else {
                         if self.save_exists() {
                             self.add_menu_option("continue", None);
@@ -1467,7 +1465,7 @@ impl Game {
     }
 
     // void Game::updatestate(void);
-    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, music: &mut music::Music, map: &mut map::Map, screen_params: screen::ScreenParams, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) {
+    pub fn updatestate(&mut self, graphics: &mut graphics::Graphics, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, music: &mut music::Music, map: &mut map::Map, screen_params: screen::ScreenParams, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem, screen_settings: screen::ScreenSettings) {
         self.statedelay -= 1;
         if self.statedelay <= 0 {
             self.statedelay = 0;
@@ -2039,7 +2037,7 @@ impl Game {
                     }
                 },
                 81 => {
-                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    self.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
                     music.play(6, map, self); //should be after quittomenu()
                     self.state = 0;
                 },
@@ -2088,7 +2086,7 @@ impl Game {
                         }
                     }
 
-                    self.savestatsandsettings();
+                    self.savestatsandsettings(screen_settings, fs, music);
 
                     graphics.fademode = 2;
                     music.fadeout(None, self);
@@ -2099,8 +2097,8 @@ impl Game {
                     if graphics.fademode == 1 { self.state += 1; }
                 },
                 84 => {
-                    self.quittomenu(graphics, map, script, music, obj, screen_params);
-                    self.createmenu(MenuName::timetrialcomplete, None, graphics, music, screen_params, map);
+                    self.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
+                    self.createmenu(MenuName::timetrialcomplete, None, graphics, music, screen_params, map, screen_settings, fs);
                     self.state = 0;
                 },
 
@@ -2505,7 +2503,7 @@ impl Game {
                     //     }
                     // }
                     // // #endif
-                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    self.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
                     music.play(6, map, self); //should be after quittomenu()
                     self.state = 0;
                 },
@@ -3035,7 +3033,7 @@ impl Game {
                     if graphics.fademode == 1 { self.state += 1; }
                 },
                 3101 => {
-                    self.quittomenu(graphics, map, script, music, obj, screen_params);
+                    self.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
                     music.play(6, map, self); //should be after quittomenu();
                     self.state = 0;
                 },
@@ -3148,7 +3146,7 @@ impl Game {
                         }
                     }
 
-                    self.savestatsandsettings();
+                    self.savestatsandsettings(screen_settings, fs, music);
                     if self.nodeathmode {
                         self.unlockAchievement("vvvvvvmaster"); //bloody hell
                         self.unlocknum(20);
@@ -3250,8 +3248,8 @@ impl Game {
                 },
                 3522 => {
                     self.copyndmresults();
-                    self.quittomenu(graphics, map, script, music, obj, screen_params);
-                    self.createmenu(MenuName::nodeathmodecomplete, None, graphics, music, screen_params, map);
+                    self.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
+                    self.createmenu(MenuName::nodeathmodecomplete, None, graphics, music, screen_params, map, screen_settings, fs);
                     self.state = 0;
                 },
 
@@ -4155,12 +4153,238 @@ impl Game {
     }
 
     // void Game::loadstats(ScreenSettings* screen_settings);
-    pub fn loadstats(&mut self, screen_settings: &mut screen::ScreenSettings) {
-        println!("DEADBEEF: Game::loadstats() not implemented yet");
+    pub fn loadstats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) {
+        trace!("loading stats");
+        let doc = fs.FILESYSTEM_loadTiXml2Document("unlock.vvv");
+
+        match doc {
+            Ok(mut reader) => {
+                reader.trim_text(true);
+                let mut buf = Vec::new();
+
+                let mut tag: String = String::new();
+                loop {
+                    match reader.read_event(&mut buf) {
+                        Ok(quick_xml::events::Event::Start(ref e)) => {
+                            match String::from_utf8(e.name().to_vec()) {
+                                Ok(v) => tag = v,
+                                Err(_) => tag = String::new(),
+                            }
+                        },
+                        Ok(quick_xml::events::Event::Text(text)) => {
+                            if tag.len() == 0 {
+                                continue;
+                            }
+
+                            match text.unescape_and_decode(&reader) {
+                                Ok(text) => {
+                                    let v = text.as_str();
+                                    match tag.as_str() {
+                                        // "unlock"
+                                        // "unlocknotify"
+                                        // "besttimes"
+                                        // "bestframes"
+                                        // "besttrinkets"
+                                        // "bestlives"
+                                        // "bestrank"
+                                        // "bestgamedeaths"
+                                        // "stat_trinkets"
+                                        // "swnbestrank"
+                                        // "swnrecord"
+                                        // "fullscreen"
+                                        // "stretch"
+                                        // "useLinearFilter"
+                                        // "window_width"
+                                        // "window_height"
+                                        // "noflashingmode"
+                                        // "colourblindmode"
+                                        // "setflipmode"
+                                        // "invincibility"
+                                        // "slowdown"
+                                        // "advanced_smoothing"
+                                        // "usingmmmmmm"
+                                        // "ghostsenabled"
+                                        // "skipfakeload"
+                                        // "disablepause"
+                                        // "notextoutline"
+                                        // "translucentroomname"
+                                        // "over30mode"
+                                        // "inputdelay"
+                                        // "glitchrunnermode"
+                                        // "vsync"
+                                        "musicvolume" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => music.user_music_volume = Box::new(v),
+                                                Err(s) => error!("error while parsing musicvolume value: {}", s),
+                                            };
+                                        },
+                                        "soundvolume" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => music.user_sound_volume = Box::new(v),
+                                                Err(s) => error!("error while parsing soundvolume value: {}", s),
+                                            };
+                                        },
+                                        // "controllerSensitivity"
+                                        // "flipButton"
+                                        // "enterButton"
+                                        // "escButton"
+                                        // "restartButton"
+                                        _ => info!("parsing {:?} tag not implemented", tag),
+                                    }
+
+                                },
+                                Err(_) => continue,
+                            }
+                        },
+                        Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+                        Ok(quick_xml::events::Event::Eof) => break,
+                        _ => (),
+                    }
+                    buf.clear();
+                }
+
+                // let pElem = hDoc.FirstChildElement().ToElement();
+                // // should always have a valid root but handle gracefully if it does
+                // // save this for later
+                // let hRoot = tinyxml2::XMLHandle(pElem);
+
+                // tinyxml2::XMLElement* dataNode = hRoot.FirstChildElement("Data").FirstChild().ToElement();
+
+                // for pElem = dataNode; pElem; pElem=pElem.NextSiblingElement() {
+                //     const char* pKey = pElem.Value();
+                //     const char* pText = pElem.GetText() ;
+
+                //     if pText == NULL {
+                //         pText = "";
+                //     }
+
+                //     LOAD_ARRAY(unlock)
+                //     LOAD_ARRAY(unlocknotify)
+                //     LOAD_ARRAY(besttimes)
+                //     LOAD_ARRAY(bestframes)
+                //     LOAD_ARRAY(besttrinkets)
+                //     LOAD_ARRAY(bestlives)
+                //     LOAD_ARRAY(bestrank)
+
+                //     if SDL_strcmp(pKey, "bestgamedeaths") == 0 {
+                //         bestgamedeaths = help.Int(pText);
+                //     }
+
+                //     if SDL_strcmp(pKey, "stat_trinkets") == 0 {
+                //         stat_trinkets = help.Int(pText);
+                //     }
+
+                //     if SDL_strcmp(pKey, "swnbestrank") == 0 {
+                //         swnbestrank = help.Int(pText);
+                //     }
+
+                //     if SDL_strcmp(pKey, "swnrecord") == 0 {
+                //         swnrecord = help.Int(pText);
+                //     }
+                // }
+
+                // self.deserializesettings(dataNode, screen_settings);
+            },
+            Err(xml_err) => {
+                match xml_err {
+                    quick_xml::Error::Io(io_err) => {
+                        match io_err.kind() {
+                            std::io::ErrorKind::NotFound => {
+                                trace!("{:?}", io_err);
+                                info!("No Stats found. Assuming a new player");
+
+                                // Save unlock.vvv only. Maybe we have a settings.vvv laying around too,
+                                // and we don't want to overwrite that!
+                                self.savestats(screen_settings, fs, music);
+                            },
+                            _ => panic!(io_err),
+                        }
+                    },
+                    _ => panic!(xml_err), // @sx probably this should not happen
+                }
+            },
+        }
+
     }
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
+    pub fn savestats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
+        trace!("savestats");
+        if fs.savefile_exists("unlock.vvv") {
+            info!("No unlock.vvv found. Creating new file");
+        }
+
+        let mut wrapper = xml::xml::new();
+        wrapper.update_declaration();
+        wrapper.write_start_tag("Save");
+        wrapper.update_comment(" Save file ");
+        wrapper.write_start_tag("Data");
+
+        // let s_unlock = String::new();
+        // for el in self.unlock {
+        //     s_unlock = [ s_unlock, help.String(el), "," ].concat();
+        // }
+        // xml::update_tag(dataNode, "unlock", s_unlock);
+        // let tag = "unlock";
+        // let s = self.s_unlock;
+        // writer.write_event(quick_xml::events::Event::Start(quick_xml::events::BytesStart::borrowed(tag.as_bytes(), tag.len())));
+        // writer.write_event(quick_xml::events::Event::Text(quick_xml::events::BytesText::from_plain_str(s)));
+        // writer.write_event(quick_xml::events::Event::End(quick_xml::events::BytesEnd::borrowed(tag.as_bytes())));
+
+        // let s_unlocknotify = String::new();
+        // for el in self.unlocknotify {
+        //     s_unlocknotify = [ s_unlocknotify, help.String(el), "," ].concat();
+        // }
+        // xml::update_tag(dataNode, "unlocknotify", s_unlocknotify);
+
+        // let s_besttimes = String::new();
+        // for el in self.besttimes  {
+        //     s_besttimes = [ s_besttimes, help.String(el), "," ].concat();
+        // }
+        // xml::update_tag(dataNode, "besttimes", s_besttimes);
+
+        // let s_bestframes = String::new();
+        // for el in self.bestframes {
+        //     s_bestframes = [s_bestframes, help.String(el), ","].concat();
+        // }
+        // xml::update_tag(dataNode, "bestframes", s_bestframes);
+
+
+
+
+
+        // let s_besttrinkets = String::new();
+        // for(size_t i = 0; i < SDL_arraysize(besttrinkets); i++ ) {
+        //     s_besttrinkets += help.String(besttrinkets[i]) + ",";
+        // }
+        // xml::update_tag(dataNode, "besttrinkets", s_besttrinkets);
+
+        // let s_bestlives = String::new();
+        // for(size_t i = 0; i < SDL_arraysize(bestlives); i++ ) {
+        //     s_bestlives += help.String(bestlives[i]) + ",";
+        // }
+        // xml::update_tag(dataNode, "bestlives", s_bestlives);
+
+        // let s_bestrank = String::new();
+        // for(size_t i = 0; i < SDL_arraysize(bestrank); i++ ) {
+        //     s_bestrank += help.String(bestrank[i]) + ",";
+        // }
+        // xml::update_tag(dataNode, "bestrank", s_bestrank);
+        // xml::update_tag(dataNode, "bestgamedeaths", bestgamedeaths);
+        // xml::update_tag(dataNode, "stat_trinkets", stat_trinkets);
+        // xml::update_tag(dataNode, "swnbestrank", swnbestrank);
+        // xml::update_tag(dataNode, "swnrecord", swnrecord);
+
+        // self.serializesettings(dataNode, screen_settings);
+        wrapper.update_tag("musicvolume", &music.user_music_volume.to_string());
+        wrapper.update_tag("soundvolume", &music.user_sound_volume.to_string());
+        wrapper.write_end_tag("Data");
+        wrapper.write_end_tag("Save");
+
+        return fs.FILESYSTEM_saveTiXml2Document("unlock.vvv", wrapper.writer.into_inner().into_inner());
+    }
+
     pub fn savestats_settings(&mut self, screen_settings: screen::ScreenSettings) {
        warn!("DEADBEEF: Game::savestats_settings() method not implemented yet");
     }
@@ -4207,15 +4431,24 @@ impl Game {
 
     // bool Game::savesettings(const ScreenSettings* screen_settings);
     // bool Game::savesettings(void);
+    pub fn savesettings(&mut self) -> bool {
+        warn!("DEADBEEF: Game::savesettings not implemented yet");
+
+        true
+    }
 
     // bool Game::savestatsandsettings(void);
-    pub fn savestatsandsettings(&mut self) {
-        warn!("DEADBEEF: Game::savestatsandsettings not implemented yet");
+    pub fn savestatsandsettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
+        let stats_saved = self.savestats(screen_settings, fs, music);
+        let settings_saved = self.savesettings();
+        return stats_saved && settings_saved; // Not the same as `savestats() && savesettings()`!
     }
 
     // void Game::savestatsandsettings_menu(void);
-    pub fn savestatsandsettings_menu(&mut self) {
+    pub fn savestatsandsettings_menu(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) {
         warn!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
+
+        self.savestatsandsettings(screen_settings, fs, music);
     }
 
     // void Game::deletesettings(void);
@@ -4487,7 +4720,7 @@ impl Game {
     // void Game::updatecustomlevelstats(std::string clevel, int cscore);
 
     // void Game::quittomenu(void);
-    pub fn quittomenu(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, script: &mut script::ScriptClass, music: &mut music::Music, obj: &mut entity::EntityClass, screen_params: screen::ScreenParams) {
+    pub fn quittomenu(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, script: &mut script::ScriptClass, music: &mut music::Music, obj: &mut entity::EntityClass, screen_params: screen::ScreenParams, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem) {
         self.gamestate = GameState::TITLEMODE;
         graphics.fademode = 4;
         // FILESYSTEM_unmountAssets();
@@ -4519,7 +4752,7 @@ impl Game {
                 self.currentmenuoption = 0;
             }
         } else {
-            self.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map);
+            self.createmenu(MenuName::mainmenu, Some(false), graphics, music, screen_params, map, screen_settings, fs);
         }
 
         script.hardreset(self, map, graphics, obj);

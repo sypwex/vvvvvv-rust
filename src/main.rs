@@ -37,6 +37,7 @@ use screen::render::graphics;
 mod script;
 mod utility_class;
 use utility_class::UtilityClass;
+mod xml;
 
 fn print_logo() {
     println!("\t\t");
@@ -147,12 +148,12 @@ impl Main {
         };
         // NETWORK_init();
 
-        let mut screen_settings = screen::ScreenSettings::new();
         let mut gameScreen = screen::Screen::new(&sdl_context);
+        let screen_params = gameScreen.get_screen_params();
+        let screen_settings = gameScreen.screen_settings;
         let mut map = map::Map::new(&mut gameScreen.render.graphics);
         let mut music = music::Music::new();
-        let screen_params = gameScreen.get_screen_params();
-        let mut game = game::Game::new(&mut gameScreen.render.graphics, &music, screen_params, &mut map, &mut fs);
+        let mut game = game::Game::new(&mut gameScreen.render.graphics, &mut music, screen_params, &mut map, &mut fs, screen_settings);
 
         //Set up screen
         //Load Ini
@@ -174,9 +175,9 @@ impl Main {
 
         // Prioritize unlock.vvv first (2.2 and below),
         // but settings have been migrated to settings.vvv (2.3 and up)
-        game.loadstats(&mut screen_settings);
-        game.loadsettings(&mut screen_settings);
-        gameScreen.init(&mut screen_settings);
+        game.loadstats(screen_settings, &mut fs, &mut music);
+        game.loadsettings(screen_settings);
+        gameScreen.init(screen_settings);
 
         // graphics.create_buffers(gameScreen.GetFormat());
 
@@ -509,7 +510,7 @@ impl Drop for Main {
     fn drop(&mut self) {
         eprintln!("Drop The Main!");
         /* Order matters! */
-        self.game.savestatsandsettings();
+        self.game.savestatsandsettings(self.gameScreen.screen_settings, &mut self.fs, &mut self.music);
         // gameScreen.destroy();
         // graphics.grphx.destroy();
         // graphics.destroy_buffers();
@@ -674,6 +675,7 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
     // println!("current scene function: {:?}", fnname);
 
     let screen_params = gameScreen.get_screen_params();
+    let screen_settings = gameScreen.screen_settings;
 
     match fnname {
         Fns::focused_begin => focused_begin(),
@@ -685,22 +687,22 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
         Fns::preloaderrender => preloader.render(&mut gameScreen.render.graphics),
 
         // GameState::TITLEMODE
-        Fns::titleinput => input.titleinput(music, map, game, gameScreen, key, screen_params, script, obj, help),
+        Fns::titleinput => input.titleinput(music, map, game, gameScreen, key, script, obj, help, fs),
         Fns::titlerenderfixed => gameScreen.renderfixed.titlerenderfixed(map, game, &mut gameScreen.render.graphics),
         Fns::titlerender => gameScreen.render.titlerender(game, music, map, help, key, screen_params),
-        Fns::titlelogic => logic::titlelogic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params),
+        Fns::titlelogic => logic::titlelogic(map, music, game, &mut gameScreen.renderfixed, &mut gameScreen.render.graphics, screen_params, screen_settings, fs),
 
         // GameState::GAMEMODE
         Fns::runscript => script.run(game, obj, map, &mut gameScreen.render.graphics, help, music, key, fs),
         Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(obj, game, map, &mut gameScreen.render.graphics, script, help),
         Fns::gamerender => gameScreen.render.gamerender(game, map, help, obj),
         Fns::gameinput => input.gameinput(game, &mut gameScreen.render.graphics, map, music, key, obj, script, help),
-        Fns::gamelogic => logic::gamelogic(game, &mut gameScreen.render.graphics, map, music, obj, help, script, screen_params, fs),
+        Fns::gamelogic => logic::gamelogic(game, &mut gameScreen.render.graphics, map, music, obj, help, script, screen_params, fs, screen_settings),
 
         // GameState::MAPMODE
         Fns::maprenderfixed => gameScreen.renderfixed.maprenderfixed(&mut gameScreen.render.graphics, game, map, script),
         Fns::maprender => gameScreen.render.maprender(map, help, game, script, obj),
-        Fns::mapinput => input.mapinput(game, &mut gameScreen.render.graphics, obj, script, music, map, screen_params, help, key),
+        Fns::mapinput => input.mapinput(game, &mut gameScreen.render.graphics, obj, script, music, map, help, key, fs, screen_params, screen_settings),
         Fns::maplogic => logic::maplogic(help),
 
         // GameState::TELEPORTERMODE

@@ -1,6 +1,6 @@
 use sdl2::keyboard::Keycode;
 
-use crate::{INBOUNDS_VEC, entity, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, maths, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics::{self, graphics_util}}, script::{self, scripts}, utility_class};
+use crate::{INBOUNDS_VEC, entity, filesystem, game::{self, GameState, MenuName, SLIDERMODE}, key_poll, map, maths, music, scenes::RenderResult, screen::{self, ScreenParams, render::graphics::{self, graphics_util}}, script::{self, scripts}, utility_class};
 
 pub struct Input {
     fadetomode: bool,
@@ -21,7 +21,9 @@ impl Input {
         }
     }
 
-    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: screen::ScreenParams, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
+    pub fn titleinput (&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, script: &mut script::ScriptClass, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
+        let screen_params = screen.get_screen_params();
+        let screen_settings = screen.screen_settings;
         // @sx: disabled in original code
         // game.mx = (mouseX / 4);
         // game.my = (mouseY / 4);
@@ -71,7 +73,7 @@ impl Input {
             if game.menustart && game.menucountdown <= 0 && (key.isDownKeycode(Keycode::Escape) || key.isDownVec(&game.controllerButton_esc)) {
                 music.playef(11);
                 if game.currentmenuname == game::MenuName::mainmenu {
-                    game.createmenu(game::MenuName::youwannaquit, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(game::MenuName::youwannaquit, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else {
                     if game.slidermode != game::SLIDERMODE::SLIDER_NONE {
@@ -81,7 +83,7 @@ impl Input {
                                 match self.user_changing_volume {
                                     Some(ref mut volume) => {
                                         *volume = self.previous_volume;
-                                        self.deinitvolumeslider(game);
+                                        self.deinitvolumeslider(game, screen_settings, fs, music);
                                     },
                                     None => {
                                         warn!("user_changing_volume is NULL!");
@@ -93,7 +95,7 @@ impl Input {
                     } else if game.ingame_titlemode && game.currentmenuname == game::MenuName::options {
                         game.returntoingame(&mut screen.render.graphics);
                     } else {
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 }
@@ -126,7 +128,7 @@ impl Input {
                     game.screenshake = 10;
                     game.flashlight = 5;
                 } else {
-                    self.menuactionpress(music, map, game, screen, key, screen_params);
+                    self.menuactionpress(music, map, game, screen, key, fs);
                 }
             }
             if game.currentmenuname == game::MenuName::controller &&
@@ -457,7 +459,7 @@ impl Input {
         Ok(None)
     }
 
-    pub fn mapinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, music: &mut music::Music, map: &mut map::Map, screen_params: screen::ScreenParams, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) -> Result<Option<RenderResult>, i32> {
+    pub fn mapinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, music: &mut music::Music, map: &mut map::Map, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll, fs: &mut filesystem::FileSystem, screen_params: ScreenParams, screen_settings: screen::ScreenSettings) -> Result<Option<RenderResult>, i32> {
         //TODO Mouse Input!
         //game.mx = (mouseX / 2);
         //game.my = (mouseY / 2);
@@ -503,7 +505,7 @@ impl Input {
             if game.fadetomenudelay > 0 {
                 game.fadetomenudelay -= 1;
             } else {
-                game.quittomenu(graphics, map, script, music, obj, screen_params);
+                game.quittomenu(graphics, map, script, music, obj, screen_params, screen_settings, fs);
                 music.play(6, map, game); //should be after game.quittomenu()
                 game.fadetomenu = false;
             }
@@ -585,7 +587,7 @@ impl Input {
             }
 
             if game.press_action {
-                mapmenuactionpress(game, graphics, map, music, obj, help, screen_params);
+                mapmenuactionpress(game, graphics, map, music, obj, help, fs, screen_params, screen_settings);
             }
 
             if game.menupage < 0 { game.menupage = 3; }
@@ -751,7 +753,10 @@ impl Input {
     }
 
     // static void menuactionpress(void)
-    fn menuactionpress(&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, screen_params: ScreenParams) {
+    fn menuactionpress(&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, fs: &mut filesystem::FileSystem) {
+        let screen_settings = screen.screen_settings;
+        let screen_params = screen.get_screen_params();
+
         match game.currentmenuname {
             MenuName::mainmenu => {
                 // #if defined(MAKEANDPLAY)
@@ -778,7 +783,7 @@ impl Input {
                         } else {
                             // Bring you to the normal playmenu
                             music.playef(11);
-                            game.createmenu(MenuName::play, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                            game.createmenu(MenuName::play, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                             map.nexttowercolour(&mut screen.render.graphics);
                         }
                     },
@@ -787,21 +792,21 @@ impl Input {
                     1 => { // OFFSET+1
                         // Bring you to the normal playmenu
                         music.playef(11);
-                        game.createmenu(MenuName::playerworlds, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::playerworlds, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     // #endif
                     2 => { // OFFSET+2
                         // Options
                         music.playef(11);
-                        game.createmenu(MenuName::options, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::options, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     // #if !defined(MAKEANDPLAY)
                     3 => { // OFFSET+3
                         // Credits
                         music.playef(11);
-                        game.createmenu(MenuName::credits, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     // #else
@@ -810,7 +815,7 @@ impl Input {
                     // #endif
                     4 => { // OFFSET+4
                         music.playef(11);
-                        game.createmenu(MenuName::youwannaquit, Some(false), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::youwannaquit, Some(false), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     // #undef OFFSET
@@ -827,7 +832,7 @@ impl Input {
                 if game.currentmenuoption == game.menuoptions.len() as i32 - 1 {
                     //go back to menu
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == game.menuoptions.len() as i32 - 2 {
                     //previous page
@@ -837,7 +842,7 @@ impl Input {
                     // } else {
                     //     game.levelpage -= 1;
                     // }
-                    game.createmenu(MenuName::levellist, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::levellist, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     game.currentmenuoption = game.menuoptions.len() as i32 - 2;
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == game.menuoptions.len() as i32 - 3 {
@@ -849,7 +854,7 @@ impl Input {
                     //     game.levelpage += 1;
                     // }
                     println!("method not fully implemented");
-                    game.createmenu(MenuName::levellist, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::levellist, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     game.currentmenuoption = game.menuoptions.len() as i32 - 3;
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else {
@@ -886,7 +891,7 @@ impl Input {
                     },
                     2 => {
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => panic!("incorrect menuoption"),
@@ -907,7 +912,7 @@ impl Input {
                         game.levelpage = 0;
                         // ed.getDirectoryData();
                         game.loadcustomlevelstats(); // Should only load a file if it's needed
-                        game.createmenu(MenuName::levellist, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::levellist, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     // #if !defined(NO_EDITOR)
@@ -930,7 +935,7 @@ impl Input {
                     3 => { // OFFSET+3
                         // back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -946,21 +951,21 @@ impl Input {
                         screen.toggleFullScreen();
 
                         // Recreate menu to update "resize to nearest"
-                        game.createmenu(game.currentmenuname, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(game.currentmenuname, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
 
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     1 => {
                         music.playef(11);
                         screen.toggleStretchMode();
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     2 => {
                         // resize to nearest multiple
                         if screen.isWindowed {
                             music.playef(11);
                             screen.ResizeToNearestMultiple();
-                            game.savestatsandsettings_menu();
+                            game.savestatsandsettings_menu(screen_settings, fs, music);
                         } else {
                             music.playef(2);
                         }
@@ -968,13 +973,13 @@ impl Input {
                     3 => {
                         music.playef(11);
                         screen.toggleLinearFilter();
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     4 => {
                         //change smoothing
                         music.playef(11);
                         screen.badSignalEffect= !screen.badSignalEffect;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     5 => {
                         //toggle vsync
@@ -982,13 +987,13 @@ impl Input {
                         // #ifndef __HAIKU__ // FIXME: Remove after SDL VSync bug is fixed! -flibit
                         screen.vsync = !screen.vsync;
                         screen.resetRendererWorkaround();
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                         // #endif
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1002,7 +1007,7 @@ impl Input {
                     },
                     _ => {
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1012,15 +1017,15 @@ impl Input {
                     0 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
                         map.invincibility = !map.invincibility;
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                 };
             },
@@ -1030,29 +1035,29 @@ impl Input {
                         //back
                         game.slowdown = 30;
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     1 => {
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     2 => {
                         game.slowdown = 18;
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     3 => {
                         game.slowdown = 12;
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     _ => println!("unknown menu option"),
                 };
@@ -1063,24 +1068,24 @@ impl Input {
                         // Glitchrunner mode
                         music.playef(11);
                         game.glitchrunnermode = !game.glitchrunnermode;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     1 => {
                         /* Input delay */
                         music.playef(11);
                         game.inputdelay = !game.inputdelay;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     2 => {
                         // toggle fake load screen
                         game.skipfakeload = !game.skipfakeload;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                         music.playef(11);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                 };
@@ -1090,19 +1095,19 @@ impl Input {
                     0 => {
                         // toggle unfocus pause
                         game.disablepause = !game.disablepause;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                         music.playef(11);
                     },
                     1 => {
                         // toggle translucent roomname BG
                         screen.render.graphics.translucentroomname = !screen.render.graphics.translucentroomname;
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                         music.playef(11);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                 };
@@ -1116,7 +1121,7 @@ impl Input {
                 if game.currentmenuoption == 0 {
                     //unlock play options
                     music.playef(11);
-                    game.createmenu(MenuName::unlockmenu, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::unlockmenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 }
                 // #endif
@@ -1124,11 +1129,11 @@ impl Input {
                     //invincibility
                     if !game.ingame_titlemode || (!game.insecretlab && !game.intimetrial && !game.nodeathmode) {
                         if !map.invincibility {
-                            game.createmenu(MenuName::setinvincibility, None, &mut screen.render.graphics, music, screen_params, map);
+                            game.createmenu(MenuName::setinvincibility, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                             map.nexttowercolour(&mut screen.render.graphics);
                         } else {
                             map.invincibility = !map.invincibility;
-                            game.savestatsandsettings_menu();
+                            game.savestatsandsettings_menu(screen_settings, fs, music);
                         }
                         music.playef(11);
                     } else {
@@ -1138,7 +1143,7 @@ impl Input {
                 } else if game.currentmenuoption == accessibilityoffset + 1 {
                     //change game speed
                     if !game.ingame_titlemode || (!game.insecretlab && !game.intimetrial && !game.nodeathmode) {
-                        game.createmenu(MenuName::setslowdown, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::setslowdown, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                         music.playef(11);
                     } else {
@@ -1148,14 +1153,14 @@ impl Input {
                 } else if game.currentmenuoption == accessibilityoffset + 2 {
                     //disable animated backgrounds
                     game.colourblindmode = !game.colourblindmode;
-                    game.savestatsandsettings_menu();
+                    game.savestatsandsettings_menu(screen_settings, fs, music);
                     screen.render.graphics.buffers.towerbg.tdrawback = true;
                     screen.render.graphics.buffers.titlebg.tdrawback = true;
                     music.playef(11);
                 } else if game.currentmenuoption == accessibilityoffset + 3 {
                     //disable screeneffects
                     game.noflashingmode = !game.noflashingmode;
-                    game.savestatsandsettings_menu();
+                    game.savestatsandsettings_menu(screen_settings, fs, music);
                     if !game.noflashingmode {
                         music.playef(18);
                         game.screenshake = 10;
@@ -1166,12 +1171,12 @@ impl Input {
                 } else if game.currentmenuoption == accessibilityoffset + 4 {
                     //disable text outline
                     screen.render.graphics.notextoutline = !screen.render.graphics.notextoutline;
-                    game.savestatsandsettings_menu();
+                    game.savestatsandsettings_menu(screen_settings, fs, music);
                     music.playef(11);
                 } else if game.currentmenuoption == accessibilityoffset + 5 {
                     //back
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 }
             },
@@ -1182,7 +1187,7 @@ impl Input {
                 // #endif
                     gameplayoptionsoffset = 1;
                     if game.currentmenuoption == 0 {
-                        toggleflipmode(game, &mut screen.render.graphics, music);
+                        toggleflipmode(game, &mut screen.render.graphics, music, screen_settings, fs);
                         // Fix wrong area music in Tower (Positive Force vs. ecroF evitisoP)
                         if !map.custommode {
                             let area = map.area(game.roomx, game.roomy);
@@ -1201,26 +1206,26 @@ impl Input {
                     //Toggle 30+ FPS
                     music.playef(11);
                     game.over30mode = !game.over30mode;
-                    game.savestatsandsettings_menu();
+                    game.savestatsandsettings_menu(screen_settings, fs, music);
                 } else if game.currentmenuoption == gameplayoptionsoffset + 1 {
                     //Speedrunner options
                     music.playef(11);
-                    game.createmenu(MenuName::speedrunneroptions, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::speedrunneroptions, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == gameplayoptionsoffset + 2 {
                     //Advanced options
                     music.playef(11);
-                    game.createmenu(MenuName::advancedoptions, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::advancedoptions, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == gameplayoptionsoffset + 3 {
                     //Clear Data
                     music.playef(11);
-                    game.createmenu(MenuName::cleardatamenu, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::cleardatamenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == gameplayoptionsoffset + 4 {
                     //return to previous menu
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 }
             },
@@ -1229,31 +1234,31 @@ impl Input {
                     0 => {
                         //gameplay options
                         music.playef(11);
-                        game.createmenu(MenuName::gameplayoptions, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::gameplayoptions, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         //graphic options
                         music.playef(11);
-                        game.createmenu(MenuName::graphicoptions, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::graphicoptions, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     2 => {
                         /* Audio options */
                         music.playef(11);
-                        game.createmenu(MenuName::audiooptions, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::audiooptions, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     3 => {
                         //gamepad options
                         music.playef(11);
-                        game.createmenu(MenuName::controller, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::controller, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     4 => {
                         //accessibility options
                         music.playef(11);
-                        game.createmenu(MenuName::accessibility, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::accessibility, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
@@ -1262,7 +1267,7 @@ impl Input {
                         if game.ingame_titlemode {
                             game.returntoingame(&mut screen.render.graphics);
                         } else {
-                            game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                            game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                             map.nexttowercolour(&mut screen.render.graphics);
                         }
                     }
@@ -1275,7 +1280,7 @@ impl Input {
                         if game.slidermode == SLIDERMODE::SLIDER_NONE {
                             self.initvolumeslider(game.currentmenuoption, game, music);
                         } else {
-                            self.deinitvolumeslider(game);
+                            self.deinitvolumeslider(game, screen_settings, fs, music);
                         }
                     },
                     2 => {
@@ -1288,14 +1293,14 @@ impl Input {
                         if music.currentsong > -1 {
                             music.play(music.currentsong, map, game);
                         }
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     _ => warn!("unknown menu option"),
                 };
 
                 if game.currentmenuoption == 2 + music.mmmmmm as i32 {
                     /* Return */
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 }
             },
@@ -1306,53 +1311,53 @@ impl Input {
                         game.unlock[9] = true;
                         game.unlocknotify[9] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     1 => {
                         //unlock 2
                         game.unlock[10] = true;
                         game.unlocknotify[10] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     2 => {
                         //unlock 3
                         game.unlock[11] = true;
                         game.unlocknotify[11] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     3 => {
                         //unlock 4
                         game.unlock[12] = true;
                         game.unlocknotify[12] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     4 => {
                         //unlock 5
                         game.unlock[13] = true;
                         game.unlocknotify[13] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     5 => {
                         //unlock 6
                         game.unlock[14] = true;
                         game.unlocknotify[14] = true;
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenutrials, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     6 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => println!("unkown menu option"),
@@ -1363,7 +1368,7 @@ impl Input {
                     0 => {
                         //unlock time trials separately...
                         music.playef(11);
-                        game.createmenu(MenuName::unlockmenutrials, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::unlockmenutrials, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
@@ -1373,44 +1378,44 @@ impl Input {
                         game.unlocknotify[16] = true;
                         game.unlock[6] = true;
                         game.unlock[7] = true;
-                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     2 => {
                         //unlock no death mode
                         music.playef(11);
                         game.unlock[17] = true;
                         game.unlocknotify[17] = true;
-                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     3 => {
                         //unlock flip mode
                         music.playef(11);
                         game.unlock[18] = true;
                         game.unlocknotify[18] = true;
-                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     4 => {
                         //unlock jukebox
                         music.playef(11);
                         game.stat_trinkets = 20;
-                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     5 => {
                         //unlock secret lab
                         music.playef(11);
                         game.unlock[8] = true;
                         game.unlocknotify[8] = true;
-                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map);
-                        game.savestatsandsettings_menu();
+                        game.createmenu(MenuName::unlockmenu, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1421,19 +1426,19 @@ impl Input {
                     0 => {
                         //next page
                         music.playef(11);
-                        game.createmenu(MenuName::credits2, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits2, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         //last page
                         music.playef(11);
-                        game.createmenu(MenuName::credits6, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits6, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1443,19 +1448,19 @@ impl Input {
                     0 => {
                         //next page
                         music.playef(11);
-                        game.createmenu(MenuName::credits25, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits25, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         //previous page
                         music.playef(11);
-                        game.createmenu(MenuName::credits, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     2 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                     _ => (),
@@ -1466,19 +1471,19 @@ impl Input {
                     0 => {
                         //next page
                         music.playef(11);
-                        game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         //previous page
                         music.playef(11);
-                        game.createmenu(MenuName::credits2, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits2, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1493,10 +1498,10 @@ impl Input {
                         // if game.current_credits_list_index >= SDL_arraysize(Credits::superpatrons) {
                         //     // No more super patrons. Move to the next credits section
                         //     game.current_credits_list_index = 0;
-                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // } else {
                         //     // There are more super patrons. Refresh the menu with the next ones
-                        //     game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // }
                         println!("DEADBEEF(input.rs): not implemented yet");
 
@@ -1510,10 +1515,10 @@ impl Input {
                         if game.current_credits_list_index < 0 {
                             //No more super patrons. Move to the previous credits section
                             game.current_credits_list_index = 0;
-                            game.createmenu(MenuName::credits25, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                            game.createmenu(MenuName::credits25, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         } else {
                             //There are more super patrons. Refresh the menu with the next ones
-                            game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                            game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         }
 
                         map.nexttowercolour(&mut screen.render.graphics);
@@ -1522,7 +1527,7 @@ impl Input {
                         //back
                         music.playef(11);
                         game.current_credits_list_index = 0;
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1537,10 +1542,10 @@ impl Input {
                         // if game.current_credits_list_index >= SDL_arraysize(Credits::patrons) {
                         //     // No more patrons. Move to the next credits section
                         //     game.current_credits_list_index = 0;
-                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // } else {
                         //     // There are more patrons. Refresh the menu with the next ones
-                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // }
                         println!("DEADBEEF(input.rs): not implemented yet");
 
@@ -1554,10 +1559,10 @@ impl Input {
                         // if game.current_credits_list_index < 0 {
                         //     //No more patrons. Move to the previous credits section
                         //     game.current_credits_list_index = SDL_arraysize(Credits::superpatrons) - 1 - (SDL_arraysize(Credits::superpatrons)-1)%9;
-                        //     game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits3, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // } else {
                         //     //There are more patrons. Refresh the menu with the next ones
-                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // }
                         println!("DEADBEEF(input.rs): not implemented yet");
 
@@ -1567,7 +1572,7 @@ impl Input {
                         //back
                         music.playef(11);
                         game.current_credits_list_index = 0;
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1582,10 +1587,10 @@ impl Input {
                         // if game.current_credits_list_index >= SDL_arraysize(Credits::githubfriends) {
                         //     // No more GitHub contributors. Move to the next credits section
                         //     game.current_credits_list_index = 0;
-                        //     game.createmenu(MenuName::credits6, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits6, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // } else {
                         //     // There are more GitHub contributors. Refresh the menu with the next ones
-                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // }
                         println!("DEADBEEF(input.rs): not implemented yet");
 
@@ -1599,10 +1604,10 @@ impl Input {
                         // if game.current_credits_list_index < 0 {
                         //     //No more GitHub contributors. Move to the previous credits section
                         //     game.current_credits_list_index = SDL_arraysize(Credits::patrons) - 1 - (SDL_arraysize(Credits::patrons)-1)%14;
-                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits4, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // } else {
                         //     //There are more GitHub contributors. Refresh the menu with the next ones
-                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        //     game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         // }
                         println!("DEADBEEF(input.rs): not implemented yet");
 
@@ -1612,7 +1617,7 @@ impl Input {
                         //back
                         music.playef(11);
                         game.current_credits_list_index = 0;
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1622,7 +1627,7 @@ impl Input {
                     0 => {
                         //first page
                         music.playef(11);
-                        game.createmenu(MenuName::credits, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
@@ -1630,13 +1635,13 @@ impl Input {
                         music.playef(11);
                         // game.current_credits_list_index = SDL_arraysize(Credits::githubfriends) - 1 - (SDL_arraysize(Credits::githubfriends)-1)%9;
                         println!("DEADBEEF(input.rs): not implemented yet");
-                        game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::credits5, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1667,7 +1672,7 @@ impl Input {
                         //go to a menu!
                         music.playef(11);
                         game.loadsummary(); //Prepare save slots to display
-                        game.createmenu(MenuName::continuemenu, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::continuemenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     }
                 } else if game.currentmenuoption == 1 && game.unlock[8] {
                     if !map.invincibility && game.slowdown == 30 {
@@ -1680,17 +1685,17 @@ impl Input {
                 } else if game.currentmenuoption == sloffset+2 {
                     //play modes
                     music.playef(11);
-                    game.createmenu(MenuName::playmodes, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::playmodes, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == sloffset+3 && game.save_exists() {
                     //newgame
                     music.playef(11);
-                    game.createmenu(MenuName::newgamewarning, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::newgamewarning, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == sloffset+ngoffset+4 {
                     //back
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 }
             },
@@ -1706,7 +1711,7 @@ impl Input {
                     _ => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1719,11 +1724,11 @@ impl Input {
                         if key.sensitivity > 4 {
                             key.sensitivity = 0;
                         }
-                        game.savestatsandsettings_menu();
+                        game.savestatsandsettings_menu(screen_settings, fs, music);
                     },
                     5 => {
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1734,7 +1739,7 @@ impl Input {
                     0 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => {
@@ -1746,7 +1751,7 @@ impl Input {
                         game.deletesettings();
                         game.flashlight = 5;
                         game.screenshake = 15;
-                        game.createmenu(MenuName::mainmenu, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::mainmenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     }
                 };
@@ -1755,25 +1760,25 @@ impl Input {
                 if game.currentmenuoption == 0 && game.slowdown == 30 && !map.invincibility {
                     //go to the time trial menu
                     music.playef(11);
-                    game.createmenu(MenuName::timetrials, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::timetrials, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == 1 && game.unlock[16] {
                     //intermission mode menu
                     music.playef(11);
-                    game.createmenu(MenuName::intermissionmenu, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::intermissionmenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == 2 && game.unlock[17] && game.slowdown == 30 && !map.invincibility {
                     //start a game in no death mode
                     music.playef(11);
-                    game.createmenu(MenuName::startnodeathmode, None, &mut screen.render.graphics, music, screen_params, map);
+                    game.createmenu(MenuName::startnodeathmode, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else if game.currentmenuoption == 3 && game.unlock[18] {
                     //enable/disable flip mode
-                    toggleflipmode(game, &mut screen.render.graphics, music);
+                    toggleflipmode(game, &mut screen.render.graphics, music, screen_settings, fs);
                 } else if game.currentmenuoption == 4 {
                     //back
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else {
                     //Can't do yet! play sad sound
@@ -1794,7 +1799,7 @@ impl Input {
                     2 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1813,7 +1818,7 @@ impl Input {
                     2 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1824,19 +1829,19 @@ impl Input {
                     0 => {
                         music.playef(11);
                         music.play(6, map, game);
-                        game.createmenu(MenuName::playint1, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::playint1, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     1 => {
                         music.playef(11);
                         music.play(6, map, game);
-                        game.createmenu(MenuName::playint2, None, &mut screen.render.graphics, music, screen_params, map);
+                        game.createmenu(MenuName::playint2, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     2 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1863,7 +1868,7 @@ impl Input {
                     4 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1890,7 +1895,7 @@ impl Input {
                     4 => {
                         //back
                         music.playef(11);
-                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                        game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                         map.nexttowercolour(&mut screen.render.graphics);
                     },
                     _ => (),
@@ -1906,7 +1911,7 @@ impl Input {
             MenuName::unlocktimetrials | MenuName::unlocktimetrial | MenuName::unlocknodeathmode | MenuName::unlockintermission | MenuName::unlockflipmode => {
                 //back
                 music.playef(11);
-                game.createmenu(MenuName::play, Some(true), &mut screen.render.graphics, music, screen_params, map);
+                game.createmenu(MenuName::play, Some(true), &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                 map.nexttowercolour(&mut screen.render.graphics);
             },
             MenuName::timetrials => {
@@ -1938,7 +1943,7 @@ impl Input {
                     //go to the time trial menu
                     //back
                     music.playef(11);
-                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                    game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     map.nexttowercolour(&mut screen.render.graphics);
                 } else {
                     //Can't do yet! play sad sound
@@ -1988,7 +1993,7 @@ impl Input {
             MenuName::gamecompletecontinue | MenuName::nodeathmodecomplete2 => {
                 music.play(6, map, game);
                 music.playef(11);
-                game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                 map.nexttowercolour(&mut screen.render.graphics);
             },
             MenuName::errorsavingsettings => {
@@ -1996,7 +2001,7 @@ impl Input {
                     game.silence_settings_error = true;
                 }
                 music.playef(11);
-                game.returnmenu(&mut screen.render.graphics, music, screen_params, map);
+                game.returnmenu(&mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                 map.nexttowercolour(&mut screen.render.graphics);
             },
 
@@ -2026,9 +2031,9 @@ impl Input {
     }
 
     // static void deinitvolumeslider(void)
-    fn deinitvolumeslider(&mut self, game: &mut game::Game) {
+    fn deinitvolumeslider(&mut self, game: &mut game::Game, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) {
         self.user_changing_volume = None;
-        game.savestatsandsettings_menu();
+        game.savestatsandsettings_menu(screen_settings, fs, music);
         game.slidermode = game::SLIDERMODE::SLIDER_NONE;
     }
 
@@ -2194,9 +2199,9 @@ fn updatebuttonmappings(key: &mut key_poll::KeyPoll, game: &mut game::Game, bind
 }
 
 // static void toggleflipmode(void)
-fn toggleflipmode(game: &mut game::Game, graphics: &mut graphics::Graphics, music: &mut music::Music) {
+fn toggleflipmode(game: &mut game::Game, graphics: &mut graphics::Graphics, music: &mut music::Music, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem) {
     graphics.setflipmode = !graphics.setflipmode;
-    game.savestatsandsettings_menu();
+    game.savestatsandsettings_menu(screen_settings, fs, music);
 
     if graphics.setflipmode {
         music.playef(18);
@@ -2208,7 +2213,7 @@ fn toggleflipmode(game: &mut game::Game, graphics: &mut graphics::Graphics, musi
 }
 
 // static void mapmenuactionpress(void)
-fn mapmenuactionpress(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass, screen_params: ScreenParams) {
+fn mapmenuactionpress(game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem, screen_params: ScreenParams, screen_settings: screen::ScreenSettings) {
     match game.menupage {
         1 => {
             if obj.flags[67] && !game.inspecial() && !map.custommode {
@@ -2310,7 +2315,7 @@ fn mapmenuactionpress(game: &mut game::Game, graphics: &mut graphics::Graphics, 
 
             // Set this before we create the menu
             game.kludge_ingametemp = game.currentmenuname;
-            game.createmenu(MenuName::options, None, graphics, music, screen_params, map);
+            game.createmenu(MenuName::options, None, graphics, music, screen_params, map, screen_settings, fs);
             map.nexttowercolour(graphics);
         },
         32 => {
