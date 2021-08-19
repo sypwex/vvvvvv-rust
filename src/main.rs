@@ -176,14 +176,15 @@ impl Main {
         // Prioritize unlock.vvv first (2.2 and below),
         // but settings have been migrated to settings.vvv (2.3 and up)
         game.loadstats(screen_settings, &mut fs, &mut music);
-        game.loadsettings(screen_settings);
+        let mut help = utility_class::UtilityClass::new();
+        let mut key = key_poll::KeyPoll::new();
+        game.loadsettings(&mut fs, &mut music, &mut map, &mut gameScreen, &mut help, &mut key);
+        game.init(&mut music);
         gameScreen.init(screen_settings);
 
         // graphics.create_buffers(gameScreen.GetFormat());
 
-        // @sx: for skipfakeload see Game::init()
-        // if (game.skipfakeload)
-        //     game.gamestate = TITLEMODE;
+        // TODO: @sx
         // if (game.slowdown == 0) game.slowdown = 30;
         // @sx: for unlockAchievement stuff see Game::init()
 
@@ -199,11 +200,11 @@ impl Main {
             // ed: editorclass;
 
             fs,
-            help: utility_class::UtilityClass::new(),
+            help,
             // graphics: graphics::Graphics::new(),
             music,
             game,
-            key: key_poll::KeyPoll::new(),
+            key,
             map,
             obj: entity::EntityClass::new(),
             gameScreen,

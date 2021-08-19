@@ -1,5 +1,5 @@
 use sdl2::controller::Button;
-use crate::{INBOUNDS_VEC, entity, filesystem, map, maths, music, screen::{self, render::graphics}, script, utility_class, xml};
+use crate::{INBOUNDS_VEC, entity, filesystem, key_poll, map, maths, music, screen::{self, render::graphics}, script, utility_class, xml};
 
 pub const numcrew: usize = 6;
 const numunlock: usize = 25;
@@ -671,6 +671,7 @@ impl Game {
 
     // void Game::init(void);
     pub fn init(&mut self, music: &mut music::Music) {
+        // @sx this code was previously located in main.cpp
         // static inline int get_framerate(const int slowdown)
         self.gameframerate = match self.slowdown {
             30 => 34,
@@ -4204,7 +4205,14 @@ impl Game {
                                         // "advanced_smoothing"
                                         // "usingmmmmmm"
                                         // "ghostsenabled"
-                                        // "skipfakeload"
+                                        "skipfakeload" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.skipfakeload = v != 0;
+                                                },
+                                                Err(s) => error!("error while parsing musicvolume value: {}", s),
+                                            };
+                                        },
                                         // "disablepause"
                                         // "notextoutline"
                                         // "translucentroomname"
@@ -4247,17 +4255,17 @@ impl Game {
                 // // should always have a valid root but handle gracefully if it does
                 // // save this for later
                 // let hRoot = tinyxml2::XMLHandle(pElem);
-
+                //
                 // tinyxml2::XMLElement* dataNode = hRoot.FirstChildElement("Data").FirstChild().ToElement();
-
+                //
                 // for pElem = dataNode; pElem; pElem=pElem.NextSiblingElement() {
                 //     const char* pKey = pElem.Value();
                 //     const char* pText = pElem.GetText() ;
-
+                //
                 //     if pText == NULL {
                 //         pText = "";
                 //     }
-
+                //
                 //     LOAD_ARRAY(unlock)
                 //     LOAD_ARRAY(unlocknotify)
                 //     LOAD_ARRAY(besttimes)
@@ -4265,19 +4273,19 @@ impl Game {
                 //     LOAD_ARRAY(besttrinkets)
                 //     LOAD_ARRAY(bestlives)
                 //     LOAD_ARRAY(bestrank)
-
+                //
                 //     if SDL_strcmp(pKey, "bestgamedeaths") == 0 {
                 //         bestgamedeaths = help.Int(pText);
                 //     }
-
+                //
                 //     if SDL_strcmp(pKey, "stat_trinkets") == 0 {
                 //         stat_trinkets = help.Int(pText);
                 //     }
-
+                //
                 //     if SDL_strcmp(pKey, "swnbestrank") == 0 {
                 //         swnbestrank = help.Int(pText);
                 //     }
-
+                //
                 //     if SDL_strcmp(pKey, "swnrecord") == 0 {
                 //         swnrecord = help.Int(pText);
                 //     }
@@ -4376,9 +4384,7 @@ impl Game {
         // xml::update_tag(dataNode, "swnbestrank", swnbestrank);
         // xml::update_tag(dataNode, "swnrecord", swnrecord);
 
-        // self.serializesettings(dataNode, screen_settings);
-        wrapper.update_tag("musicvolume", &music.user_music_volume.to_string());
-        wrapper.update_tag("soundvolume", &music.user_sound_volume.to_string());
+        self.serializesettings(&mut wrapper, screen_settings, music);
         wrapper.write_end_tag("Data");
         wrapper.write_end_tag("Save");
 
@@ -4395,7 +4401,7 @@ impl Game {
     }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
-    fn deserializesettings(&mut self) {
+    fn deserializesettings(&mut self, reader: &mut quick_xml::Reader<std::io::BufReader<std::fs::File>>, music: &mut music::Music, map: &mut map::Map, gameScreen: &mut screen::Screen, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) {
         warn!("DEADBEEF: Game::deserializesettings not fully implemented yet");
 
         // Don't duplicate controller buttons!
@@ -4404,7 +4410,96 @@ impl Game {
         self.controllerButton_esc.clear();
         self.controllerButton_restart.clear();
 
-        // TODO:
+        reader.trim_text(true);
+        let mut buf = Vec::new();
+
+        let mut tag: String = String::new();
+        loop {
+            match reader.read_event(&mut buf) {
+                Ok(quick_xml::events::Event::Start(ref e)) => {
+                    match String::from_utf8(e.name().to_vec()) {
+                        Ok(v) => tag = v,
+                        Err(_) => tag = String::new(),
+                    }
+                },
+                Ok(quick_xml::events::Event::Text(text)) => {
+                    if tag.len() == 0 {
+                        continue;
+                    }
+
+                    match text.unescape_and_decode(&reader) {
+                        Ok(text) => {
+                            let v = text.as_str();
+                            info!("parsing value ({}) into ({}) tag", v, tag);
+                            match tag.as_str() {
+                                "fullscreen" => gameScreen.screen_settings.fullscreen = v == "1",
+                                "stretch" => gameScreen.screen_settings.stretch = i32::from_str_radix(v, 10).unwrap_or(0),
+                                "useLinearFilter" => gameScreen.screen_settings.linearFilter = v == "1",
+                                "window_width" => gameScreen.screen_settings.windowWidth = i32::from_str_radix(v, 10).unwrap_or(320),
+                                "window_height" => gameScreen.screen_settings.windowHeight = i32::from_str_radix(v, 10).unwrap_or(240),
+                                "noflashingmode" => self.noflashingmode = v == "1",
+                                "colourblindmode" => self.colourblindmode = v == "1",
+                                "setflipmode" => gameScreen.render.graphics.setflipmode = v == "1",
+                                "invincibility" => map.invincibility = v == "1",
+                                "slowdown" => self.slowdown = i32::from_str_radix(v, 10).unwrap_or(30),
+                                "advanced_smoothing" => gameScreen.screen_settings.badSignal = v == "1",
+                                "usingmmmmmm" => music.usingmmmmmm = v == "1",
+                                "ghostsenabled" => self.ghostsenabled = v == "1",
+                                "skipfakeload" => self.skipfakeload = v == "1",
+                                "disablepause" => self.disablepause = v == "1",
+                                "over30mode" => self.over30mode = v == "1",
+                                "inputdelay" => self.inputdelay = v == "1",
+                                "glitchrunnermode" => self.glitchrunnermode = v == "1",
+                                "vsync" => gameScreen.screen_settings.useVsync = v == "1",
+                                "notextoutline" => gameScreen.render.graphics.notextoutline = v == "1",
+                                "translucentroomname" => gameScreen.render.graphics.translucentroomname = v == "1",
+                                "musicvolume" => music.user_music_volume = Box::new(i32::from_str_radix(v, 10).unwrap_or(music::USER_VOLUME_MAX)),
+                                "soundvolume" => music.user_sound_volume = Box::new(i32::from_str_radix(v, 10).unwrap_or(music::USER_VOLUME_MAX)),
+
+                                // if SDL_strcmp(pKey, "flipButton") == 0 {
+                                //     SDL_GameControllerButton newButton;
+                                //     if GetButtonFromString(pText, &newButton) {
+                                //         controllerButton_flip.push_back(newButton);
+                                //     }
+                                // }
+
+                                // if SDL_strcmp(pKey, "enterButton") == 0 {
+                                //     SDL_GameControllerButton newButton;
+                                //     if GetButtonFromString(pText, &newButton) {
+                                //         controllerButton_map.push_back(newButton);
+                                //     }
+                                // }
+
+                                // if SDL_strcmp(pKey, "escButton") == 0 {
+                                //     SDL_GameControllerButton newButton;
+                                //     if GetButtonFromString(pText, &newButton) {
+                                //         controllerButton_esc.push_back(newButton);
+                                //     }
+                                // }
+
+                                // if SDL_strcmp(pKey, "restartButton") == 0 {
+                                //     SDL_GameControllerButton newButton;
+                                //     if GetButtonFromString(pText, &newButton)
+                                //     {
+                                //         controllerButton_restart.push_back(newButton);
+                                //     }
+                                // }
+
+                                "controllerSensitivity" => key.sensitivity = i32::from_str_radix(v, 10).unwrap_or(2),
+
+                                _ => info!("parsing {:?} tag not implemented", tag),
+                            }
+
+                        },
+                        Err(_) => continue,
+                    }
+                },
+                Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+                Ok(quick_xml::events::Event::Eof) => break,
+                _ => (),
+            }
+            buf.clear();
+        }
 
         if self.controllerButton_flip.len() < 1 {
             self.controllerButton_flip.push(Button::A);
@@ -4421,26 +4516,137 @@ impl Game {
     }
 
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
+    fn serializesettings(&mut self, wrapper: &mut xml::xml, screen_settings: screen::ScreenSettings, music: &mut music::Music) {
+        warn!("DEADBEEF: Game::serializesettings not implemented yet");
+
+        // xml::update_tag(dataNode, "fullscreen", (int) screen_settings->fullscreen);
+        // xml::update_tag(dataNode, "stretch", screen_settings->stretch);
+        // xml::update_tag(dataNode, "useLinearFilter", (int) screen_settings->linearFilter);
+        // xml::update_tag(dataNode, "window_width", screen_settings->windowWidth);
+        // xml::update_tag(dataNode, "window_height", screen_settings->windowHeight);
+        // xml::update_tag(dataNode, "noflashingmode", noflashingmode);
+        // xml::update_tag(dataNode, "colourblindmode", colourblindmode);
+        // xml::update_tag(dataNode, "setflipmode", graphics.setflipmode);
+        // xml::update_tag(dataNode, "invincibility", map.invincibility);
+        // xml::update_tag(dataNode, "slowdown", slowdown);
+        // xml::update_tag(dataNode, "advanced_smoothing", (int) screen_settings->badSignal);
+        // xml::update_tag(dataNode, "usingmmmmmm", music.usingmmmmmm);
+        // xml::update_tag(dataNode, "ghostsenabled", (int) ghostsenabled);
+        wrapper.update_tag("skipfakeload", if self.skipfakeload { "1" } else { "0" });
+        // xml::update_tag(dataNode, "disablepause", (int) disablepause);
+        // xml::update_tag(dataNode, "notextoutline", (int) graphics.notextoutline);
+        // xml::update_tag(dataNode, "translucentroomname", (int) graphics.translucentroomname);
+        // xml::update_tag(dataNode, "over30mode", (int) over30mode);
+        // xml::update_tag(dataNode, "inputdelay", (int) inputdelay);
+        // xml::update_tag(dataNode, "glitchrunnermode", (int) glitchrunnermode);
+        // xml::update_tag(dataNode, "vsync", (int) screen_settings->useVsync);
+        wrapper.update_tag("musicvolume", &music.user_music_volume.to_string());
+        wrapper.update_tag("soundvolume", &music.user_sound_volume.to_string());
+
+        // Delete all controller buttons we had previously.
+        // dataNode->FirstChildElement() shouldn't be NULL at this point...
+        // we've already added a bunch of elements
+        // for (tinyxml2::XMLElement* element = dataNode->FirstChildElement();
+        // element != NULL;
+        // /* Increment code handled separately */) {
+        //     const char* name = element->Name();
+
+        //     if (SDL_strcmp(name, "flipButton") == 0
+        //     || SDL_strcmp(name, "enterButton") == 0
+        //     || SDL_strcmp(name, "escButton") == 0
+        //     || SDL_strcmp(name, "restartButton") == 0)
+        //     {
+        //         // Can't just doc.DeleteNode(element) and then go to next,
+        //         // element->NextSiblingElement() will be NULL.
+        //         // Instead, store pointer of element we want to delete. Then
+        //         // increment `element`. And THEN delete the element.
+        //         tinyxml2::XMLElement* delete_this = element;
+
+        //         element = element->NextSiblingElement();
+
+        //         doc.DeleteNode(delete_this);
+        //         continue;
+        //     }
+
+        //     element = element->NextSiblingElement();
+        // }
+
+        // Now add them
+        // for (size_t i = 0; i < controllerButton_flip.size(); i += 1) {
+        //     tinyxml2::XMLElement* msg = doc.NewElement("flipButton");
+        //     msg->LinkEndChild(doc.NewText(help.String((int) controllerButton_flip[i]).c_str()));
+        //     dataNode->LinkEndChild(msg);
+        // }
+        // for (size_t i = 0; i < controllerButton_map.size(); i += 1) {
+        //     tinyxml2::XMLElement* msg = doc.NewElement("enterButton");
+        //     msg->LinkEndChild(doc.NewText(help.String((int) controllerButton_map[i]).c_str()));
+        //     dataNode->LinkEndChild(msg);
+        // }
+        // for (size_t i = 0; i < controllerButton_esc.size(); i += 1) {
+        //     tinyxml2::XMLElement* msg = doc.NewElement("escButton");
+        //     msg->LinkEndChild(doc.NewText(help.String((int) controllerButton_esc[i]).c_str()));
+        //     dataNode->LinkEndChild(msg);
+        // }
+        // for (size_t i = 0; i < controllerButton_restart.size(); i += 1) {
+        //     tinyxml2::XMLElement* msg = doc.NewElement("restartButton");
+        //     msg->LinkEndChild(doc.NewText(help.String((int) controllerButton_restart[i]).c_str()));
+        //     dataNode->LinkEndChild(msg);
+        // }
+
+        // xml::update_tag(dataNode, "controllerSensitivity", key.sensitivity);
+    }
 
     // void Game::loadsettings(ScreenSettings* screen_settings);
-    pub fn loadsettings(&mut self, screen_settings: screen::ScreenSettings) {
-        warn!("DEADBEEF: Game::loadsettings not implemented yet");
+    pub fn loadsettings(&mut self, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map, gameScreen: &mut screen::Screen, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) {
+        trace!("loadsettings");
+        let doc = fs.FILESYSTEM_loadTiXml2Document("settings.vvv");
 
-        self.deserializesettings();
+        match doc {
+            Ok(mut reader) => {
+                self.deserializesettings(&mut reader, music, map, gameScreen, help, key);
+            },
+            Err(xml_err) => {
+                match xml_err {
+                    quick_xml::Error::Io(io_err) => {
+                        match io_err.kind() {
+                            std::io::ErrorKind::NotFound => {
+                                self.savesettings(gameScreen.screen_settings, fs, music);
+                                info!("No settings.vvv found");
+                            },
+                            _ => panic!("{:?}", io_err),
+                        }
+                    },
+                    _ => panic!("{:?}", xml_err),
+                }
+            },
+        }
     }
 
     // bool Game::savesettings(const ScreenSettings* screen_settings);
     // bool Game::savesettings(void);
-    pub fn savesettings(&mut self) -> bool {
+    pub fn savesettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
         warn!("DEADBEEF: Game::savesettings not implemented yet");
 
-        true
+        if !fs.savefile_exists("settings.vvv") {
+            info!("No settings.vvv found. Creating new file");
+        }
+
+        let mut wrapper = xml::xml::new();
+        wrapper.update_declaration();
+        wrapper.write_start_tag("Settings");
+        wrapper.update_comment(" Settings (duplicated from unlock.vvv) ");
+        wrapper.write_start_tag("Data");
+        self.serializesettings(&mut wrapper, screen_settings, music);
+        wrapper.write_end_tag("Data");
+        wrapper.write_end_tag("Settings");
+
+        return fs.FILESYSTEM_saveTiXml2Document("settings.vvv", wrapper.writer.into_inner().into_inner());
     }
 
     // bool Game::savestatsandsettings(void);
     pub fn savestatsandsettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
         let stats_saved = self.savestats(screen_settings, fs, music);
-        let settings_saved = self.savesettings();
+        let settings_saved = self.savesettings(screen_settings, fs, music);
         return stats_saved && settings_saved; // Not the same as `savestats() && savesettings()`!
     }
 
@@ -4469,19 +4675,18 @@ impl Game {
         }
 
         warn!("DEADBEEF: Game::savetele() method not fully implemented yet");
-        // tinyxml2::XMLDocument doc;
-        // let already_exists = fs.FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", doc);
+        // let already_exists = fs.FILESYSTEM_loadTiXml2Document("tsave.vvv");
         // if !already_exists {
         //     info!("No tsave.vvv found. Creating new file");
         // }
         // self.telesummary = self.writemaingamesave(doc);
-        //
-        // if !fs.FILESYSTEM_saveTiXml2Document("saves/tsave.vvv", doc) {
+
+        // if !fs.FILESYSTEM_saveTiXml2Document("tsave.vvv", doc) {
         //     error!("Could Not Save game!\n");
         //     error!("Failed: {}{}\n", self.saveFilePath, "tsave.vvv");
         //     return false;
         // }
-        //
+
         // info!("Game saved\n");
         return true;
     }
@@ -4617,8 +4822,8 @@ impl Game {
     }
 
     // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
-    pub fn Game(&mut self, doc: i32) -> &'static str {
-        warn!("DEADBEEF: ::string Game() method not implemented yet");
+    pub fn writemaingamesave(&mut self, doc: i32) -> &'static str {
+        warn!("DEADBEEF: Game::writemaingamesave() method not implemented yet");
         &""
     }
 
