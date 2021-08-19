@@ -906,15 +906,15 @@ impl Graphics {
     // void Graphics::cutscenebars(void)
     pub fn cutscenebars(&mut self) {
         let usethispos = self.lerp(self.oldcutscenebarspos as f32, self.cutscenebarspos as f32) as u32;
+        // TODO: @sx double check for buffer overflow
+        let x = 360u32.checked_sub(usethispos).unwrap_or(0);
         if self.showcutscenebars {
             graphics_util::FillRect(&mut self.buffers.backBuffer, 0, 0, usethispos, 16, sdl2::pixels::Color::BLACK);
-            // TODO: @sx double check for buffer overflow
-            let x: u32 = 360u32.checked_sub(usethispos).unwrap_or(0);
             graphics_util::FillRect(&mut self.buffers.backBuffer, x, 224, usethispos, 16, sdl2::pixels::Color::BLACK);
         } else if self.cutscenebarspos > 0 {
             //disappearing
             graphics_util::FillRect(&mut self.buffers.backBuffer, 0, 0, usethispos, 16, sdl2::pixels::Color::BLACK);
-            graphics_util::FillRect(&mut self.buffers.backBuffer, 360 - usethispos, 224, usethispos, 16, sdl2::pixels::Color::BLACK);
+            graphics_util::FillRect(&mut self.buffers.backBuffer, x, 224, usethispos, 16, sdl2::pixels::Color::BLACK);
         }
     }
 

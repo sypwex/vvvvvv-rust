@@ -7,8 +7,8 @@ use self::render::graphics::graphics_util;
 pub mod render;
 pub mod renderfixed;
 
-const SCREEN_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
-const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBX8888;
+const SCREEN_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBA8888;
+const TEXTURE_PIXEL_FORMAT: sdl2::pixels::PixelFormatEnum = sdl2::pixels::PixelFormatEnum::RGBA8888;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScreenSettings {
