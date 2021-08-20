@@ -680,8 +680,68 @@ impl Map {
 
     // void mapclass::resetplayer(void)
     // void mapclass::resetplayer(const bool player_died)
-    pub fn resetplayer(&mut self, player_died: Option<bool>) {
-        println!("DEADBEEF: mapclass::resetplayer method not implemented yet");
+    pub fn resetplayer(&mut self, player_died: Option<bool>, game: &mut game::Game, obj: &mut entity::EntityClass, graphics: &mut graphics::Graphics, music: &mut music::Music, help: &mut utility_class::UtilityClass) {
+        let player_died = player_died.unwrap_or(false);
+        let was_in_tower = self.towermode;
+        if game.roomx != game.saverx || game.roomy != game.savery {
+            self.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
+        }
+
+        game.deathseq = -1;
+        let i = obj.getplayer() as usize;
+        if INBOUNDS_VEC!(i, obj.entities) {
+            obj.entities[i].vx = 0.0;
+            obj.entities[i].vy = 0.0;
+            obj.entities[i].ax = 0.0;
+            obj.entities[i].ay = 0.0;
+            obj.entities[i].xp = game.savex;
+            obj.entities[i].yp = game.savey;
+
+            //Fix conveyor death loop glitch
+            obj.entities[i].newxp = obj.entities[i].xp as f32;
+            obj.entities[i].newyp = obj.entities[i].yp as f32;
+
+            obj.entities[i].dir = game.savedir;
+            obj.entities[i].colour = 0;
+            if player_died {
+                game.lifeseq = 10;
+                obj.entities[i].invis = true;
+            } else {
+                obj.entities[i].invis = false;
+            }
+            if !game.glitchrunnermode {
+                obj.entities[i].size = 0;
+                obj.entities[i].cx = 6;
+                obj.entities[i].cy = 2;
+                obj.entities[i].w = 12;
+                obj.entities[i].h = 21;
+            }
+
+            // If we entered a tower as part of respawn, reposition camera
+            if !was_in_tower && self.towermode {
+                self.ypos = obj.entities[i].yp - 120;
+                if self.ypos < 0 {
+                    self.ypos = 0;
+                }
+                self.oldypos = self.ypos;
+                graphics.buffers.towerbg.bypos = self.ypos / 2;
+            }
+        }
+
+        //Just in case the supercrewmate is fucking this up!
+        game.scmhurt = false;
+        if game.supercrewmate {
+            if game.roomx == game.scmprogress + 41 {
+                game.scmprogress = game.roomx - 41;
+            } else {
+                game.scmprogress = game.roomx - 40;
+            }
+            if game.scmprogress != 0 {
+                game.scmmoveme = true;
+            } else {
+                game.scmmoveme = false;
+            }
+        }
     }
 
     // void mapclass::warpto(int rx, int ry , int t, int tx, int ty)

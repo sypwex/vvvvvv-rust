@@ -3439,8 +3439,7 @@ impl<'a> EntityClass {
         //Is the player colliding with any damageblocks?
         if self.checkdamage(None, help) && !map.invincibility {
             //usual player dead stuff
-            println!("TODO: @sx: oopse, we're dead, uncomment next line");
-            // game.deathseq = 30;
+            game.deathseq = 30;
         }
 
         //how about the supercrewmate?
@@ -3501,15 +3500,13 @@ impl<'a> EntityClass {
 
                         // TODO: @sx borrow checker interesting point
                         if graphics.Hitest(drawframe1, colpoint1, drawframe2, colpoint2, help) {
-                            println!("TODO: @sx: oopse, we're dead, uncomment next lines");
-                            // game.deathseq = 30;
-                            // game.scmhurt = scm;
+                            game.deathseq = 30;
+                            game.scmhurt = scm;
                         }
                     } else {
                         //Ok, then we just assume a normal bounding box collision
-                        println!("TODO: @sx: oopse, we're dead, uncomment next lines");
-                        // game.deathseq = 30;
-                        // game.scmhurt = scm;
+                        game.deathseq = 30;
+                        game.scmhurt = scm;
                     }
                 }
             },

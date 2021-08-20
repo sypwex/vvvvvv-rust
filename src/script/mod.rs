@@ -1117,7 +1117,7 @@ impl ScriptClass {
                 } else if self.words[0] == "resetgame" {
                     map.resetnames();
                     map.resetmap();
-                    map.resetplayer(None);
+                    map.resetplayer(None, game, obj, graphics, music, help);
                     graphics.buffers.towerbg.tdrawback = true;
 
                     obj.resetallflags();
@@ -1891,7 +1891,7 @@ impl ScriptClass {
                     //In this game, constant, never destroyed
                     obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
                 } else {
-                    map.resetplayer(None);
+                    map.resetplayer(None, game, obj, graphics, music, help);
                 }
                 map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
                 map.initmapdata();

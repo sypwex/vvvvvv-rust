@@ -331,7 +331,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
 
                 game.gravitycontrol = game.savegc;
                 graphics.textboxremove();
-                map.resetplayer(Some(true));
+                map.resetplayer(Some(true), game, obj, graphics, music, help);
             }
         }
     } else {
