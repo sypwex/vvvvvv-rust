@@ -110,7 +110,7 @@ impl Render {
 
         match game.currentmenuname {
             MenuName::mainmenu => {
-                let vsprite = 27; // 23
+                let vsprite = 23;
                 self.graphics.drawsprite_rgb((160 - 96) + 0 * 32, temp, vsprite, tr, tg, tb);
                 self.graphics.drawsprite_rgb((160 - 96) + 1 * 32, temp, vsprite, tr, tg, tb);
                 self.graphics.drawsprite_rgb((160 - 96) + 2 * 32, temp, vsprite, tr, tg, tb);
@@ -1064,7 +1064,7 @@ impl Render {
             self.tb = self.graphics.col_tb;
 
             let temp = 50;
-            let vsprite = 27; // 23
+            let vsprite = 23;
             self.graphics.drawsprite_rgb((160 - 96) + 0 * 32, temp, vsprite, self.tr, self.tg, self.tb);
             self.graphics.drawsprite_rgb((160 - 96) + 1 * 32, temp, vsprite, self.tr, self.tg, self.tb);
             self.graphics.drawsprite_rgb((160 - 96) + 2 * 32, temp, vsprite, self.tr, self.tg, self.tb);

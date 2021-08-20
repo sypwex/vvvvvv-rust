@@ -1305,12 +1305,12 @@ impl Graphics {
     // bool Graphics::Hitest(SDL_Surface* surface1, point p1, SDL_Surface* surface2, point p2)
     pub fn Hitest(&mut self, drawframe1: usize, p1: maths::point, drawframe2: usize, p2: maths::point, help: &mut utility_class::UtilityClass) -> bool {
         let (surface1, surface2) = if self.flipmode {
-            if INBOUNDS_VEC!(drawframe1, self.grphx.flipsprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.flipsprites.surfaces) {
+            if !(INBOUNDS_VEC!(drawframe1, self.grphx.flipsprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.flipsprites.surfaces)) {
                 return false
             }
             (&self.grphx.flipsprites.surfaces[drawframe1], &self.grphx.flipsprites.surfaces[drawframe2])
         } else {
-            if INBOUNDS_VEC!(drawframe1, self.grphx.sprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.sprites.surfaces) {
+            if !(INBOUNDS_VEC!(drawframe1, self.grphx.sprites.surfaces) && INBOUNDS_VEC!(drawframe2, self.grphx.sprites.surfaces)) {
                 return false
             }
             (&self.grphx.sprites.surfaces[drawframe1], &self.grphx.sprites.surfaces[drawframe2])

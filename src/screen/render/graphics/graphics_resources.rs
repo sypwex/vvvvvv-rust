@@ -169,9 +169,9 @@ impl Image {
             },
             _ => {
                 let mut i = 0;
-                while i*h < info.width {
+                while i*h < info.height {
                     let mut j = 0;
-                    while j*w < info.height {
+                    while j*w < info.width {
                         let mut s = sdl2::surface::Surface::new(w, h, pf).unwrap();
                         let src_rect = sdl2::rect::Rect::new((j * w) as i32, (i * h) as i32, w, w);
                         surface.blit(src_rect, &mut s, None).unwrap();
