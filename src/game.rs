@@ -1426,13 +1426,13 @@ impl Game {
     }
 
     // void Game::remaining_textbox(void);
-    pub fn remaining_textbox(&mut self, graphics: &mut graphics::Graphics) {
+    pub fn remaining_textbox(&mut self, graphics: &mut graphics::Graphics, help: &utility_class::UtilityClass) {
         let remaining = 6 - self.crewrescued();
 
         let string = if remaining == 1 {
             "  One remains  ".to_string()
         } else if remaining > 0 {
-            format!("  {} remain  ", remaining)
+            format!("  {} remain  ", help.number(remaining as i32))
         } else {
             "  All Crew Members Rescued!  ".to_string()
         };
@@ -2724,7 +2724,7 @@ impl Game {
                     self.state += 1;
                     self.statedelay = 45;
 
-                    self.remaining_textbox(graphics);
+                    self.remaining_textbox(graphics, help);
                 },
                 3009 => {
                     self.state += 1;
@@ -2764,7 +2764,7 @@ impl Game {
                     self.state += 1;
                     self.statedelay = 45;
 
-                    self.remaining_textbox(graphics);
+                    self.remaining_textbox(graphics, help);
                 },
                 3023 => {
                     self.state += 1;
@@ -2804,7 +2804,7 @@ impl Game {
                     self.state += 1;
                     self.statedelay = 45;
 
-                    self.remaining_textbox(graphics);
+                    self.remaining_textbox(graphics, help);
                 },
                 3043 => {
                     self.state += 1;
@@ -2844,7 +2844,7 @@ impl Game {
                     self.state += 1;
                     self.statedelay = 45;
 
-                    self.remaining_textbox(graphics);
+                    self.remaining_textbox(graphics, help);
                 },
                 3053 => {
                     self.state += 1;
@@ -2897,7 +2897,7 @@ impl Game {
                     self.state += 1;
                     self.statedelay = 45;
 
-                    self.remaining_textbox(graphics);
+                    self.remaining_textbox(graphics, help);
                 },
                 3063 => {
                     self.state += 1;

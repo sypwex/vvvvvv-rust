@@ -1127,9 +1127,9 @@ impl Graphics {
 
     // void Graphics::createtextboxreal(std::string t, int xp, int yp, int r, int g, int b, bool flipme)
     pub fn createtextboxreal(&mut self, t: &str, xp: i32, yp: i32, r: i32, g: i32, b: i32, flipme: bool) {
-        let m = self.textbox.len();
+        self.m = self.textbox.len();
 
-        if m < 20 {
+        if self.m < 20 {
             let mut text = TextBoxClass::new();
             text.line.push(t.to_string());
             text.xp = xp;
