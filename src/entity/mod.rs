@@ -580,8 +580,8 @@ impl<'a> EntityClass {
         let mut meta2 = meta2.unwrap_or(0);
         let p1 = p1.unwrap_or(0);
         let p2 = p2.unwrap_or(0);
-        let p3 = p3.unwrap_or(0);
-        let p4 = p4.unwrap_or(0);
+        let p3 = p3.unwrap_or(320);
+        let p4 = p4.unwrap_or(240);
 
         self.k = self.entities.len() as i32;
 
