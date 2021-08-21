@@ -1904,6 +1904,18 @@ impl ScriptClass {
             _ => error!("incorrect game mode"),
         }
 
+        // @sx: just a little debugging helper, tourist mode #neoadditions
+        #[cfg(debug_assertions)]
+        match std::env::var("NOCUTSCENES") {
+            Ok(v) => {
+                if v == "1" {
+                    println!("cutscenes will be skipped");
+                    game.nocutscenes = true;
+                }
+            },
+            _ => (),
+        }
+
         Ok(())
     }
 
