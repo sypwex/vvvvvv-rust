@@ -52,3 +52,17 @@ pub fn VVV_max(a: i32, b: i32) -> i32 {
 pub fn c_rand() -> i32 {
     rand::thread_rng().gen::<i32>()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn randoms() {
+        for i in 0..20 {
+            let num = fRandom();
+            assert_ne!(0.0, num);
+            println!("{}", num);
+        }
+    }
+}

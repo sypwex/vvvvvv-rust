@@ -2120,14 +2120,16 @@ impl Graphics {
 
     // void Graphics::updatebackground(int t)
     pub fn updatebackground(&mut self, t: i32) {
+        trace!("updatebackground({})", t);
+
         match t {
             1 => {
                 //Starfield
                 for i in 0..numstars {
                     self.stars[i].w = 2;
                     self.stars[i].h = 2;
-                    self.stars[i].x -= self.starsspeed[i];
-                    if self.stars[i].x < -10 {
+                    self.stars[i].x -= self.starsspeed[i] * 3 / 2; // @sx in original no increasing speed here
+                    if self.stars[i].x < 0 { // @sx in original -10
                         self.stars[i].x += 340;
                         self.stars[i].y = (maths::fRandom() * 240.0) as i32;
                         self.stars[i].w = 2;
