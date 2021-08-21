@@ -1343,7 +1343,7 @@ impl Map {
             // },
             // #endif
             // #if !defined(NO_CUSTOM_LEVELS)
-            12 => {
+            // 12 => {
                 // //Custom level
                 // let room = ed.getroomprop(rx - 100, ry - 100);
                 // game.customcol = ed.getlevelcol(room.tileset, room.tilecol) + 1;
@@ -1575,7 +1575,7 @@ impl Map {
                 // }
 
                 // //do the appear/remove roomname here
-            }
+            // },
             // #endif
 
             _ => println!("map::loadlevel(): loading level {} not implemented yet", t),
