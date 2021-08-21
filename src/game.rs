@@ -1142,10 +1142,10 @@ impl Game {
 
                     if temp == 1 {
                         self.createmenu(MenuName::unlocktimetrial, Some(true), graphics, music, screen_params, map, screen_settings, fs);
-                        self.savestatsandsettings(screen_settings, fs, music);
+                        self.savestatsandsettings(screen_settings, fs, music, map);
                     } else if temp > 1 {
                         self.createmenu(MenuName::unlocktimetrials, Some(true), graphics, music, screen_params, map, screen_settings, fs);
-                        self.savestatsandsettings(screen_settings, fs, music);
+                        self.savestatsandsettings(screen_settings, fs, music, map);
                     }
                 } else {
                     //Alright, we haven't self.unlocked any time trials. How about no death mode?
@@ -1161,21 +1161,21 @@ impl Game {
                         self.unlocknotify[17] = true;
                         self.unlock[17] = true;
                         self.createmenu(MenuName::unlocknodeathmode, Some(true), graphics, music, screen_params, map, screen_settings, fs);
-                        self.savestatsandsettings(screen_settings, fs, music);
+                        self.savestatsandsettings(screen_settings, fs, music, map);
                     }
                     //Alright then! Flip mode?
                     else if self.unlock[5] && !self.unlocknotify[18] {
                         self.unlock[18] = true;
                         self.unlocknotify[18] = true;
                         self.createmenu(MenuName::unlockflipmode, Some(true), graphics, music, screen_params, map, screen_settings, fs);
-                        self.savestatsandsettings(screen_settings, fs, music);
+                        self.savestatsandsettings(screen_settings, fs, music, map);
                     }
                     //What about the intermission levels?
                     else if self.unlock[7] && !self.unlocknotify[16] {
                         self.unlock[16] = true;
                         self.unlocknotify[16] = true;
                         self.createmenu(MenuName::unlockintermission, Some(true), graphics, music, screen_params, map, screen_settings, fs);
-                        self.savestatsandsettings(screen_settings, fs, music);
+                        self.savestatsandsettings(screen_settings, fs, music, map);
                     } else {
                         if self.save_exists() {
                             self.add_menu_option("continue", None);
@@ -2087,7 +2087,7 @@ impl Game {
                         }
                     }
 
-                    self.savestatsandsettings(screen_settings, fs, music);
+                    self.savestatsandsettings(screen_settings, fs, music, map);
 
                     graphics.fademode = 2;
                     music.fadeout(None, self);
@@ -3147,7 +3147,7 @@ impl Game {
                         }
                     }
 
-                    self.savestatsandsettings(screen_settings, fs, music);
+                    self.savestatsandsettings(screen_settings, fs, music, map);
                     if self.nodeathmode {
                         self.unlockAchievement("vvvvvvmaster"); //bloody hell
                         self.unlocknum(20);
@@ -4154,7 +4154,7 @@ impl Game {
     }
 
     // void Game::loadstats(ScreenSettings* screen_settings);
-    pub fn loadstats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) {
+    pub fn loadstats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) {
         trace!("loading stats");
         let doc = fs.FILESYSTEM_loadTiXml2Document("unlock.vvv");
 
@@ -4200,7 +4200,15 @@ impl Game {
                                         // "noflashingmode"
                                         // "colourblindmode"
                                         // "setflipmode"
-                                        // "invincibility"
+                                        "invincibility" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    map.invincibility = v != 0;
+                                                },
+                                                Err(s) => error!("error while parsing invincibility value: {}", s),
+                                            };
+
+                                        }
                                         // "slowdown"
                                         // "advanced_smoothing"
                                         // "usingmmmmmm"
@@ -4303,7 +4311,7 @@ impl Game {
 
                                 // Save unlock.vvv only. Maybe we have a settings.vvv laying around too,
                                 // and we don't want to overwrite that!
-                                self.savestats(screen_settings, fs, music);
+                                self.savestats(screen_settings, fs, music, map);
                             },
                             _ => panic!(io_err),
                         }
@@ -4317,7 +4325,7 @@ impl Game {
 
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
-    pub fn savestats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
+    pub fn savestats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
         trace!("savestats");
         if fs.savefile_exists("unlock.vvv") {
             info!("No unlock.vvv found. Creating new file");
@@ -4384,7 +4392,7 @@ impl Game {
         // xml::update_tag(dataNode, "swnbestrank", swnbestrank);
         // xml::update_tag(dataNode, "swnrecord", swnrecord);
 
-        self.serializesettings(&mut wrapper, screen_settings, music);
+        self.serializesettings(&mut wrapper, screen_settings, music, map);
         wrapper.write_end_tag("Data");
         wrapper.write_end_tag("Save");
 
@@ -4516,7 +4524,7 @@ impl Game {
     }
 
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
-    fn serializesettings(&mut self, wrapper: &mut xml::xml, screen_settings: screen::ScreenSettings, music: &mut music::Music) {
+    fn serializesettings(&mut self, wrapper: &mut xml::xml, screen_settings: screen::ScreenSettings, music: &mut music::Music, map: &mut map::Map) {
         warn!("DEADBEEF: Game::serializesettings not implemented yet");
 
         // xml::update_tag(dataNode, "fullscreen", (int) screen_settings->fullscreen);
@@ -4527,7 +4535,7 @@ impl Game {
         // xml::update_tag(dataNode, "noflashingmode", noflashingmode);
         // xml::update_tag(dataNode, "colourblindmode", colourblindmode);
         // xml::update_tag(dataNode, "setflipmode", graphics.setflipmode);
-        // xml::update_tag(dataNode, "invincibility", map.invincibility);
+        wrapper.update_tag("invincibility", if map.invincibility { "1" } else { "0" });
         // xml::update_tag(dataNode, "slowdown", slowdown);
         // xml::update_tag(dataNode, "advanced_smoothing", (int) screen_settings->badSignal);
         // xml::update_tag(dataNode, "usingmmmmmm", music.usingmmmmmm);
@@ -4610,7 +4618,7 @@ impl Game {
                     quick_xml::Error::Io(io_err) => {
                         match io_err.kind() {
                             std::io::ErrorKind::NotFound => {
-                                self.savesettings(gameScreen.screen_settings, fs, music);
+                                self.savesettings(gameScreen.screen_settings, fs, music, map);
                                 info!("No settings.vvv found");
                             },
                             _ => panic!("{:?}", io_err),
@@ -4624,7 +4632,7 @@ impl Game {
 
     // bool Game::savesettings(const ScreenSettings* screen_settings);
     // bool Game::savesettings(void);
-    pub fn savesettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
+    pub fn savesettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
         warn!("DEADBEEF: Game::savesettings not implemented yet");
 
         if !fs.savefile_exists("settings.vvv") {
@@ -4636,7 +4644,7 @@ impl Game {
         wrapper.write_start_tag("Settings");
         wrapper.update_comment(" Settings (duplicated from unlock.vvv) ");
         wrapper.write_start_tag("Data");
-        self.serializesettings(&mut wrapper, screen_settings, music);
+        self.serializesettings(&mut wrapper, screen_settings, music, map);
         wrapper.write_end_tag("Data");
         wrapper.write_end_tag("Settings");
 
@@ -4644,17 +4652,23 @@ impl Game {
     }
 
     // bool Game::savestatsandsettings(void);
-    pub fn savestatsandsettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) -> bool {
-        let stats_saved = self.savestats(screen_settings, fs, music);
-        let settings_saved = self.savesettings(screen_settings, fs, music);
+    pub fn savestatsandsettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
+        let stats_saved = self.savestats(screen_settings, fs, music, map);
+        let settings_saved = self.savesettings(screen_settings, fs, music, map);
         return stats_saved && settings_saved; // Not the same as `savestats() && savesettings()`!
     }
 
     // void Game::savestatsandsettings_menu(void);
-    pub fn savestatsandsettings_menu(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music) {
+    pub fn savestatsandsettings_menu(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) {
         warn!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
 
-        self.savestatsandsettings(screen_settings, fs, music);
+        self.savestatsandsettings(screen_settings, fs, music, map);
+
+        // // Call Game::savestatsandsettings(), but upon failure, go to the save error screen
+        // if !self.savestatsandsettings() && !silence_settings_error {
+        //     self.createmenu(MenuName::errorsavingsettings);
+        //     map.nexttowercolour();
+        // }
     }
 
     // void Game::deletesettings(void);

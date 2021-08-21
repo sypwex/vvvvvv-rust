@@ -175,7 +175,7 @@ impl Main {
 
         // Prioritize unlock.vvv first (2.2 and below),
         // but settings have been migrated to settings.vvv (2.3 and up)
-        game.loadstats(screen_settings, &mut fs, &mut music);
+        game.loadstats(screen_settings, &mut fs, &mut music, &mut map);
         let mut help = utility_class::UtilityClass::new();
         let mut key = key_poll::KeyPoll::new();
         game.loadsettings(&mut fs, &mut music, &mut map, &mut gameScreen, &mut help, &mut key);
@@ -511,7 +511,7 @@ impl Drop for Main {
     fn drop(&mut self) {
         eprintln!("Drop The Main!");
         /* Order matters! */
-        self.game.savestatsandsettings(self.gameScreen.screen_settings, &mut self.fs, &mut self.music);
+        self.game.savestatsandsettings(self.gameScreen.screen_settings, &mut self.fs, &mut self.music, &mut self.map);
         // gameScreen.destroy();
         // graphics.grphx.destroy();
         // graphics.destroy_buffers();

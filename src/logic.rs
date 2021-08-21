@@ -295,7 +295,7 @@ pub fn gamelogic(game: &mut game::Game, graphics: &mut graphics::Graphics, map: 
                     game.swnrecord = game.swntimer;
                     if game.swnmessage == 0 {
                         music.playef(25);
-                        game.savestatsandsettings(screen_settings, fs, music);
+                        game.savestatsandsettings(screen_settings, fs, music, map);
                     }
                     game.swnmessage = 1;
                 }
