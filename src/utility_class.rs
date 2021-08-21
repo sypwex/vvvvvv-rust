@@ -247,3 +247,31 @@ impl UtilityClass {
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numbers() {
+        let help = UtilityClass::new();
+
+        assert_eq!("Zero", help.number(0));
+        assert_eq!("One", help.number(1));
+        assert_eq!("Nine", help.number(9));
+
+        assert_eq!("Eleven", help.number(11));
+        assert_eq!("Nineteen", help.number(19));
+
+        assert_eq!("Ten", help.number(10));
+        assert_eq!("Ninety", help.number(90));
+
+        assert_eq!("Twenty One", help.number(21));
+        assert_eq!("Thirty Three", help.number(33));
+
+        assert_eq!("One Hundred", help.number(100));
+
+        assert_eq!("???", help.number(-1));
+        assert_eq!("Lots", help.number(101));
+    }
+}
