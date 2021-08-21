@@ -166,6 +166,7 @@ impl<'a> EntityClass {
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
+                trace!("new block: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::TRIGGER as i32 => {
                 self.blocks[blockptr].r#type = EntityEnum::TRIGGER;
@@ -174,14 +175,14 @@ impl<'a> EntityClass {
                 self.blocks[blockptr].rectset(xp, yp, w, h);
                 self.blocks[blockptr].trigger = trig;
                 self.blocks[blockptr].script = script;
-                info!("new trigger: {:?}", self.blocks[blockptr]);
+                trace!("new trigger: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::DAMAGE as i32 => {
                 self.blocks[blockptr].r#type = EntityEnum::DAMAGE;
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
-                // info!("new damage: {:?}", self.blocks[blockptr]);
+                trace!("new damage: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::DIRECTIONAL as i32 => {
                 self.blocks[blockptr].r#type = EntityEnum::DIRECTIONAL;
@@ -189,7 +190,7 @@ impl<'a> EntityClass {
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
                 self.blocks[blockptr].trigger = trig;
-                info!("new directional: {:?}", self.blocks[blockptr]);
+                trace!("new directional: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::SAFE as i32 => {
                 self.blocks[blockptr].r#type = EntityEnum::SAFE;
@@ -198,7 +199,7 @@ impl<'a> EntityClass {
                 self.blocks[blockptr].wp = w;
                 self.blocks[blockptr].hp = h;
                 self.blocks[blockptr].rectset(xp, yp, w, h);
-                info!("new safe: {:?}", self.blocks[blockptr]);
+                trace!("new safe: {:?}", self.blocks[blockptr]);
             },
             t if t == EntityEnum::ACTIVITY as i32 => {
                 //Activity Zone
@@ -427,12 +428,12 @@ impl<'a> EntityClass {
                         self.blocks[blockptr].setblockcolour("orange");
                         trig = 0;
                     },
-                    _ => println!("{}", 0),
+                    _ => warn!("unmatched trigger: ({})", trig),
                 };
 
-                info!("new activity: {:?}", self.blocks[blockptr]);
+                trace!("new activity: {:?}", self.blocks[blockptr]);
             },
-            _ => println!("TODO: refactor to enum... unmatched type: {}", t),
+            _ => warn!("unmatched type: ({})", t),
         }
     }
 
@@ -478,7 +479,7 @@ impl<'a> EntityClass {
     // void entityclass::disableblock( int t )
     pub fn disableblock(&mut self, t: usize) {
         if !INBOUNDS_VEC!(t, self.blocks) {
-            println!("disableblock() out-of-bounds!");
+            warn!("disableblock() out-of-bounds!");
             return;
         }
 
@@ -529,7 +530,7 @@ impl<'a> EntityClass {
     // void entityclass::copylinecross( int t )
     pub fn copylinecross(&mut self, t: usize) {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("copylinecross() out-of-bounds!");
+            warn!("copylinecross() out-of-bounds!");
             return;
         }
 
@@ -540,7 +541,7 @@ impl<'a> EntityClass {
     // void entityclass::revertlinecross( int t, int s )
     pub fn revertlinecross(&mut self, t: usize, s: usize) {
         if !INBOUNDS_VEC!(t, self.entities) | !INBOUNDS_VEC!(s, self.linecrosskludge) {
-            println!("revertlinecross() out-of-bounds!");
+            warn!("revertlinecross() out-of-bounds!");
             return;
         }
 
@@ -670,9 +671,11 @@ impl<'a> EntityClass {
                 self.entities[entity_id].colour = 8;
 
                 if game.roomy == 111 && (game.roomx >= 113 && game.roomx <= 117) {
+                    // @sx lies emitter
                     self.entities[entity_id].setenemy(0);
                     self.entities[entity_id].setenemyroom(game.roomx, game.roomy); //For colour
                 } else if game.roomx == 113 && (game.roomy <= 110 && game.roomy >= 108) {
+                    // @sx factory emitter
                     self.entities[entity_id].setenemy(1);
                     self.entities[entity_id].setenemyroom(game.roomx, game.roomy); //For colour
                 } else if game.roomx == 113 && game.roomy == 107 {
@@ -1287,7 +1290,7 @@ impl<'a> EntityClass {
                         }
                     },
 
-                    _ => println!("unkown meta2 value {}", meta2),
+                    _ => warn!("unmatched meta2 value: ({})", meta2),
                 }
             },
             26 => {
@@ -1430,7 +1433,7 @@ impl<'a> EntityClass {
                     self.entities[entity_id].colour = 18;
                 }
             },
-            _ => println!("unknown entity type {}", t),
+            _ => warn!("unmatched entity type: ({})", t),
 
         };
 
@@ -1453,14 +1456,14 @@ impl<'a> EntityClass {
     // bool entityclass::updateentities( int i )
     pub fn updateentities(&mut self, i: usize, game: &mut game::Game, map: &mut map::Map, music: &mut music::Music, script: &mut script::ScriptClass) -> bool {
         if !INBOUNDS_VEC!(i, self.entities) {
-            println!("updateentities() out-of-bounds!");
+            warn!("updateentities() out-of-bounds!");
             return true;
         }
 
         if self.entities[i].statedelay <= 0 {
             match self.entities[i].r#type {
                 0 => {
-                    //Playerk
+                    //Player
                 },
                 1 => {
                     //Movement behaviors
@@ -1791,7 +1794,7 @@ impl<'a> EntityClass {
                                 self.entities[i].lerpoldxp += self.entities[i].para as i32;
                             }
                         },
-                        _ => println!("unknown movement behaviour ({})", self.entities[i].behave),
+                        _ => warn!("unmatched movement behaviour: ({})", self.entities[i].behave),
                     }
                 },
                 2 => {
@@ -2321,7 +2324,7 @@ impl<'a> EntityClass {
                                 }
                             }
                         },
-                        _ => println!("unknown swn game behaviour ({})", self.entities[i].behave),
+                        _ => warn!("unmatched swn game behaviour: ({})", self.entities[i].behave),
                     };
                 },
 
@@ -2468,7 +2471,7 @@ impl<'a> EntityClass {
                         self.entities[i].state = 0;
                     }
                 },
-                _ => println!("no idea how to update entity type ({})", self.entities[i].r#type),
+                _ => warn!("unmatched entity type: ({})", self.entities[i].r#type),
             }
         } else {
             self.entities[i].statedelay -= 1;
@@ -2483,7 +2486,7 @@ impl<'a> EntityClass {
     // void entityclass::animateentities( int _i )
     pub fn animateentities(&mut self, _i: i32, game: &mut game::Game) {
         if !INBOUNDS_VEC!(_i, self.entities) {
-            println!("animateentities() out-of-bounds!");
+            warn!("animateentities() out-of-bounds!");
             return;
         }
         let _i = _i as usize;
@@ -2910,7 +2913,7 @@ impl<'a> EntityClass {
     // bool entityclass::entitycollide( int a, int b )
     pub fn entitycollide(&self, a: usize, b: usize, help: &mut utility_class::UtilityClass) -> bool {
         if !INBOUNDS_VEC!(a, self.entities) || !INBOUNDS_VEC!(b, self.entities) {
-            println!("entitycollide() out-of-bounds!");
+            warn!("entitycollide() out-of-bounds!");
             return false;
         }
 
@@ -3183,7 +3186,7 @@ impl<'a> EntityClass {
     // bool entityclass::entitycollidefloor( int t )
     pub fn entitycollidefloor(&mut self, t: usize, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("entitycollidefloor() out-of-bounds!");
+            warn!("entitycollidefloor() out-of-bounds!");
             return false
         }
 
@@ -3200,7 +3203,7 @@ impl<'a> EntityClass {
     // bool entityclass::entitycollideroof( int t )
     pub fn entitycollideroof(&mut self, t: usize, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("entitycollidefloor() out-of-bounds!");
+            warn!("entitycollidefloor() out-of-bounds!");
             return false
         }
 
@@ -3217,7 +3220,7 @@ impl<'a> EntityClass {
     // bool entityclass::testwallsx( int t, int tx, int ty, const bool skipdirblocks )
     fn testwallsx(&mut self, t: usize, tx: i32, ty: i32, skipdirblocks: bool, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("testwallsx() out-of-bounds!");
+            warn!("testwallsx() out-of-bounds!");
             return false
         }
 
@@ -3253,7 +3256,7 @@ impl<'a> EntityClass {
     // bool entityclass::testwallsy( int t, float tx, float ty )
     fn testwallsy(&mut self, t: usize, tx: f32, ty: f32, map: &mut map::Map, help: &mut utility_class::UtilityClass) -> bool {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("testwallsy() out-of-bounds!");
+            warn!("testwallsy() out-of-bounds!");
             return false;
         }
 
@@ -3289,7 +3292,7 @@ impl<'a> EntityClass {
     // void entityclass::applyfriction( int t, float xrate, float yrate )
     fn applyfriction(&mut self, t: usize, xrate: f32, yrate: f32) {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("applyfriction() out-of-bounds!");
+            warn!("applyfriction() out-of-bounds!");
             return;
         }
 
@@ -3306,11 +3309,16 @@ impl<'a> EntityClass {
         if self.entities[t].vy.abs() < yrate { self.entities[t].vy = 0.0; }
     }
 
+    // @sx: base physics
     // void entityclass::updateentitylogic( int t )
     pub fn updateentitylogic(&mut self, t: usize, game: &mut game::Game) {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("updateentitylogic() out-of-bounds!");
+            warn!("updateentitylogic() out-of-bounds!");
             return;
+        }
+
+        if self.entities[t].r#type != 0 {
+            info!("updating entity logic: {:?}", self.entities[t]);
         }
 
         self.entities[t].oldxp = self.entities[t].xp;
@@ -3342,7 +3350,7 @@ impl<'a> EntityClass {
     // void entityclass::entitymapcollision( int t )
     pub fn entitymapcollision(&mut self, t: usize, map: &mut map::Map, help: &mut utility_class::UtilityClass) {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("entitymapcollision() out-of-bounds!");
+            warn!("entitymapcollision() out-of-bounds!");
             return;
         }
 
@@ -3473,7 +3481,7 @@ impl<'a> EntityClass {
         let scm = scm.unwrap_or(false);
 
         if !INBOUNDS_VEC!(i, self.entities) || !INBOUNDS_VEC!(j, self.entities) {
-            println!("collisioncheck() out-of-bounds!");
+            warn!("collisioncheck() out-of-bounds!");
             return;
         }
 
@@ -3595,7 +3603,7 @@ impl<'a> EntityClass {
     // void entityclass::stuckprevention(int t)
     fn stuckprevention(&mut self, t: i32, game: &mut game::Game, map: &mut map::Map, help: &mut utility_class::UtilityClass) {
         if !INBOUNDS_VEC!(t, self.entities) {
-            println!("stuckprevention() out-of-bounds!");
+            warn!("stuckprevention() out-of-bounds!");
             return;
         }
         let t = t as usize;

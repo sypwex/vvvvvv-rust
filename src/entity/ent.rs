@@ -158,9 +158,10 @@ impl std::fmt::Debug for EntClass {
             .field("animate", &self.animate)
             .field("para", &self.para)
             .field("life", &self.life)
-            .field("colour", &self.colour)
             .field("invis", &self.invis)
 
+            .field("xp", &self.xp)
+            .field("yp", &self.yp)
             .field("oldxp", &self.oldxp)
             .field("oldyp", &self.oldyp)
             .field("ax", &self.ax)
@@ -178,6 +179,8 @@ impl std::fmt::Debug for EntClass {
             .field("y1", &self.y1)
             .field("x2", &self.x2)
             .field("y2", &self.y2)
+            .field("lerpoldxp", &self.lerpoldxp)
+            .field("lerpoldyp", &self.lerpoldyp)
 
             .field("onentity", &self.onentity)
             .field("harmful", &self.harmful)
@@ -196,11 +199,8 @@ impl std::fmt::Debug for EntClass {
             .field("actionframe", &self.actionframe)
             .field("visualonground", &self.visualonground)
             .field("visualonroof", &self.visualonroof)
-            .field("yp", &self.yp)
-            .field("xp", &self.xp)
+            .field("colour", &self.colour)
             .field("realcol", &self.realcol)
-            .field("lerpoldxp", &self.lerpoldxp)
-            .field("lerpoldyp", &self.lerpoldyp)
             .finish()
     }
 }
