@@ -547,64 +547,6 @@ impl Game {
             swnmessage: 0,
 
             // clearcustomlevelstats(),
-
-            // tinyxml2::XMLDocument doc;
-            // if !FILESYSTEM_loadTiXml2Document("saves/qsave.vvv", doc))
-            // {
-            //     quicksummary = "";
-            //     printf("Quick Save Not Found\n");
-            // }
-            // else
-            // {
-            //     tinyxml2::XMLHandle hDoc(&doc);
-            //     tinyxml2::XMLElement* pElem;
-            //     tinyxml2::XMLHandle hRoot(NULL);
-            //     pElem=hDoc.FirstChildElement().ToElement();
-            //     if !pElem)
-            //     {
-            //         printf("Quick Save Appears Corrupted: No XML Root\n");
-            //     }
-            //     // save this for later
-            //     hRoot=tinyxml2::XMLHandle(pElem);
-            //     for( pElem = hRoot.FirstChildElement( "Data" ).FirstChild().ToElement(); pElem; pElem=pElem->NextSiblingElement())
-            //     {
-            //         std::string pKey(pElem->Value());
-            //         const char* pText = pElem->GetText() ;
-            //         if pKey == "summary")
-            //         {
-            //             quicksummary = pText;
-            //         }
-            //     }
-            // }
-
-
-            // tinyxml2::XMLDocument docTele;
-            // if !FILESYSTEM_loadTiXml2Document("saves/tsave.vvv", docTele)) {
-            //     telesummary = "";
-            //     printf("Teleporter Save Not Found\n");
-            // } else {
-            //     tinyxml2::XMLHandle hDoc(&docTele);
-            //     tinyxml2::XMLElement* pElem;
-            //     tinyxml2::XMLHandle hRoot(NULL); {
-            //         pElem=hDoc.FirstChildElement().ToElement();
-            //         // should always have a valid root but handle gracefully if it does
-            //         if !pElem) {
-            //             printf("Teleporter Save Appears Corrupted: No XML Root\n");
-            //         }
-            //         // save this for later
-            //         hRoot=tinyxml2::XMLHandle(pElem);
-            //     }
-            //     for( pElem = hRoot.FirstChildElement( "Data" ).FirstChild().ToElement(); pElem; pElem=pElem->NextSiblingElement())
-            //     {
-            //         std::string pKey(pElem->Value());
-            //         const char* pText = pElem->GetText() ;
-            //         if pKey == "summary")
-            //         {
-            //             telesummary = pText;
-            //         }
-            //     }
-            // }
-
             mx: 0,
             my: 0,
             screenshake: 0,
@@ -670,7 +612,21 @@ impl Game {
     }
 
     // void Game::init(void);
-    pub fn init(&mut self, music: &mut music::Music) {
+    pub fn init(&mut self, fs: &mut filesystem::FileSystem, map: &mut map::Map, music: &mut music::Music, obj: &mut entity::EntityClass, help: &utility_class::UtilityClass) {
+        trace!("init()");
+
+        let result = self.loadsave("qsave.vvv", SaveFullness::Summary, fs, map, obj, help);
+        if result.0 == true {
+            self.quicksummary = result.1;
+            info!("quick save info: {} {} {}", self.quicksummary, result.2, result.3);
+        };
+
+        let result = self.loadsave("tsave.vvv", SaveFullness::Summary, fs, map, obj, help);
+        if result.0 == true {
+            self.telesummary  = result.1;
+            info!("teleport save info: {} {} {}", self.telesummary, result.2, result.3);
+        };
+
         // @sx this code was previously located in main.cpp
         // static inline int get_framerate(const int slowdown)
         self.gameframerate = match self.slowdown {
@@ -760,9 +716,27 @@ impl Game {
     }
 
     // bool Game::savequick(void);
-    pub fn savequick(&mut self) -> bool {
-        warn!("DEADBEEF: Game::savequick() method not implemented yet");
-        false
+    pub fn savequick(&mut self, fs: &mut filesystem::FileSystem, map: &map::Map, music: &music::Music, obj: &entity::EntityClass, help: &utility_class::UtilityClass) -> bool {
+        trace!("savequick()");
+
+        if map.custommode || self.inspecial() {
+            //Don't trash save data!
+            return false
+        }
+
+        if !fs.savefile_exists("qsave.vvv") {
+            info!("No qsave.vvv found. Creating new file");
+        }
+        let mut doc = xml::xml::new();
+        self.quicksummary = self.writemaingamesave(&mut doc, map, music, obj, help);
+
+        if !fs.FILESYSTEM_saveTiXml2Document("qsave.vvv", doc.writer.into_inner().into_inner()) {
+            error!("Could Not Quick Save game!");
+            return false
+        }
+
+        info!("Game saved");
+        true
     }
 
     // void Game::gameclock(void);
@@ -789,14 +763,24 @@ impl Game {
     }
 
     // std::string Game::giventimestring(int hrs, int min, int sec);
+    fn giventimestring(&self, hrs: i32, min: i32, sec: i32, help: &utility_class::UtilityClass) -> String {
+        let hrs = if hrs > 0 {
+            hrs.to_string() + ":"
+        } else {
+            String::new()
+        };
+
+        format!("{}{}:{}", hrs, help.twodigits(min), help.twodigits(sec))
+    }
 
     // std::string Game::timestring(void);
-    pub fn timestring(&mut self, help: &mut utility_class::UtilityClass) -> String {
+    pub fn timestring(&self, help: &utility_class::UtilityClass) -> String {
         let tempstring = if self.hours > 0 {
             [help.String(self.hours), ":".to_string()].concat()
         } else {
             String::new()
         };
+
         [tempstring, help.twodigits(self.minutes).to_string(), ":".to_string(), help.twodigits(self.seconds).to_string()].concat()
     }
 
@@ -1448,12 +1432,12 @@ impl Game {
     }
 
     // void Game::savetele_textbox(void);
-    pub fn savetele_textbox(&mut self, graphics: &mut graphics::Graphics, map: &mut map::Map, fs: &mut filesystem::FileSystem) {
+    pub fn savetele_textbox(&mut self, fs: &mut filesystem::FileSystem, graphics: &mut graphics::Graphics, map: &map::Map, music: &music::Music, obj: &entity::EntityClass, help: &utility_class::UtilityClass) {
         if self.inspecial() || map.custommode {
             return;
         }
 
-        match self.savetele(map, fs) {
+        match self.savetele(fs, map, music, obj, help) {
             true => {
                 graphics.createtextboxflipme("    Game Saved    ", -1, 12, 174, 174, 174);
                 graphics.textboxtimer(25);
@@ -2511,7 +2495,7 @@ impl Game {
 
                 2000 => {
                     //Game Saved!
-                    self.savetele_textbox(graphics, map, fs);
+                    self.savetele_textbox(fs, graphics, map, music, obj, help);
                     self.state = 0;
                 },
 
@@ -3382,7 +3366,7 @@ impl Game {
                 4019 => {
                     if self.intimetrial || self.nodeathmode || self.inintermission {
                     } else {
-                        self.savetele(map, fs);
+                        self.savetele(fs, map, music, obj, help);
                     }
                     let i = obj.getteleporter() as usize;
                     self.activetele = true;
@@ -4155,7 +4139,7 @@ impl Game {
 
     // void Game::loadstats(ScreenSettings* screen_settings);
     pub fn loadstats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) {
-        trace!("loading stats");
+        trace!("loadstats()");
         let doc = fs.FILESYSTEM_loadTiXml2Document("unlock.vvv");
 
         match doc {
@@ -4207,7 +4191,6 @@ impl Game {
                                                 },
                                                 Err(s) => error!("error while parsing invincibility value: {}", s),
                                             };
-
                                         }
                                         // "slowdown"
                                         // "advanced_smoothing"
@@ -4306,7 +4289,6 @@ impl Game {
                     quick_xml::Error::Io(io_err) => {
                         match io_err.kind() {
                             std::io::ErrorKind::NotFound => {
-                                trace!("{:?}", io_err);
                                 info!("No Stats found. Assuming a new player");
 
                                 // Save unlock.vvv only. Maybe we have a settings.vvv laying around too,
@@ -4326,16 +4308,16 @@ impl Game {
     // bool Game::savestats(const ScreenSettings* screen_settings);
     // bool Game::savestats(void);
     pub fn savestats(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
-        trace!("savestats");
+        trace!("savestats()");
         if fs.savefile_exists("unlock.vvv") {
             info!("No unlock.vvv found. Creating new file");
         }
 
-        let mut wrapper = xml::xml::new();
-        wrapper.update_declaration();
-        wrapper.write_start_tag("Save");
-        wrapper.update_comment(" Save file ");
-        wrapper.write_start_tag("Data");
+        let mut doc = xml::xml::new();
+        doc.update_declaration();
+        doc.write_start_tag("Save");
+        doc.update_comment(" Save file ");
+        doc.write_start_tag("Data");
 
         // let s_unlock = String::new();
         // for el in self.unlock {
@@ -4392,24 +4374,27 @@ impl Game {
         // xml::update_tag(dataNode, "swnbestrank", swnbestrank);
         // xml::update_tag(dataNode, "swnrecord", swnrecord);
 
-        self.serializesettings(&mut wrapper, screen_settings, music, map);
-        wrapper.write_end_tag("Data");
-        wrapper.write_end_tag("Save");
+        self.serializesettings(&mut doc, screen_settings, music, map);
+        doc.write_end_tag("Data");
+        doc.write_end_tag("Save");
 
-        return fs.FILESYSTEM_saveTiXml2Document("unlock.vvv", wrapper.writer.into_inner().into_inner());
+        return fs.FILESYSTEM_saveTiXml2Document("unlock.vvv", doc.writer.into_inner().into_inner());
     }
 
     pub fn savestats_settings(&mut self, screen_settings: screen::ScreenSettings) {
-       warn!("DEADBEEF: Game::savestats_settings() method not implemented yet");
+        trace!("savestats_settings()");
+        warn!("DEADBEEF: Game::savestats_settings() method not implemented yet");
     }
 
     // void Game::deletestats(void);
     pub fn deletestats(&mut self) {
+        trace!("deletestats()");
         warn!("DEADBEEF: Game::deletestats() not implemented yet");
     }
 
     // void Game::deserializesettings(tinyxml2::XMLElement* dataNode, ScreenSettings* screen_settings);
     fn deserializesettings(&mut self, reader: &mut quick_xml::Reader<std::io::BufReader<std::fs::File>>, music: &mut music::Music, map: &mut map::Map, gameScreen: &mut screen::Screen, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) {
+        trace!("deserializesettings()");
         warn!("DEADBEEF: Game::deserializesettings not fully implemented yet");
 
         // Don't duplicate controller buttons!
@@ -4525,6 +4510,7 @@ impl Game {
 
     // void Game::serializesettings(tinyxml2::XMLElement* dataNode, const ScreenSettings* screen_settings);
     fn serializesettings(&mut self, wrapper: &mut xml::xml, screen_settings: screen::ScreenSettings, music: &mut music::Music, map: &mut map::Map) {
+        trace!("serializesettings()");
         warn!("DEADBEEF: Game::serializesettings not implemented yet");
 
         // xml::update_tag(dataNode, "fullscreen", (int) screen_settings->fullscreen);
@@ -4606,7 +4592,7 @@ impl Game {
 
     // void Game::loadsettings(ScreenSettings* screen_settings);
     pub fn loadsettings(&mut self, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map, gameScreen: &mut screen::Screen, help: &mut utility_class::UtilityClass, key: &mut key_poll::KeyPoll) {
-        trace!("loadsettings");
+        trace!("loadsettings()");
         let doc = fs.FILESYSTEM_loadTiXml2Document("settings.vvv");
 
         match doc {
@@ -4633,6 +4619,7 @@ impl Game {
     // bool Game::savesettings(const ScreenSettings* screen_settings);
     // bool Game::savesettings(void);
     pub fn savesettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
+        trace!("savesettings()");
         warn!("DEADBEEF: Game::savesettings not implemented yet");
 
         if !fs.savefile_exists("settings.vvv") {
@@ -4653,6 +4640,7 @@ impl Game {
 
     // bool Game::savestatsandsettings(void);
     pub fn savestatsandsettings(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) -> bool {
+        trace!("savestatsandsettings()");
         let stats_saved = self.savestats(screen_settings, fs, music, map);
         let settings_saved = self.savesettings(screen_settings, fs, music, map);
         return stats_saved && settings_saved; // Not the same as `savestats() && savesettings()`!
@@ -4660,6 +4648,7 @@ impl Game {
 
     // void Game::savestatsandsettings_menu(void);
     pub fn savestatsandsettings_menu(&mut self, screen_settings: screen::ScreenSettings, fs: &mut filesystem::FileSystem, music: &mut music::Music, map: &mut map::Map) {
+        trace!("savestatsandsettings_menu()");
         warn!("DEADBEEF: Game::savestatsandsettings_menu not implemented yet");
 
         self.savestatsandsettings(screen_settings, fs, music, map);
@@ -4673,55 +4662,61 @@ impl Game {
 
     // void Game::deletesettings(void);
     pub fn deletesettings(&mut self) {
+        trace!("deletesettings()");
         warn!("DEADBEEF: Game::deletesettings() method not implemented yet");
     }
 
     // void Game::deletequick(void);
     pub fn deletequick(&mut self) {
+        trace!("deletequick()");
         warn!("DEADBEEF: Game::deletequick() method not implemented yet");
     }
 
     // bool Game::savetele(void);
-    pub fn savetele(&mut self, map: &mut map::Map, fs: &mut filesystem::FileSystem) -> bool {
+    pub fn savetele(&mut self, fs: &mut filesystem::FileSystem, map: &map::Map, music: &music::Music, obj: &entity::EntityClass, help: &utility_class::UtilityClass) -> bool {
+        trace!("savetele()");
+
         if map.custommode || self.inspecial() {
             //Don't trash save data!
             return false;
         }
 
-        warn!("DEADBEEF: Game::savetele() method not fully implemented yet");
-        // let already_exists = fs.FILESYSTEM_loadTiXml2Document("tsave.vvv");
-        // if !already_exists {
-        //     info!("No tsave.vvv found. Creating new file");
-        // }
-        // self.telesummary = self.writemaingamesave(doc);
+        if !fs.savefile_exists("tsave.vvv") {
+            info!("No tsave.vvv found. Creating new file");
+        }
+        let mut doc = xml::xml::new();
+        self.telesummary = self.writemaingamesave(&mut doc, map, music, obj, help);
 
-        // if !fs.FILESYSTEM_saveTiXml2Document("tsave.vvv", doc) {
-        //     error!("Could Not Save game!\n");
-        //     error!("Failed: {}{}\n", self.saveFilePath, "tsave.vvv");
-        //     return false;
-        // }
+        if !fs.FILESYSTEM_saveTiXml2Document("tsave.vvv", doc.writer.into_inner().into_inner()) {
+            error!("Could Not Save game!");
+            return false
+        }
 
-        // info!("Game saved\n");
-        return true;
+        info!("Game saved");
+        true
     }
 
     // void Game::loadtele(void);
-    pub fn loadtele(&mut self) {
-        warn!("DEADBEEF: Game::loadtele() method not implemented yet");
+    pub fn loadtele(&mut self, fs: &mut filesystem::FileSystem, map: &mut map::Map, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) {
+        trace!("loadtele()");
+        self.readmaingamesave("tsave.vvv", fs, map, obj, help);
     }
 
     // void Game::deletetele(void);
     pub fn deletetele(&mut self) {
+        trace!("deletetele()");
         warn!("DEADBEEF: Game::deletetele() method not implemented yet");
     }
 
     // void Game::customstart(void);
     pub fn customstart(&mut self) {
+        trace!("customstart()");
         warn!("DEADBEEF: Game::customstart() method not implemented yet");
     }
 
     // void Game::start(void);
     pub fn start(&mut self, map: &mut map::Map, music: &mut music::Music) {
+        trace!("start()");
         self.jumpheld = true;
 
         self.savex = 232;
@@ -4744,11 +4739,13 @@ impl Game {
 
     // void Game::startspecial(int t);
     pub fn startspecial(&mut self, t: i32) {
+        trace!("startspecial()");
         warn!("DEADBEEF: Game::startspecial() method not implemented yet");
     }
 
     // void Game::starttrial(int t);
     pub fn starttrial(&mut self, t: i32) {
+        trace!("starttrial()");
         warn!("DEADBEEF: Game::starttrial() method not implemented yet");
     }
 
@@ -4821,24 +4818,427 @@ impl Game {
     }
 
     // void Game::loadquick(void);
-    pub fn loadquick(&mut self) {
-        warn!("DEADBEEF: Game::loadquick() method not implemented yet");
+    pub fn loadquick(&mut self, fs: &mut filesystem::FileSystem, map: &mut map::Map, obj: &mut entity::EntityClass, help: &mut utility_class::UtilityClass) {
+        trace!("loadquick()");
+        self.readmaingamesave("qsave.vvv", fs, map, obj, help);
     }
 
     // void Game::loadsummary(void);
-    pub fn loadsummary(&mut self) {
-        warn!("DEADBEEF: Game::loadsummary() method not implemented yet");
+    pub fn loadsummary(&mut self, fs: &mut filesystem::FileSystem, map: &mut map::Map, music: &music::Music, obj: &mut entity::EntityClass, help: &utility_class::UtilityClass) {
+        trace!("loadsummary()");
+
+        let result = self.loadsave("tsave.vvv", SaveFullness::Brief, fs, map, obj, help);
+        if result.0 == true {
+            self.telesummary = result.1;
+            self.tele_gametime = result.2;
+            self.tele_currentarea = result.3;
+            self.tele_trinkets = result.4;
+
+            info!("loaded teleport save info: {} {} {} {}", self.telesummary, self.tele_gametime, self.tele_currentarea, self.tele_trinkets);
+        }
+
+        let result = self.loadsave("qsave.vvv", SaveFullness::Brief, fs, map, obj, help);
+        if result.0 == true {
+            self.quicksummary = result.1;
+            self.quick_gametime = result.2;
+            self.quick_currentarea = result.3;
+            self.quick_trinkets = result.4;
+
+            info!("loaded quick save info: {} {} {} {}", self.quicksummary, self.quick_gametime, self.quick_currentarea, self.quick_trinkets);
+        }
+    }
+
+    fn loadsave(&mut self, file: &str, save_fullness: SaveFullness, fs: &mut filesystem::FileSystem, map: &mut map::Map, obj: &mut entity::EntityClass, help: &utility_class::UtilityClass) -> (bool, String, String, String, i32) {
+        trace!("loadsave({},{:?})", file, save_fullness);
+        let doc = fs.FILESYSTEM_loadTiXml2Document(file);
+        let mut summary = String::new();
+        let mut trinkets = 0;
+
+        match doc {
+            Ok(mut reader) => {
+                let mut l_minute: i32 = 0;
+                let mut l_second: i32 = 0;
+                let mut l_hours: i32 = 0;
+                let mut l_saveX = 0;
+                let mut l_saveY = 0;
+
+                reader.trim_text(true);
+                let mut buf = Vec::new();
+
+                let mut tag: String = String::new();
+                loop {
+                    match reader.read_event(&mut buf) {
+                        Ok(quick_xml::events::Event::Start(ref e)) => {
+                            match String::from_utf8(e.name().to_vec()) {
+                                Ok(v) => tag = v,
+                                Err(_) => tag = String::new(),
+                            }
+                        },
+                        Ok(quick_xml::events::Event::Text(text)) => {
+                            if tag.len() == 0 {
+                                continue;
+                            }
+
+                            match text.unescape_and_decode(&reader) {
+                                Ok(text) => {
+                                    let v = text.as_str();
+                                    let tag = tag.as_str();
+
+                                    let mut pass = false;
+                                    match save_fullness {
+                                        SaveFullness::Summary | SaveFullness::Brief | SaveFullness::Full => {
+                                            match tag {
+                                                "summary" => pass = true,
+                                                _ => (),
+                                            }
+                                        },
+                                    }
+
+                                    match save_fullness {
+                                        SaveFullness::Brief | SaveFullness::Full => {
+                                            match tag {
+                                                "seconds" | "minutes" | "hours" | "trinkets" | "finalmode" | "finalstretch" |
+                                                "saverx" | "savery" => pass = true,
+                                                _ => (),
+                                            }
+                                        },
+                                        _ => (),
+                                    }
+
+                                    match save_fullness {
+                                        SaveFullness::Full => {
+                                            match tag {
+                                                "savex" | "savey" | "savegc" | "savedir" | "savepoint" |
+                                                "companion" | "lastsaved" | "scmprogress" | "frames" | "deathcounts" | "totalflips" | "supercrewmate" | "scmmoveme" |
+                                                "hardestroom" | "hardestroomdeaths" |
+                                                "worldmap" | "flags" | "crewstats" | "collect" => pass = true,
+                                                _ => (),
+                                            }
+                                        },
+                                        _ => (),
+                                    }
+
+                                    if pass == false {
+                                        info!("parsing {:?} tag not implemented for {:?} fullness", tag, save_fullness);
+                                        continue
+                                    }
+
+                                    match tag {
+                                        // SaveFullness::Summary
+                                        "summary" => summary = text,
+
+                                        // SaveFullness::Brief
+                                        "seconds" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => l_second = v,
+                                                Err(s) => error!("error while parsing seconds value: {}", s),
+                                            };
+                                        },
+                                        "minutes" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => l_minute = v,
+                                                Err(s) => error!("error while parsing minutes value: {}", s),
+                                            };
+                                        },
+                                        "hours" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => l_hours = v,
+                                                Err(s) => error!("error while parsing hours value: {}", s),
+                                            };
+                                        },
+                                        "trinkets" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    trinkets = v;
+                                                },
+                                                Err(s) => error!("error while parsing trinkets value: {}", s),
+                                            };
+                                        },
+                                        "finalmode" => map.finalmode = v == "1",
+                                        "finalstretch" => map.finalstretch = v == "1",
+                                        "saverx" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    match save_fullness {
+                                                        SaveFullness::Summary => (),
+                                                        SaveFullness::Brief => {
+                                                            l_saveX = v;
+                                                        },
+                                                        SaveFullness::Full => {
+                                                            self.saverx = v;
+                                                        },
+                                                    }
+                                                },
+                                                Err(s) => error!("error while parsing saverx value: {}", s),
+                                            };
+                                        },
+                                        "savery" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    match save_fullness {
+                                                        SaveFullness::Summary => (),
+                                                        SaveFullness::Brief => {
+                                                            l_saveY = v;
+                                                        },
+                                                        SaveFullness::Full => {
+                                                            self.savery = v;
+                                                        },
+                                                    }
+                                                },
+                                                Err(s) => error!("error while parsing savery value: {}", s),
+                                            };
+                                        },
+
+                                        // SaveFullness::Full
+                                        "savex" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.savex = v;
+                                                },
+                                                Err(s) => error!("error while parsing savex value: {}", s),
+                                            };
+                                        },
+                                        "savey" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.savey = v;
+                                                },
+                                                Err(s) => error!("error while parsing savey value: {}", s),
+                                            };
+                                        },
+                                        "savegc" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.savegc = v;
+                                                },
+                                                Err(s) => error!("error while parsing savegc value: {}", s),
+                                            };
+                                        },
+                                        "savedir" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.savedir = v;
+                                                },
+                                                Err(s) => error!("error while parsing savedir value: {}", s),
+                                            };
+                                        },
+                                        "savepoint" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.savepoint = v;
+                                                },
+                                                Err(s) => error!("error while parsing savepoint value: {}", s),
+                                            };
+                                        },
+                                        "companion" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.companion = v;
+                                                },
+                                                Err(s) => error!("error while parsing companion value: {}", s),
+                                            };
+                                        },
+                                        "lastsaved" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.lastsaved = v;
+                                                },
+                                                Err(s) => error!("error while parsing lastsaved value: {}", s),
+                                            };
+                                        },
+                                        "scmprogress" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.scmprogress = v;
+                                                },
+                                                Err(s) => error!("error while parsing scmprogress value: {}", s),
+                                            };
+                                        },
+                                        "frames" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.frames = v;
+                                                },
+                                                Err(s) => error!("error while parsing frames value: {}", s),
+                                            };
+                                        },
+                                        "deathcounts" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.deathcounts = v;
+                                                },
+                                                Err(s) => error!("error while parsing deathcounts value: {}", s),
+                                            };
+                                        },
+                                        "totalflips" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.totalflips = v;
+                                                },
+                                                Err(s) => error!("error while parsing totalflips value: {}", s),
+                                            };
+                                        },
+
+                                        "supercrewmate" => self.supercrewmate = v == "1",
+                                        "scmmoveme" => self.scmmoveme = v == "1",
+
+                                        "hardestroom" => self.hardestroom = text,
+                                        "hardestroomdeaths" => {
+                                            match i32::from_str_radix(v, 10) {
+                                                Ok(v) => {
+                                                    self.hardestroomdeaths = v;
+                                                },
+                                                Err(s) => error!("error while parsing hardestroomdeaths value: {}", s),
+                                            };
+                                        },
+
+                                        "worldmap" => {
+                                            let loaded = v.split(",").map(| x | if x == "0" { false } else { true }).collect::<Vec<bool>>();
+                                            for (i, explore) in map.explored.iter_mut().enumerate() {
+                                                *explore = loaded[i];
+                                            }
+                                        },
+                                        "flags" => {
+                                            let loaded = v.split(",").map(| x | if x == "0" { false } else { true }).collect::<Vec<bool>>();
+                                            for (i, flag) in obj.flags.iter_mut().enumerate() {
+                                                *flag = loaded[i];
+                                            }
+                                        },
+                                        "crewstats" => {
+                                            let loaded = v.split(",").map(| x | if x == "0" { false } else { true }).collect::<Vec<bool>>();
+                                            for (i, crewstat) in self.crewstats.iter_mut().enumerate() {
+                                                *crewstat = loaded[i];
+                                            }
+                                        },
+                                        "collect" => {
+                                            let loaded = v.split(",").map(| x | if x == "0" { false } else { true }).collect::<Vec<bool>>();
+                                            for (i, collect) in obj.collect.iter_mut().enumerate() {
+                                                *collect = loaded[i];
+                                            }
+                                        },
+
+                                        _ => info!("parsing {:?} tag not implemented", tag),
+                                    }
+                                },
+                                Err(_) => continue,
+                            }
+
+                            // LOAD_ARRAY_RENAME(crewstats, tele_crewstats)
+                        },
+                        Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
+                        Ok(quick_xml::events::Event::Eof) => break,
+                        _ => (),
+                    }
+                    buf.clear();
+                }
+
+                return (
+                    true,
+                    summary,
+                    self.giventimestring(l_hours, l_minute, l_second, help),
+                    map.currentarea(map.area(l_saveX, l_saveY)).to_string(),
+                    trinkets,
+                )
+            },
+            Err(xml_err) => {
+                match xml_err {
+                    quick_xml::Error::Io(io_err) => {
+                        match io_err.kind() {
+                            std::io::ErrorKind::NotFound => {
+                                info!("({}) Save Not Found", file);
+
+                                return (false, String::new(), String::new(), String::new(), 0)
+                            },
+                            _ => panic!(io_err),
+                        }
+                    },
+                    _ => panic!(xml_err), // @sx probably this should not happen
+                };
+            },
+        }
     }
 
     // void Game::readmaingamesave(tinyxml2::XMLDocument& doc);
-    pub fn readmaingamesave(&mut self, doc: i32) {
-        warn!("DEADBEEF: Game::readmaingamesave() method not implemented yet");
+    pub fn readmaingamesave(&mut self, file: &str, fs: &mut filesystem::FileSystem, map: &mut map::Map, obj: &mut entity::EntityClass, help: &utility_class::UtilityClass) {
+        trace!("readmaingamesave({})", file);
+        self.loadsave(file, SaveFullness::Full, fs, map, obj, help);
     }
 
     // std::string Game::writemaingamesave(tinyxml2::XMLDocument& doc);
-    pub fn writemaingamesave(&mut self, doc: i32) -> &'static str {
-        warn!("DEADBEEF: Game::writemaingamesave() method not implemented yet");
-        &""
+    pub fn writemaingamesave(&mut self, doc: &mut xml::xml, map: &map::Map, music: &music::Music, obj: &entity::EntityClass, help: &utility_class::UtilityClass) -> String {
+        trace!("writemaingamesave()");
+
+        if map.custommode || self.inspecial() {
+            //Don't trash save data!
+            return String::new()
+        }
+
+        doc.update_declaration();
+        doc.write_start_tag("Start");
+        doc.update_comment(" Save file ");
+        doc.write_start_tag("Data");
+
+        //Flags, map and stats
+        let mapExplored = map.explored.iter().map(| x | if *x == true { "1" } else { "0" }).collect::<Vec<&str>>().join(",");
+        doc.update_tag("worldmap", &mapExplored);
+
+        let flags = obj.flags.iter().map(| x | if *x == true { "1" } else { "0" }).collect::<Vec<&str>>().join(",");
+        doc.update_tag("flags", &flags);
+
+        let crewstatsString = self.crewstats.iter().map(| x | if *x == true { "1" } else { "0" }).collect::<Vec<&str>>().join(",");
+        doc.update_tag("crewstats", &crewstatsString);
+
+        let collect = obj.collect.iter().map(| x | if *x == true { "1" } else { "0" }).collect::<Vec<&str>>().join(",");
+        doc.update_tag("collect", &collect);
+
+        //Position
+        doc.update_tag("savex", &self.savex.to_string());
+        doc.update_tag("savey", &self.savey.to_string());
+        doc.update_tag("saverx", &self.saverx.to_string());
+        doc.update_tag("savery", &self.savery.to_string());
+        doc.update_tag("savegc", &self.savegc.to_string());
+        doc.update_tag("savedir", &self.savedir.to_string());
+        doc.update_tag("savepoint", &self.savepoint.to_string());
+        doc.update_tag("trinkets", &self.trinkets(obj).to_string());
+
+        //Special stats
+        doc.update_tag("currentsong", &(if music.nicefade {
+            music.nicechange.to_string()
+        } else {
+            music.currentsong.to_string()
+        }));
+
+        doc.update_tag("teleportscript", &self.teleportscript);
+        doc.update_tag("companion", &self.companion.to_string());
+
+        doc.update_tag("lastsaved", &self.lastsaved.to_string());
+        doc.update_tag("supercrewmate", &self.supercrewmate.to_string());
+
+        doc.update_tag("scmprogress", &self.scmprogress.to_string());
+        doc.update_tag("scmmoveme", &self.scmmoveme.to_string());
+
+        doc.update_tag("frames", &self.frames.to_string());
+        doc.update_tag("seconds", &self.seconds.to_string());
+
+        doc.update_tag("minutes", &self.minutes.to_string());
+        doc.update_tag("hours", &self.hours.to_string());
+
+        doc.update_tag("deathcounts", &self.deathcounts.to_string());
+        doc.update_tag("totalflips", &self.totalflips.to_string());
+
+        doc.update_tag("hardestroom", &self.hardestroom);
+        doc.update_tag("hardestroomdeaths", &self.hardestroomdeaths.to_string());
+
+        doc.update_tag("finalmode", if map.finalmode { "1" } else { "0" });
+        doc.update_tag("finalstretch", if map.finalstretch { "1" } else { "0" });
+
+        let summary = format!("{}, {}", self.savearea, self.timestring(help));
+        doc.update_tag("summary", &summary);
+
+        doc.write_end_tag("Data");
+        doc.write_end_tag("Start");
+
+        return summary;
     }
 
     // void Game::initteleportermode(void);
@@ -4880,15 +5280,7 @@ impl Game {
 
     // int Game::trinkets(void);
     pub fn trinkets(&self, obj: &entity::EntityClass) -> i32 {
-        let mut temp = 0;
-        for ob in obj.collect.iter() {
-            // if obj.collect[i] {
-            // TODO @sx @impl
-            if true {
-                temp += 1;
-            }
-        }
-        temp
+        obj.collect.iter().fold(0, | collected, x | { if *x == true { collected + 1 } else { collected } })
     }
 
     // int Game::crewmates(void);
@@ -5136,4 +5528,11 @@ pub enum GameState {
     GAMECOMPLETE2,
     EDITORMODE,
     PRELOADER,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum SaveFullness {
+    Summary,
+    Brief,
+    Full,
 }

@@ -1482,7 +1482,7 @@ impl ScriptClass {
                     map.gotoroom(46, 54, game, graphics, music, obj, help);
                 } else if self.words[0] == "telesave" {
                     if !game.intimetrial && !game.nodeathmode && !game.inintermission {
-                        game.savetele(map, fs);
+                        game.savetele(fs, map, music, obj, help);
                     }
                 } else if self.words[0] == "createlastrescued" {
                     self.r = match game.lastsaved {
@@ -1870,7 +1870,8 @@ impl ScriptClass {
     }
 
     // void scriptclass::startgamemode( int t )
-    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music, help: &mut utility_class::UtilityClass) -> Result<(), i32>  {
+    pub fn startgamemode(&mut self, t: i32, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, obj: &mut entity::EntityClass, music: &mut music::Music, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) -> Result<(), i32>  {
+        trace!("startgamemode({})", t);
         match t {
             0 => {
                 game.gamestate = GameState::GAMEMODE;
@@ -1898,7 +1899,73 @@ impl ScriptClass {
 
                 scripts::load(self, "intro");
             },
-            1..=19 => warn!("gamemode {} not implemented yet", t),
+            1 => {
+                game.gamestate = GameState::GAMEMODE;
+                self.hardreset(game, map, graphics, obj);
+                game.start(map, music);
+                game.loadtele(fs, map, obj, help);
+                game.gravitycontrol = game.savegc;
+                game.jumpheld = true;
+
+                //set flipmode
+                if graphics.setflipmode {
+                    graphics.flipmode = true;
+                } else {
+                    obj.flags[73] = true;
+                }
+
+                if obj.entities.is_empty() {
+                    //In this game, constant, never destroyed
+                    obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
+                } else {
+                    map.resetplayer(None, game, obj, graphics, music, help);
+                }
+
+                map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
+                map.initmapdata();
+                graphics.fademode = 4;
+            },
+            2 => {
+                //Load Quicksave
+                game.gamestate = GameState::GAMEMODE;
+                self.hardreset(game, map, graphics, obj);
+                game.start(map, music);
+                game.loadquick(fs, map, obj, help);
+                game.gravitycontrol = game.savegc;
+                game.jumpheld = true;
+
+                //set flipmode
+                if graphics.setflipmode {
+                    graphics.flipmode = true;
+                } else {
+                    obj.flags[73] = true;
+                }
+
+                if obj.entities.is_empty() {
+                    //In this game, constant, never destroyed
+                    obj.createentity(game.savex, game.savey, 0, Some(0), None, None, None, None, None, game);
+                } else {
+                    map.resetplayer(None, game, obj, graphics, music, help);
+                }
+
+                map.gotoroom(game.saverx, game.savery, game, graphics, music, obj, help);
+                map.initmapdata();
+
+                //a very special case for here needs to ensure that the tower is set correctly
+                if map.towermode {
+                    map.resetplayer(None, game, obj, graphics, music, help);
+
+                    let i = obj.getplayer() as usize;
+                    if INBOUNDS_VEC!(i, obj.entities) {
+                        map.ypos = obj.entities[i].yp - 120;
+                    }
+                    graphics.buffers.towerbg.bypos = map.ypos / 2;
+                    map.cameramode = 0;
+                    map.colsuperstate = 0;
+                }
+                graphics.fademode = 4;
+            },
+            3..=19 => warn!("gamemode {} not implemented yet", t),
 
             100 => return Err(0),
             _ => error!("incorrect game mode"),
@@ -1988,7 +2055,7 @@ impl ScriptClass {
             } else {
                 music.changemusicarea(game.teleport_to_x, game.teleport_to_y);
             }
-            game.savetele_textbox(graphics, map, fs);
+            game.savetele_textbox(fs, graphics, map, music, obj, help);
         }
     }
 

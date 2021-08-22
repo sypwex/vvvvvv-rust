@@ -128,7 +128,7 @@ impl Input {
                     game.screenshake = 10;
                     game.flashlight = 5;
                 } else {
-                    self.menuactionpress(music, map, game, screen, key, fs);
+                    self.menuactionpress(music, map, game, screen, key, fs, help, obj);
                 }
             }
             if game.currentmenuname == game::MenuName::controller &&
@@ -145,7 +145,7 @@ impl Input {
                 self.fadetomodedelay -= 1;
             } else {
                 self.fadetomode = false;
-                if let Err(code) = script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music, help) {
+                if let Err(code) = script.startgamemode(self.gotomode, game, &mut screen.render.graphics, map, obj, music, help, fs) {
                     return Err(code)
                 }
             }
@@ -154,7 +154,7 @@ impl Input {
         Ok(None)
     }
 
-    pub fn gameinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass) -> Result<Option<RenderResult>, i32> {
+    pub fn gameinput (&mut self, game: &mut game::Game, graphics: &mut graphics::Graphics, map: &mut map::Map, music: &mut music::Music, key: &mut key_poll::KeyPoll, obj: &mut entity::EntityClass, script: &mut script::ScriptClass, help: &mut utility_class::UtilityClass, fs: &mut filesystem::FileSystem) -> Result<Option<RenderResult>, i32> {
         //TODO mouse input
         //game.mx = (mouseX / 2);
         //game.my = (mouseY / 2);
@@ -220,7 +220,7 @@ impl Input {
         if game.intimetrial && graphics.fademode == 1 && game.quickrestartkludge {
             //restart the time trial
             game.quickrestartkludge = false;
-            script.startgamemode(game.timetriallevel + 3, game, graphics, map, obj, music, help)?;
+            script.startgamemode(game.timetriallevel + 3, game, graphics, map, obj, music, help, fs)?;
             game.deathseq = -1;
             game.completestop = false;
         }
@@ -753,7 +753,9 @@ impl Input {
     }
 
     // static void menuactionpress(void)
-    fn menuactionpress(&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, fs: &mut filesystem::FileSystem) {
+    fn menuactionpress(&mut self, music: &mut music::Music, map: &mut map::Map, game: &mut game::Game, screen: &mut screen::Screen, key: &mut key_poll::KeyPoll, fs: &mut filesystem::FileSystem, help: &utility_class::UtilityClass, obj: &mut entity::EntityClass) {
+        trace!("menuactionpress: menuname={:?} option={})", game.currentmenuname, game.currentmenuoption);
+
         let screen_settings = screen.screen_settings;
         let screen_params = screen.get_screen_params();
 
@@ -1671,7 +1673,7 @@ impl Input {
                     } else {
                         //go to a menu!
                         music.playef(11);
-                        game.loadsummary(); //Prepare save slots to display
+                        game.loadsummary(fs, map, music, obj, help); //Prepare save slots to display
                         game.createmenu(MenuName::continuemenu, None, &mut screen.render.graphics, music, screen_params, map, screen_settings, fs);
                     }
                 } else if game.currentmenuoption == 1 && game.unlock[8] {
@@ -2260,7 +2262,7 @@ fn mapmenuactionpress(game: &mut game::Game, graphics: &mut graphics::Graphics, 
                 // else
                 // #endif
                 {
-                    game.savequick()
+                    game.savequick(fs, map, music, obj, help)
                 };
                 game.gamesaved = success;
                 game.gamesavefailed = !success;

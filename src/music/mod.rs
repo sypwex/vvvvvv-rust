@@ -33,8 +33,8 @@ pub struct Music {
     pub user_music_volume: Box<i32>,
     pub user_sound_volume: Box<i32>,
 
-    nicechange: i32,
-    nicefade: bool,
+    pub nicechange: i32,
+    pub nicefade: bool,
     quick_fade: bool,
 
     pppppp_blob: BinaryBlob,

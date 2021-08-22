@@ -1212,7 +1212,6 @@ impl Graphics {
                 for i in 0..self.fadebars.len() {
                     self.fadebars[i] = 320 + (maths::fRandom() * 12.0) as i32 * 8;
                 }
-                println!("{:?} fadebars", self.fadebars);
                 self.setfade(416);
                 self.fademode = 5;
             } else if self.fademode == 5 {

@@ -37,7 +37,7 @@ pub struct Map {
     pub roomdeaths: [i32; 20*20],
     pub roomdeathsfinal: [i32; 20*20],
     pub contents: [i16; 40*30],
-    explored: [bool; 20*20],
+    pub explored: [bool; 20*20],
     pub vmult: [i32; 30],
 
     //Start here!

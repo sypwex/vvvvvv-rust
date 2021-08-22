@@ -88,7 +88,7 @@ fn teleportermodeinput(game: &mut game::Game, script: &mut script::ScriptClass, 
         input.teleporterinput(game, graphics, map, key, obj)
     } else {
         script.run(game, obj, map, graphics, help, music, key, fs);
-        input.gameinput(game, graphics, map, music, key, obj, script, help)
+        input.gameinput(game, graphics, map, music, key, obj, script, help, fs)
     }
 }
 // static void flipmodeoff(void)
@@ -179,7 +179,8 @@ impl Main {
         let mut help = utility_class::UtilityClass::new();
         let mut key = key_poll::KeyPoll::new();
         game.loadsettings(&mut fs, &mut music, &mut map, &mut gameScreen, &mut help, &mut key);
-        game.init(&mut music);
+        let mut obj = entity::EntityClass::new();
+        game.init(&mut fs, &mut map, &mut music, &mut obj, &help);
         gameScreen.init(screen_settings);
 
         // graphics.create_buffers(gameScreen.GetFormat());
@@ -206,7 +207,7 @@ impl Main {
             game,
             key,
             map,
-            obj: entity::EntityClass::new(),
+            obj,
             gameScreen,
             script: script::ScriptClass::new(),
 
@@ -697,7 +698,7 @@ fn invoke_scene_function(preloader: &mut Preloader, fnname: Fns, music: &mut mus
         Fns::runscript => script.run(game, obj, map, &mut gameScreen.render.graphics, help, music, key, fs),
         Fns::gamerenderfixed => gameScreen.renderfixed.gamerenderfixed(obj, game, map, &mut gameScreen.render.graphics, script, help),
         Fns::gamerender => gameScreen.render.gamerender(game, map, help, obj),
-        Fns::gameinput => input.gameinput(game, &mut gameScreen.render.graphics, map, music, key, obj, script, help),
+        Fns::gameinput => input.gameinput(game, &mut gameScreen.render.graphics, map, music, key, obj, script, help, fs),
         Fns::gamelogic => logic::gamelogic(game, &mut gameScreen.render.graphics, map, music, obj, help, script, screen_params, fs, screen_settings),
 
         // GameState::MAPMODE

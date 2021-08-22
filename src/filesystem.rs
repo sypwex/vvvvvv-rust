@@ -197,11 +197,11 @@ impl FileSystem {
     // void FILESYSTEM_freeMemory(unsigned char **mem)
 
     // bool FILESYSTEM_saveTiXml2Document(const char *name, tinyxml2::XMLDocument& doc)
-    pub fn FILESYSTEM_saveTiXml2Document(&mut self, name: &str, xml: Vec<u8>) -> bool {
+    pub fn FILESYSTEM_saveTiXml2Document(&mut self, name: &str, doc: Vec<u8>) -> bool {
         let saveDir = self.saveDir.clone().unwrap().clone().to_str().unwrap().to_owned();
         let path = saveDir + name;
-        info!("FILESYSTEM_saveTiXml2Document: writing {} bytes into {}", xml.len(), path);
-        std::fs::write(path, xml).expect("error while writing save");
+        info!("FILESYSTEM_saveTiXml2Document: writing {} bytes into {}", doc.len(), path);
+        std::fs::write(path, doc).expect("error while writing save");
 
         true
     }
