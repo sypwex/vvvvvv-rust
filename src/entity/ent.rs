@@ -356,7 +356,88 @@ impl EntClass {
 
     // void entclass::setenemy( int t )
     pub fn setenemy(&mut self, t: i32) {
-        println!("DEADBEEF: entclass::setenemy() method not implemented yet");
+        match t {
+            //lies emitter
+            0 => {
+                match self.para as i32 {
+                    0 => {
+                        self.tile = 60;
+                        self.animate = 2;
+                        self.colour = 6;
+                        self.behave = 10;
+                        self.w = 32;
+                        self.h = 32;
+                        self.x1 = -200;
+                    },
+                    1 => {
+                        self.yp += 10;
+                        self.lerpoldyp += 10;
+                        self.tile = 63;
+                        self.animate = 100; //LIES
+                        self.colour = 6;
+                        self.behave = 11;
+                        self.para = 9.0; //destroyed when outside
+                        self.x1 = -200;
+                        self.x2 = 400;
+                        self.w = 26;
+                        self.h = 10;
+                        self.cx = 1;
+                        self.cy = 1;
+                    },
+                    2 => {
+                        self.tile = 62;
+                        self.animate = 100;
+                        self.colour = 6;
+                        self.behave = -1;
+                        self.w = 32;
+                        self.h = 32;
+                    },
+                    _ => (),
+                };
+            },
+            //FACTORY emitter
+            1 => {
+                match self.para as i32 {
+                    0 => {
+                        self.tile = 72;
+                        self.animate = 3;
+                        self.size = 9;
+                        self.colour = 6;
+                        self.behave = 12;
+                        self.w = 64;
+                        self.h = 40;
+                        self.cx = 0;
+                        self.cy = 24;
+                    },
+                    1 => {
+                        self.xp += 4;
+                        self.lerpoldxp += 4;
+                        self.yp -= 4;
+                        self.lerpoldyp -= 4;
+                        self.tile = 76;
+                        self.animate = 100; // Clouds
+                        self.colour = 6;
+                        self.behave = 13;
+                        self.para = -6.0; //destroyed when outside
+                        self.x2 = 400;
+                        self.w = 32;
+                        self.h = 12;
+                        self.cx = 0;
+                        self.cy = 6;
+                    },
+                    2 => {
+                        self.tile = 77;
+                        self.animate = 100;
+                        self.colour = 6;
+                        self.behave = -1;
+                        self.w = 32;
+                        self.h = 16;
+                    },
+                    _ => (),
+                };
+            },
+            _ => (),
+        };
     }
 
     // void entclass::setenemyroom( int rx, int ry )
