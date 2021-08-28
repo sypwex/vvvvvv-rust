@@ -261,7 +261,7 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 [[package]]
 name = "physfs"
 version = "0.0.1"
-source = "git+https://github.com/sypwex/physfs#732299aceaedd2ee747317d20c9e099fd5a31745"
+source = "git+https://github.com/sypwex/physfs#7515f0205eab1d20a16e6894b4113220bd4909bb"
 dependencies = [
  "bindgen",
  "env_logger 0.9.0",
