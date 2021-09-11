@@ -16,21 +16,43 @@ pub struct FileSystem {
 
 // static void* bridged_malloc(PHYSFS_uint64 size)
 fn bridged_malloc(size: physfs::uint64) -> *mut ::std::os::raw::c_void {
+    #[cfg(not(target_family = "windows"))]
     unsafe {
         sdl2_sys::SDL_malloc(size)
+    }
+
+    #[cfg(target_family = "windows")]
+    unsafe {
+        sdl2_sys::SDL_malloc(size as u32)
     }
 }
 
 // static void* bridged_realloc(void* ptr, PHYSFS_uint64 size)
 fn bridged_realloc(ptr: *mut ::std::os::raw::c_void, size: physfs::uint64) -> *mut ::std::os::raw::c_void {
+    #[cfg(not(target_family = "windows"))]
     unsafe {
         sdl2_sys::SDL_realloc(ptr, size)
+    }
+
+    #[cfg(target_family = "windows")]
+    unsafe {
+        sdl2_sys::SDL_realloc(ptr, size as u32)
     }
 }
 
 impl FileSystem {
     // int FILESYSTEM_init(char *argvZero, char* baseDir, char *assetsPath)
     pub fn new(argvZero: String, baseDir: Option<&Path>, assetsPath: Option<&Path>) -> Result<Self, String> {
+        #[cfg(not(target_family = "windows"))]
+        let allocator = physfs::Allocator {
+            Init: None,
+            Deinit: None,
+            // Malloc: Some(bridged_malloc),
+            Malloc: Some(sdl2_sys::SDL_malloc),
+            Realloc: Some(sdl2_sys::SDL_realloc),
+            Free: Some(sdl2_sys::SDL_free),
+        };
+        #[cfg(target_family = "windows")]
         let allocator = physfs::Allocator {
             Init: None,
             Deinit: None,

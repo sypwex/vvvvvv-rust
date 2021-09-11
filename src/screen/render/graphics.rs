@@ -3210,6 +3210,7 @@ fn PROCESS_TILESHEET_CHECK_ERROR(tilesheet: graphics_resources::Image, tile_squa
         let message_title: [char; 128] = [' '; 128];
 
         unsafe {
+            #[cfg(not(target_family = "windows"))]
             sdl2_sys::SDL_snprintf(
                 message.as_ptr() as *mut libc::c_char,
                 message.len() as u64,
@@ -3217,9 +3218,26 @@ fn PROCESS_TILESHEET_CHECK_ERROR(tilesheet: graphics_resources::Image, tile_squa
                 tilesheet.name.as_str(),
                 tile_square as libc::c_uint
             );
+            #[cfg(not(target_family = "windows"))]
             sdl2_sys::SDL_snprintf(
                 message_title.as_ptr() as *mut i8,
                 message_title.len() as u64,
+                error_title.as_ptr() as *const libc::c_char,
+                tilesheet.name.as_str()
+            );
+
+            #[cfg(target_os = "windows")]
+            sdl2_sys::SDL_snprintf(
+                message.as_ptr() as *mut libc::c_char,
+                message.len() as u32,
+                error.as_ptr() as *const libc::c_char,
+                tilesheet.name.as_str(),
+                tile_square as libc::c_uint
+            );
+            #[cfg(target_os = "windows")]
+            sdl2_sys::SDL_snprintf(
+                message_title.as_ptr() as *mut i8,
+                message_title.len() as u32,
                 error_title.as_ptr() as *const libc::c_char,
                 tilesheet.name.as_str()
             );

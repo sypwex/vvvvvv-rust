@@ -74,7 +74,11 @@ pub fn malloc(size: usize) -> Result<Vec<u8>, ()> {
         Ok(vec![0;0])
     } else {
         unsafe {
+            #[cfg(not(target_family = "windows"))]
             let ptr = sdl2_sys::SDL_malloc(size as u64) as *mut u8;
+            #[cfg(target_family = "windows")]
+            let ptr = sdl2_sys::SDL_malloc(size as u32) as *mut u8;
+
             if ptr.is_null() {
                 error!("SDL_malloc returned empty pointer!");
                 Err(())
