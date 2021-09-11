@@ -6,9 +6,7 @@ stages:
 build:
   stage: build
   script:
-    - ln -s /usr/local/lib/darwin/libSDL2-2.0.0.dylib ./crossbuild/libSDL/
-    - ln -s /usr/local/lib/darwin/libSDL2_mixer-2.0.0.dylib ./crossbuild/libSDL/
-    - ls -al ./crossbuild/libSDL/
+    - cp /usr/local/lib/darwin/{libSDL2-2.0.0,libSDL2_mixer-2.0.0}.dylib ./crossbuild/libSDL/
     - ./crossbuild.sh
 
 release:
