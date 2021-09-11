@@ -6,7 +6,7 @@ stages:
 build:
   stage: build
   script:
-    - . crossbuild.sh
+    - ./crossbuild.sh
 
 release:
   stage: release
