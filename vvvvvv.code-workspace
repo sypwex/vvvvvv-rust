@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../rust-sdl2"
+		},
+		{
+			"path": "../physfs"
+		}
+	],
+	"settings": {}
+}

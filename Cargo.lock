@@ -261,7 +261,7 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 [[package]]
 name = "physfs"
 version = "0.0.1"
-source = "git+https://github.com/sypwex/physfs#7515f0205eab1d20a16e6894b4113220bd4909bb"
+source = "git+https://github.com/sypwex/physfs#20196f2ef5e51f5e24a42d5ea745cb423468c585"
 dependencies = [
  "bindgen",
  "env_logger 0.9.0",
@@ -378,8 +378,8 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "sdl2"
-version = "0.34.5"
-source = "git+https://github.com/sypwex/rust-sdl2#60da79f743fe16ad8b0977a685e16169566b8b13"
+version = "0.36.0"
+source = "git+https://github.com/sypwex/rust-sdl2#08c172c07d1315a939db641de3bc901b6c12fed6"
 dependencies = [
  "bitflags",
  "lazy_static",
@@ -389,8 +389,8 @@ dependencies = [
 
 [[package]]
 name = "sdl2-sys"
-version = "0.34.5"
-source = "git+https://github.com/sypwex/rust-sdl2#60da79f743fe16ad8b0977a685e16169566b8b13"
+version = "0.36.0"
+source = "git+https://github.com/sypwex/rust-sdl2#08c172c07d1315a939db641de3bc901b6c12fed6"
 dependencies = [
  "cfg-if",
  "libc",
@@ -447,9 +447,9 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "version-compare"
-version = "0.0.10"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d63556a25bae6ea31b52e640d7c41d1ab27faba4ccb600013837a3d0b3994ca1"
+checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
 
 [[package]]
 name = "version_check"
