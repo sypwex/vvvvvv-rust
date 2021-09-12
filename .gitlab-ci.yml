@@ -3,11 +3,14 @@ stages:
   - test
   - release
 
+before_script:
+  - printenv | sort
+
 build:
   stage: build
   script:
-    - cp /usr/local/lib/darwin/{libSDL2-2.0.0,libSDL2_mixer-2.0.0}.dylib ./crossbuild/libSDL/
-    - ./crossbuild.sh
+    # - cp /usr/local/lib/darwin/{libSDL2-2.0.0,libSDL2_mixer-2.0.0}.dylib ./crossbuild/libSDL/
+    # - ./crossbuild.sh
     - |
       VERSION=$(. ./bin/increment_version.sh ${VERSIONCOMPONENTTOINCREMENT} ${LASTVERSION})
       echo "${VERSION}" > version.txt
