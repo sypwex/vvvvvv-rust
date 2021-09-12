@@ -16,12 +16,12 @@ build:
   script:
     # - cp /usr/local/lib/darwin/{libSDL2-2.0.0,libSDL2_mixer-2.0.0}.dylib ./crossbuild/libSDL/
     # - ./crossbuild.sh
+    - VERSION=$(. ./bin/increment_version.sh ${VERSIONCOMPONENTTOINCREMENT} ${LASTVERSION})
+    - echo "${VERSION}" > version.txt
+    - echo "${VERSION}" > version-${VERSION}.txt
+    - echo "VERSION=${VERSION}" > version.env
+    - tar -czvf ${PACKAGENAME}.${VERSION}.tar.gz .
     - |
-      VERSION=$(. ./bin/increment_version.sh ${VERSIONCOMPONENTTOINCREMENT} ${LASTVERSION})
-      echo "${VERSION}" > version.txt
-      echo "${VERSION}" > version-${VERSION}.txt
-      echo "VERSION=${VERSION}" > version.env
-      tar -czvf ${PACKAGENAME}.${VERSION}.tar.gz .
       curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file ${PACKAGENAME}.${VERSION}.tar.gz ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${PACKAGENAME}/${VERSION}/${PACKAGENAME}.${VERSION}.tar.gz
   artifacts:
     reports:
