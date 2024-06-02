@@ -127,13 +127,14 @@ impl Image {
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).unwrap();
 
-        let mut surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, info.line_size as u32, sdl2::pixels::PixelMasks {
+        let masks = sdl2::pixels::PixelMasks {
             bpp: if no_alpha { 24 } else { 32 },
             rmask: 0x000000FF,
             gmask: 0x0000FF00,
             bmask: 0x00FF0000,
             amask: if no_alpha { 0x00000000 } else { 0xFF000000 },
-        }).unwrap();
+        };
+        let surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, info.line_size as u32, &masks).unwrap();
         let mut surface = surface.convert_format(sdl2::pixels::PixelFormatEnum::ABGR8888).unwrap();
         if no_blend {
             surface.set_blend_mode(sdl2::render::BlendMode::Blend);
@@ -211,13 +212,14 @@ impl Image {
         let mut data: Vec<u8> = vec![0; info.buffer_size()];
         reader.next_frame(&mut data).unwrap();
 
-        let surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, info.line_size as u32, sdl2::pixels::PixelMasks {
+        let masks = sdl2::pixels::PixelMasks {
             bpp: if no_alpha { 24 } else { 32 },
             rmask: 0x000000FF,
             gmask: 0x0000FF00,
             bmask: 0x00FF0000,
             amask: if no_alpha { 0x00000000 } else { 0xFF000000 },
-        }).unwrap();
+        };
+        let surface = sdl2::surface::Surface::from_data_pixelmasks(data.as_mut_slice(), info.width, info.height, 0u32, &masks).unwrap();
         let mut surface = surface.convert_format(sdl2::pixels::PixelFormatEnum::ABGR8888).unwrap();
         if no_blend {
             surface.set_blend_mode(sdl2::render::BlendMode::Blend);
