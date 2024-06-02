@@ -10,5 +10,36 @@
 			"path": "../physfs"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"actionButtons": {
+			"commands": [
+				{
+					"name": "🖉",
+					"useVsCodeApi": true,
+					"command": "workbench.action.openWorkspaceSettingsFile",
+				},
+				{
+					"name": "ruin",
+					"singleInstance": true,
+					"useVsCodeApi": false,
+					"command": "cargo run",
+				},
+				{
+					"name": "build",
+					"singleInstance": true,
+					"useVsCodeApi": false,
+					"command": "cargo build --release",
+				},
+				{
+					"name": "🖌",
+					"singleInstance": true,
+					"useVsCodeApi": false,
+					"command": "cargo clean",
+				},
+			],
+			"defaultColor": "Yellow",
+			"reloadButton": "↻",
+			"loadNpmCommands": false
+		}
+	}
 }
