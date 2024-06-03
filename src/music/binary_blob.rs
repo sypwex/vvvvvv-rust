@@ -264,7 +264,7 @@ impl BinaryBlob {
             }
             self.m_memblocks[i] = match sdl2u::malloc(self.m_headers[i].size) {
                 Ok(data) => {
-                    physfs::readBytes(handle, data.as_ptr() as *mut libc::c_void, self.m_headers[i].size);
+                    physfs::readBytes(handle, data.as_ptr() as *mut std::os::raw::c_void, self.m_headers[i].size);
                     data
                 },
                 Err(_) => {
@@ -301,7 +301,7 @@ impl BinaryBlob {
         }
 
         // let rw = unsafe {
-        //     let raw = sdl2_sys::SDL_RWFromConstMem(self.m_memblocks[index].as_ptr() as *const libc::c_void, size as i32);
+        //     let raw = sdl2_sys::SDL_RWFromConstMem(self.m_memblocks[index].as_ptr() as *const std::os::raw::c_void, size as i32);
         //     if raw.is_null() {
         //         return Err("unable to get rwops object".to_string())
         //     }

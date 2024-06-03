@@ -19,7 +19,7 @@
 					"command": "workbench.action.openWorkspaceSettingsFile",
 				},
 				{
-					"name": "ruin",
+					"name": "run",
 					"singleInstance": true,
 					"useVsCodeApi": false,
 					"command": "cargo run",
@@ -35,6 +35,18 @@
 					"singleInstance": true,
 					"useVsCodeApi": false,
 					"command": "cargo clean",
+				},
+				{
+					"name": "wasm build",
+					"singleInstance": true,
+					"useVsCodeApi": false,
+					"command": "wasm-pack build --target web",
+				},
+				{
+					"name": "wasm test",
+					"singleInstance": true,
+					"useVsCodeApi": false,
+					"command": "wasm-pack test --headless --firefox",
 				},
 			],
 			"defaultColor": "Yellow",

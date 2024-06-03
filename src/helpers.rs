@@ -7,7 +7,7 @@ macro_rules! as_mut_ptr {
 
 // Convert C string `c_str` to a String. Return an empty string if
 // `c_str` is NULL.
-pub fn c_str_to_string(c_str: *const libc::c_char) -> String {
+pub fn c_str_to_string(c_str: *const std::os::raw::c_char) -> String {
     if c_str.is_null() {
         String::new()
     } else {
@@ -17,6 +17,6 @@ pub fn c_str_to_string(c_str: *const libc::c_char) -> String {
     }
 }
 
-pub fn string_to_c_str(s: &str) -> *const libc::c_char {
-    s.to_string().as_ptr() as *const libc::c_char
+pub fn string_to_c_str(s: &str) -> *const std::os::raw::c_char {
+    s.to_string().as_ptr() as *const std::os::raw::c_char
 }

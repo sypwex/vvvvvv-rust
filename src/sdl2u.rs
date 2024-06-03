@@ -61,7 +61,7 @@ pub fn sys_map_rgb (format: *const SDL_PixelFormat, r: u8, g: u8, b: u8) -> u32 
     }
 }
 
-pub fn sdl_create_rgb_surface_(flags: u32, width: libc::c_int, height: libc::c_int, depth: libc::c_int, Rmask: u32, Gmask: u32, Bmask: u32, Amask: u32) -> *mut SDL_Surface {
+pub fn sdl_create_rgb_surface_(flags: u32, width: std::os::raw::c_int, height: std::os::raw::c_int, depth: std::os::raw::c_int, Rmask: u32, Gmask: u32, Bmask: u32, Amask: u32) -> *mut SDL_Surface {
     unsafe {
         sdl2_sys::SDL_CreateRGBSurface(flags, width, height, depth, Rmask, Gmask, Bmask, Amask)
     }

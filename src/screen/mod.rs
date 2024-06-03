@@ -82,7 +82,7 @@ impl Screen {
 
         /* */
 
-        let m_window = unsafe { sdl2_sys::SDL_CreateWindow("".as_ptr() as *const libc::c_char, 0, 0, 100, 100, 0) };
+        let m_window = unsafe { sdl2_sys::SDL_CreateWindow("".as_ptr() as *const std::os::raw::c_char, 0, 0, 100, 100, 0) };
         let m_renderer = unsafe { sdl2_sys::SDL_CreateRenderer(m_window, 0, 0) };
         let m_screen = sdl2::surface::Surface::new(1, 1, SCREEN_PIXEL_FORMAT).unwrap();
         let m_screenTexture = unsafe { sdl2_sys::SDL_CreateTextureFromSurface(m_renderer, m_screen.raw()) };
@@ -129,13 +129,13 @@ impl Screen {
 
         unsafe {
             sdl2_sys::SDL_SetHintWithPriority(
-                sdl2_sys::SDL_HINT_RENDER_SCALE_QUALITY.as_ptr() as *const libc::c_char,
-                (if self.isFiltered { "linear" } else { "nearest" }).as_ptr() as *const libc::c_char,
+                sdl2_sys::SDL_HINT_RENDER_SCALE_QUALITY.as_ptr() as *const std::os::raw::c_char,
+                (if self.isFiltered { "linear" } else { "nearest" }).as_ptr() as *const std::os::raw::c_char,
                 sdl2_sys::SDL_HintPriority::SDL_HINT_OVERRIDE
             );
             sdl2_sys::SDL_SetHintWithPriority(
-                sdl2_sys::SDL_HINT_RENDER_VSYNC.as_ptr() as *const libc::c_char,
-                (if self.vsync { "1" } else { "0" }).as_ptr() as *const libc::c_char,
+                sdl2_sys::SDL_HINT_RENDER_VSYNC.as_ptr() as *const std::os::raw::c_char,
+                (if self.vsync { "1" } else { "0" }).as_ptr() as *const std::os::raw::c_char,
                 sdl2_sys::SDL_HintPriority::SDL_HINT_OVERRIDE
             );
 
@@ -149,7 +149,7 @@ impl Screen {
                 as_mut_ptr!(self.m_window),
                 as_mut_ptr!(self.m_renderer),
             );
-            sdl2_sys::SDL_SetWindowTitle(self.m_window, "VVVVVV/Rust".as_ptr() as *const libc::c_char);
+            sdl2_sys::SDL_SetWindowTitle(self.m_window, "VVVVVV/Rust".as_ptr() as *const std::os::raw::c_char);
 
             self.LoadIcon();
 
@@ -224,8 +224,8 @@ impl Screen {
             }
 
             if self.stretchMode == 1 {
-                let mut winX: libc::c_int = 0;
-                let mut winY: libc::c_int = 0;
+                let mut winX: std::os::raw::c_int = 0;
+                let mut winY: std::os::raw::c_int = 0;
                 sdl2_sys::SDL_GetWindowSize(self.m_window, &mut winX, &mut winY);
                 if sdl2_sys::SDL_RenderSetLogicalSize(self.m_renderer, winX, winY) != 0 {
                     println!("Error: could not set logical size: {:?}", sdl2_sys::SDL_GetError());

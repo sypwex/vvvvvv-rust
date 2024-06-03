@@ -42,7 +42,7 @@ impl MusicTrack {
     pub fn from_blob(mem: &Vec<u8>, size: usize) -> Result<Self, String> {
         unsafe {
             info!("sound_system::from_blob(): loading music track from blob size {}, reading size {}", mem.len(), size);
-            let rw = sdl2_sys::SDL_RWFromConstMem(mem.as_ptr() as *const libc::c_void, size as i32);
+            let rw = sdl2_sys::SDL_RWFromConstMem(mem.as_ptr() as *const std::os::raw::c_void, size as i32);
             let m_music = sdl2_sys::mixer::Mix_LoadMUS_RW(rw, 1);
 
             Ok(Self {

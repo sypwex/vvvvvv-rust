@@ -3212,40 +3212,40 @@ fn PROCESS_TILESHEET_CHECK_ERROR(tilesheet: graphics_resources::Image, tile_squa
         unsafe {
             #[cfg(not(target_family = "windows"))]
             sdl2_sys::SDL_snprintf(
-                message.as_ptr() as *mut libc::c_char,
+                message.as_ptr() as *mut std::os::raw::c_char,
                 message.len() as u64,
-                error.as_ptr() as *const libc::c_char,
+                error.as_ptr() as *const std::os::raw::c_char,
                 tilesheet.name.as_str(),
-                tile_square as libc::c_uint
+                tile_square as std::os::raw::c_uint
             );
             #[cfg(not(target_family = "windows"))]
             sdl2_sys::SDL_snprintf(
                 message_title.as_ptr() as *mut i8,
                 message_title.len() as u64,
-                error_title.as_ptr() as *const libc::c_char,
+                error_title.as_ptr() as *const std::os::raw::c_char,
                 tilesheet.name.as_str()
             );
 
             #[cfg(target_os = "windows")]
             sdl2_sys::SDL_snprintf(
-                message.as_ptr() as *mut libc::c_char,
+                message.as_ptr() as *mut std::os::raw::c_char,
                 message.len() as u32,
-                error.as_ptr() as *const libc::c_char,
+                error.as_ptr() as *const std::os::raw::c_char,
                 tilesheet.name.as_str(),
-                tile_square as libc::c_uint
+                tile_square as std::os::raw::c_uint
             );
             #[cfg(target_os = "windows")]
             sdl2_sys::SDL_snprintf(
                 message_title.as_ptr() as *mut i8,
                 message_title.len() as u32,
-                error_title.as_ptr() as *const libc::c_char,
+                error_title.as_ptr() as *const std::os::raw::c_char,
                 tilesheet.name.as_str()
             );
 
             sdl2_sys::SDL_ShowSimpleMessageBox(
                 sdl2_sys::SDL_MessageBoxFlags::SDL_MESSAGEBOX_ERROR as u32,
-                message_title.as_ptr() as *const libc::c_char,
-                message.as_ptr() as *const libc::c_char,
+                message_title.as_ptr() as *const std::os::raw::c_char,
+                message.as_ptr() as *const std::os::raw::c_char,
                 ptr::null_mut()
             );
         }
