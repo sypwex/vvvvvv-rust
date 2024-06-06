@@ -68,27 +68,20 @@ impl MusicTrack {
 impl SoundTrack {
     // SoundTrack::SoundTrack(const char* fileName)
     pub fn new(fileName: &str) -> Self {
-        // unsigned char *mem;
-        // size_t length;
-        // FILESYSTEM_loadAssetToMemory(fileName, &mem, &length, false);
-        // if mem == NULL {
-        //     fprintf(stderr, "Unable to load WAV file %s\n", fileName);
-        //     SDL_assert(0 && "WAV file missing!");
-        //     return;
-        // }
-        // SDL_RWops *fileIn = SDL_RWFromConstMem(mem, length);
+        let sound = match physfs::openRead(&fileName) {
+            Ok(handle) => {
+                let length = handle.fileLength().unwrap();
+                let mut buffer = vec![0u8; length as usize];
+                handle.readBytes(buffer.as_mut_ptr() as *mut std::ffi::c_void, length);
 
-        let sound = match sdl2::mixer::Chunk::from_file(fileName) {
-            Ok(c) => Some(c),
-            Err(s) => {
-                eprintln!("Unable to load WAV file: {}", s);
-                None
+                let data = sdl2::rwops::RWops::from_bytes(&buffer).ok();
+                data.and_then(|data| data.load_wav().ok())
             },
+            Err(e) => panic!("Unable to load WAV file: {}: {}", e, fileName),
         };
-        // FILESYSTEM_freeMemory(&mem);
 
         Self {
-            sound,
+            sound
         }
     }
 }

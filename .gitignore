@@ -2,7 +2,6 @@
 .vscode/settings.json
 /target
 data.zip
-/assets
 /*.bmp
 /tmp
 perf.data*

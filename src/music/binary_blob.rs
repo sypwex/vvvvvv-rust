@@ -231,12 +231,11 @@ impl BinaryBlob {
             },
         };
 
-        let size = physfs::fileLength(handle).unwrap();
+        let size = handle.fileLength().unwrap();
 
         let mut headers = vec![resourceheader_c::default(); max_headers];
 
-        physfs::readBytes(
-            handle,
+        handle.readBytes(
             headers.as_mut_ptr() as *mut ::std::os::raw::c_void,
             mem::size_of::<[resourceheader_c; max_headers]>()
         );
@@ -259,12 +258,12 @@ impl BinaryBlob {
                 break;
             }
 
-            if let Err(s) = physfs::seek(handle, offset) {
+            if let Err(s) = handle.seek(offset) {
                 panic!("failure while seeking offset {} for physfs handle {:?}", offset, handle);
             }
             self.m_memblocks[i] = match sdl2u::malloc(self.m_headers[i].size) {
                 Ok(data) => {
-                    physfs::readBytes(handle, data.as_ptr() as *mut libc::c_void, self.m_headers[i].size);
+                    handle.readBytes(data.as_ptr() as *mut libc::c_void, self.m_headers[i].size);
                     data
                 },
                 Err(_) => {
@@ -276,11 +275,6 @@ impl BinaryBlob {
             offset += self.m_headers[i].size;
             continue;
         }
-
-        if let Err(s) = physfs::close(handle) {
-            warn!("warning: unable to close physfs handle: {}", s);
-        }
-        info!("The complete reloaded file size: {}", size);
 
         for i in 0..self.m_headers.len() {
             if !self.m_headers[i].valid {

@@ -74,3 +74,9 @@ cargo run --release
 ```bash
 mkdir -p ./target/{debug,release} && cp data.zip ./target/debug/ && cp data.zip ./target/release/
 ```
+
+## Notes
+
+You can search original code by function signature, like
+
+`SoundTrack::SoundTrack(const char* fileName)`

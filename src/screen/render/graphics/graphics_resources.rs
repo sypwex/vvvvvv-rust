@@ -118,8 +118,10 @@ impl Image {
 
     // static SDL_Surface* LoadImage(const char *filename, bool noBlend = true, bool noAlpha = false)
     pub fn LoadImage(file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> Vec<sdl2::surface::Surface<'static>> {
-        let file_path = ["assets/graphics/", file, ".png"].concat();
-        let decoder = match File::open(file_path.to_owned()) {
+
+        // TODO: @sx load assets from RAM
+        let file_path = ["/graphics/", file, ".png"].concat();
+        let decoder = match physfs::openRead(&file_path) {
             Ok(x) => png::Decoder::new(x),
             Err(e) => panic!("{}: {}", e, file_path),
         };
@@ -203,8 +205,8 @@ impl Image {
 
     // static SDL_Surface* LoadImage(const char *filename, bool noBlend = true, bool noAlpha = false)
     pub fn LoadOneImage(file: &str, no_blend: bool, no_alpha: bool, w: u32, h: u32) -> sdl2::surface::Surface<'static> {
-        let file_path = ["assets/graphics/", file, ".png"].concat();
-        let decoder = match File::open(file_path.to_owned()) {
+        let file_path = ["/graphics/", file, ".png"].concat();
+        let decoder = match physfs::openRead(&file_path) {
             Ok(x) => png::Decoder::new(x),
             Err(e) => panic!("{}: {}", e, file_path),
         };

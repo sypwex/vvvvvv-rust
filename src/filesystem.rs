@@ -153,6 +153,7 @@ impl FileSystem {
             return Err("data.zip missing!".to_string())
         }
 
+        // @sx: what actually creates/should create gamecontrollerdb.txt?
         unsafe {
             let output = basePath.join("gamecontrollerdb.txt");
             if let Ok(rw) = sdl2::rwops::RWops::from_file(output, "rb") {
