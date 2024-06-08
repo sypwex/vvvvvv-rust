@@ -6,34 +6,40 @@ Since this repository is just a game engine, in order to start the game one need
 
 ## Build
 
-Arch Linux
+Assuming Rust is installed and available in PATH.
 
-```bash
-rustup default stable
-??? sudo pacman -S physfs
-cargo build
-```
+Use stable Rust toolchain, e.g. `rustup default stable`.
 
 Ubuntu 23.10
 
 ```bash
-rustup default stable
 sudo apt install clang libphysfs-dev libsdl2-dev libsdl2-mixer-dev
 cargo build
 ```
 
-MacOS 10.15.7
+Apple x86/Intel (tested on MacOS 10.15.7)
+
+```bash
+brew install sdl2 sdl2_mixer physfs
+brew link sdl2
+cargo build
+```
+
+Apple ARM/M1 (tested on MacOS 14.5)
+
+Since brew installs x86 version, use one vcpkg provides.
 
 ```bash
 rustup default stable
-brew install sdl2 sdl2_mixer physfs
+vcpkg install sdl2 sdl2-mixer physfs ???
 cargo build
 ```
 
 Windows (TODO)
 
 ```
-…
+vcpkg install sdl2 sdl2-mixer physfs ???
+cargo build
 ```
 
 ## Run
