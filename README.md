@@ -1,26 +1,8 @@
-# VVVVVV #RIIR Project
+# VVVVVV Rust fork
 
-This project is derivative work based on [original source code](https://github.com/TerryCavanagh/VVVVVV) of the desktop version of the [VVVVVV-game](https://en.wikipedia.org/wiki/VVVVVV). The main purpose were to learn plain Rust development, so directory structure and API mimics the original work. But the code is not a direct port, it's a rewrite from scratch with some changes like respecting borrow checker rules.
+This project is the game engine of the desktop version of the [VVVVVV-game](https://en.wikipedia.org/wiki/VVVVVV) and is derivative work based on [original source code](https://github.com/TerryCavanagh/VVVVVV). The main purpose is to learn plain Rust game engine development, so directory structure and API mimics the original work. But this code is not a direct port, it's a rewrite from scratch with some changes like respecting Rust borrow checker rules.
 
-According to [original source code License](https://github.com/TerryCavanagh/VVVVVV/blob/master/LICENSE.md) the assets (`data.zip`) are not included in this repository, but you can get ones from [Make and Play edition](https://thelettervsixtim.es/makeandplay/).
-
-## Features
-
-Currently main features of the game are implemented, but various glitches are still included, so feel free to fork and contribute.
-
-- [x] Title screen, menu, game start
-- [x] Load levels from `data.zip`
-- [x] Load/Save game progress
-- [x] Gamepad support
-- [x] Sound/music support
-- [x] First location
-
-WIP
-
-- [ ] Second and other locations
-- [ ] Map glitches
-- [ ] Sprite glitches
-- [ ] …
+Since this repository is just a game engine, in order to start the game one need assets, and since VVVVVV is the commercial product + according to [original source code License](https://github.com/TerryCavanagh/VVVVVV/blob/master/LICENSE.md) the assets (`data.zip`) can not be included in this repository, so to say redistributed. So You can get your own copy by buying the original game, preferably PC-version since assets available directly in installation folder (e.g. from [Steam](https://store.steampowered.com/app/70300/VVVVVV/)). The other option is to load assets from [Make and Play edition](https://thelettervsixtim.es/makeandplay/). Please note that assets are intented for personal use only and should not be redistributed without Terry notice.
 
 ## Build
 
@@ -48,19 +30,10 @@ brew install sdl2 sdl2_mixer physfs
 cargo build
 ```
 
-Windows
+Windows (TODO)
 
 ```
 …
-```
-
-### Build by crossbuild.Dockerfile
-
-```bash
-docker build -t vvvvvv-crossbuild -f crossbuild.Dockerfile .
-docker run --rm -it -v `pwd`:/workdir vvvvvv-crossbuild cargo build --target=x86_64-unknown-linux-gnu
-docker run --rm -it -v `pwd`:/workdir vvvvvv-crossbuild cargo build --target=x86_64-apple-darwin
-docker run --rm -it -v `pwd`:/workdir vvvvvv-crossbuild cargo build --target=x86_64-pc-windows-gnu
 ```
 
 ## Run
